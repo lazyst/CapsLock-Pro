@@ -218,7 +218,7 @@ blacklist := []
 i := 1
 Loop {
     key := "black" . i
-    value := IniRead("CapsLock++.ini", "blacklist_virtual_env", key, "")
+    value := IniRead(A_ScriptDir "\CapsLock++.ini", "blacklist_virtual_env", key, "")
     if (value = "")
         break
     blacklist.Push(value)
@@ -230,7 +230,7 @@ blacklistClasses := []
 i := 1
 Loop {
     key := "blackclasses" . i
-    value := IniRead("CapsLock++.ini", "blacklist_classes_virtual_env", key, "")
+    value := IniRead(A_ScriptDir "\CapsLock++.ini", "blacklist_classes_virtual_env", key, "")
     if (value = "")
         break
     blacklistClasses.Push(value)
@@ -4775,8 +4775,8 @@ LoadNoteTargetsFromINI() {
         pathName := "note" . i . "2"
         
         ; 读取关键字和路径
-        keyword := IniRead("CapsLock++.ini", "noteTargets", keyName, "")
-        path := IniRead("CapsLock++.ini", "noteTargets", pathName, "")
+        keyword := IniRead(A_ScriptDir "\CapsLock++.ini", "noteTargets", keyName, "")
+        path := IniRead(A_ScriptDir "\CapsLock++.ini", "noteTargets", pathName, "")
         
         ; 如果两者都不为空，则添加到映射中
         if (keyword != "" && path != "") {
@@ -5361,7 +5361,7 @@ global forceKeepMenu := false  ; 强制保持菜单打开的标志（用于截�
 
 ; 全局设置
 global MenuSettings := {
-    DarkMode: IniRead("CapsLock++.ini", "MenuGroupsColourMode", "DarkMode", "true") = "true",           ; true=深色模式, false=浅色模式
+    DarkMode: IniRead(A_ScriptDir "\CapsLock++.ini", "MenuGroupsColourMode", "DarkMode", "true") = "true",           ; true=深色模式, false=浅色模式
     FontName: "Segoe UI",     ; 字体名称
     FontSize: 10,             ; 字体大小
     
@@ -5447,7 +5447,7 @@ ReadIniValueUTF8(filePath, section, key, defaultValue := "") {
 ;   - action: 执行的操作(函数引用)
 
 ; 从 INI 读取菜单组数量
-global menuGroupNum := ReadIniValueUTF8("CapsLock++.ini", "MenuGroupNum", "num", "0")
+global menuGroupNum := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupNum", "num", "0")
 menuGroupNum := Integer(menuGroupNum)
 
 ; 先初始化数组
@@ -5459,19 +5459,19 @@ global groupCount := []
 Loop 10 {
     i := A_Index
     ; 使用Push方法而不是索引赋值，这样数组会自动扩展
-    enableGroup.Push(ReadIniValueUTF8("CapsLock++.ini", "MenuGroupsEnable", "enableGroup" i, "false") = "true")
+    enableGroup.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupsEnable", "enableGroup" i, "false") = "true")
 }
 
 ; 读取每个组的名称
 Loop 10 {
     i := A_Index
-    groupName.Push(ReadIniValueUTF8("CapsLock++.ini", "MenuGroupName", "name" i, "组 " i))
+    groupName.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupName", "name" i, "组 " i))
 }
 
 ; 读取每个组的项目数量
 Loop 10 {
     i := A_Index
-    count := ReadIniValueUTF8("CapsLock++.ini", "MenuGroupCount", "count" i, "0")
+    count := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupCount", "count" i, "0")
     groupCount.Push(Integer(count))
 }
 
@@ -5493,10 +5493,10 @@ Loop 10 {
             sectionName := "MenuGroups" groupIndex "Items"
             
             ; 读取项目属性
-            itemName := ReadIniValueUTF8("CapsLock++.ini", sectionName, "name" itemIndex, "")
-            itemIcon := ReadIniValueUTF8("CapsLock++.ini", sectionName, "icon" itemIndex, "")
-            itemIconType := ReadIniValueUTF8("CapsLock++.ini", sectionName, "icontype" itemIndex, "")
-            itemActionStr := ReadIniValueUTF8("CapsLock++.ini", sectionName, "action" itemIndex, "")
+            itemName := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "name" itemIndex, "")
+            itemIcon := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "icon" itemIndex, "")
+            itemIconType := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "icontype" itemIndex, "")
+            itemActionStr := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "action" itemIndex, "")
             
             ; 只有当有名称时才添加项目
             if (itemName != "") {
@@ -5611,7 +5611,7 @@ ReloadMenuGroups() {
     global menuGroupNum, enableGroup, groupName, groupCount, MenuGroups
     
     ; 重新读取菜单组数量
-    menuGroupNum := ReadIniValueUTF8("CapsLock++.ini", "MenuGroupNum", "num", "0")
+    menuGroupNum := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupNum", "num", "0")
     menuGroupNum := Integer(menuGroupNum)
     
     ; 重置数组
@@ -5622,19 +5622,19 @@ ReloadMenuGroups() {
     ; 重新读取每个组的启用状态
     Loop 10 {
         i := A_Index
-        enableGroup.Push(ReadIniValueUTF8("CapsLock++.ini", "MenuGroupsEnable", "enableGroup" i, "false") = "true")
+        enableGroup.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupsEnable", "enableGroup" i, "false") = "true")
     }
     
     ; 重新读取每个组的名称
     Loop 10 {
         i := A_Index
-        groupName.Push(ReadIniValueUTF8("CapsLock++.ini", "MenuGroupName", "name" i, "组 " i))
+        groupName.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupName", "name" i, "组 " i))
     }
     
     ; 重新读取每个组的项目数量
     Loop 10 {
         i := A_Index
-        count := ReadIniValueUTF8("CapsLock++.ini", "MenuGroupCount", "count" i, "0")
+        count := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupCount", "count" i, "0")
         groupCount.Push(Integer(count))
     }
     
@@ -5656,10 +5656,10 @@ ReloadMenuGroups() {
                 sectionName := "MenuGroups" groupIndex "Items"
                 
                 ; 读取项目属性
-                itemName := ReadIniValueUTF8("CapsLock++.ini", sectionName, "name" itemIndex, "")
-                itemIcon := ReadIniValueUTF8("CapsLock++.ini", sectionName, "icon" itemIndex, "")
-                itemIconType := ReadIniValueUTF8("CapsLock++.ini", sectionName, "icontype" itemIndex, "")
-                itemActionStr := ReadIniValueUTF8("CapsLock++.ini", sectionName, "action" itemIndex, "")
+                itemName := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "name" itemIndex, "")
+                itemIcon := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "icon" itemIndex, "")
+                itemIconType := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "icontype" itemIndex, "")
+                itemActionStr := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "action" itemIndex, "")
                 
                 ; 只有当有名称时才添加项目
                 if (itemName != "") {
@@ -6654,7 +6654,7 @@ ManageProcess(action) {
             ShowTooltip("正在启用指定进程...")
             i := 1
             Loop {
-                processToStart := IniRead("CapsLock++.ini", "ProcessesToStart", "Item" i, "")
+                processToStart := IniRead(A_ScriptDir "\CapsLock++.ini", "ProcessesToStart", "Item" i, "")
                 if (processToStart = "")  ; 没有更多条目
                     break
                 Run(processToStart)
@@ -6668,7 +6668,7 @@ ManageProcess(action) {
             i := 1
             terminatedCount := 0
             Loop {
-                processToTerminate := IniRead("CapsLock++.ini", "ProcessesToTerminate", "Item" i, "")
+                processToTerminate := IniRead(A_ScriptDir "\CapsLock++.ini", "ProcessesToTerminate", "Item" i, "")
                 if (processToTerminate = "")  ; 没有更多条目
                     break
                 try {
@@ -6690,7 +6690,7 @@ ManageProcess(action) {
 WebsiteLogin(url := "") {
     CloseMenu()
     if (url != "") {
-        browser := ReadIniValueUTF8("CapsLock++.ini", "CommonWebsites", "browser", "edge")
+        browser := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CommonWebsites", "browser", "edge")
         OpenOneWebsite(url, browser)
         return
     }
@@ -6704,11 +6704,11 @@ WebsiteLogin(url := "") {
 ; 打开默认网站
 OpenDefaultWebsite() {
     ; 从INI文件读取默认网站（使用UTF-8编码）
-    site := ReadIniValueUTF8("CapsLock++.ini", "CommonWebsites", "default_site", "")
+    site := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CommonWebsites", "default_site", "")
     
     ; 如果未找到默认网站，尝试使用Credentials中的site作为备选
     if (site = "") {
-        site := ReadIniValueUTF8("CapsLock++.ini", "Credentials", "site", "")
+        site := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "Credentials", "site", "")
     }
     
     ; 如果仍未找到网站，提示错误
@@ -6718,7 +6718,7 @@ OpenDefaultWebsite() {
     }
     
     ; 读取浏览器偏好设置
-    browser := ReadIniValueUTF8("CapsLock++.ini", "CommonWebsites", "browser", "edge")
+    browser := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CommonWebsites", "browser", "edge")
     
     ; 打开网站
     OpenOneWebsite(site, browser)
@@ -6760,12 +6760,12 @@ ShowWebsiteSelectionGUI() {
         siteKey := "site" . i
         urlKey := "url" . i
         
-        siteName := ReadIniValueUTF8("CapsLock++.ini", "CommonWebsites", siteKey, "")
+        siteName := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CommonWebsites", siteKey, "")
         ; 如果读不到名称，则认为列表结束
         if (siteName = "")
             break
             
-        siteUrl := ReadIniValueUTF8("CapsLock++.ini", "CommonWebsites", urlKey, "")
+        siteUrl := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CommonWebsites", urlKey, "")
         if (siteUrl = "")
             continue
             
@@ -6787,7 +6787,7 @@ ShowWebsiteSelectionGUI() {
     }
 
     ; 读取浏览器偏好设置
-    browser := ReadIniValueUTF8("CapsLock++.ini", "CommonWebsites", "browser", "edge")
+    browser := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CommonWebsites", "browser", "edge")
 
     ; 创建GUI
     websiteGui := Gui("+AlwaysOnTop +ToolWindow")
@@ -6917,13 +6917,13 @@ ShowProcessSelectionGUI(action) {
         pathKey := "Item" i "_Path"
         checkedKey := "Item" i "_Checked"
         
-        procName := IniRead("CapsLock++.ini", sectionName, nameKey, "")
+        procName := IniRead(A_ScriptDir "\CapsLock++.ini", sectionName, nameKey, "")
         ; 如果读不到名称，则认为列表结束
         if (procName = "")
             break
             
-        procPath := IniRead("CapsLock++.ini", sectionName, pathKey, "")
-        procChecked := IniRead("CapsLock++.ini", sectionName, checkedKey, "true") = "true"
+        procPath := IniRead(A_ScriptDir "\CapsLock++.ini", sectionName, pathKey, "")
+        procChecked := IniRead(A_ScriptDir "\CapsLock++.ini", sectionName, checkedKey, "true") = "true"
         
         ; 将读取到的进程信息添加到列表
         processList.Push({name: procName, path: procPath, checked: procChecked})
@@ -8078,12 +8078,12 @@ DragWindowTimer() {
 RunCustomCommandByName(cmdName) {
     i := 1
     Loop {
-        name := ReadIniValueUTF8("CapsLock++.ini", "CustomCommands", "cmd" i "_name", "")
+        name := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CustomCommands", "cmd" i "_name", "")
         if (name = "")
             break
         if (name = cmdName) {
-            command := ReadIniValueUTF8("CapsLock++.ini", "CustomCommands", "cmd" i "_command", "")
-            workdir := ReadIniValueUTF8("CapsLock++.ini", "CustomCommands", "cmd" i "_workdir", "")
+            command := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CustomCommands", "cmd" i "_command", "")
+            workdir := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CustomCommands", "cmd" i "_workdir", "")
             if (workdir = "")
                 workdir := A_Desktop
             try {
