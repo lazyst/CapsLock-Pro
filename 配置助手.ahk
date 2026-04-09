@@ -1149,11 +1149,10 @@ ConfigSave() {
     f.Write(s)
     f.Close()
 
-    ShowTooltip("配置已保存")
-    try {
-        Run("autohotkey.exe " A_ScriptDir "\CapsLock++.ahk /restart")
-    } catch Error {
-    }
+    FileDelete(A_ScriptDir "\.reload_signal")
+    FileAppend("1", A_ScriptDir "\.reload_signal")
+
+    ShowTooltip("配置已保存，主程序将自动重新加载")
 }
 
 ShowConfigHelper()

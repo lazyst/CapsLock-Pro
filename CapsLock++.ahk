@@ -100,6 +100,9 @@ InitializeApp() {
     ; 设置自定义任务托盘图标
     SetCustomTrayIcon()
     
+    ; 创建定时器，检测配置重载信号
+    SetTimer(CheckReloadSignal, 1000)  ; 每秒检查一次
+    
     ; 自定义任务托盘菜单
     CustomizeTrayMenu()
 
@@ -5602,6 +5605,20 @@ GetActionFromString(actionStr) {
                 ; 默认空函数
                 return (*) => {}
             }
+    }
+}
+
+; 检测配置重载信号
+CheckReloadSignal() {
+    signalFile := A_ScriptDir "\.reload_signal"
+    if (FileExist(signalFile)) {
+        try {
+            FileDelete(signalFile)
+            ReloadMenuGroups()
+            ToolTip("配置已重新加载")
+            SetTimer(() => ToolTip(), -2000)
+        } catch {
+        }
     }
 }
 
