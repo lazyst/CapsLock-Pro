@@ -4182,11 +4182,24 @@ GetDesktopPath() {
 
 ; 速记功能配置
 global noteConfig := {
-    defaultDir: GetDesktopPath() . "速记\默认\"  ; 默认保存目录
+    defaultDir: A_ScriptDir . "\速记\"  ; 默认保存目录
 }
 
 ; 预定义目标文件 - 从INI文件读取
 global noteTargets := Map()
+
+; 查看模式全局变量
+global noteViewMode := false
+global noteSearchText := ""
+global noteListView := {}
+global currentEditingFile := ""  ; 当前编辑的文件路径
+; GUI 控件变量（初始化为空，在 ShowQuickNote 中赋值）
+global noteEdit := ""
+global noteGui := ""
+global statusBar := ""
+global searchEdit := ""
+global searchLabel := ""
+global deleteBtn := ""
 
 ; 从INI文件加载速记目标
 LoadNoteTargetsFromINI() {
@@ -4220,10 +4233,10 @@ LoadNoteTargetsFromINI() {
     ; 如果映射为空，添加默认项
     if (noteTargets.Count = 0) {
         noteTargets := Map(
-            "论文", GetDesktopPath() . "速记\论文灵感.txt",
-            "日记", GetDesktopPath() . "速记\日记.txt",
-            "工作", GetDesktopPath() . "速记\工作.txt",
-            "想法", GetDesktopPath() . "速记\想法.txt"
+            "论文", A_ScriptDir . "\速记\论文灵感.txt",
+            "日记", A_ScriptDir . "\速记\日记.txt",
+            "工作", A_ScriptDir . "\速记\工作.txt",
+            "想法", A_ScriptDir . "\速记\想法.txt"
         )
     }
 }
@@ -4244,6 +4257,53 @@ n::
     ShowQuickNote()
 }
 
+; 单击 ListView 文件加载内容
+NoteFileClick(*) {
+    global noteEdit, noteViewMode, currentEditingFile, statusBar, noteListView, searchEdit, searchLabel, noteGui
+
+    selectedRow := noteListView.GetNext()
+    if (!selectedRow)
+        return
+
+    ; 获取选中行的路径
+    ; 路径保存在第4列
+    filePath := noteListView.GetText(selectedRow, 4)
+
+    if (!filePath)
+        return
+
+    if (FileExist(filePath)) {
+        ; 读取文件内容
+        try {
+            content := FileRead(filePath, "UTF-8")
+        } catch {
+            content := FileRead(filePath)
+        }
+
+        noteEdit.Value := content
+
+        ; 设置当前编辑文件
+        currentEditingFile := filePath
+
+        ; 切换回编辑模式
+        noteViewMode := false
+        noteEdit.Opt("-ReadOnly")
+        noteEdit.Visible := true
+        noteListView.Visible := false
+        searchEdit.Visible := false
+        searchLabel.Visible := false
+        viewToggleBtn.Text := "查看速记"
+
+        ; 更新状态栏
+        statusBar.SetText("提示: 正在编辑 | Ctrl+S保存")
+
+        ; 聚焦编辑框
+        noteGui.Show()
+        WinWaitActive("速记")
+        ControlFocus("Edit1", "速记")
+    }
+}
+
 ; 显示速记窗口
 ShowQuickNote() {
     static isNoteGuiOpen := false
@@ -4255,7 +4315,7 @@ ShowQuickNote() {
     isNoteGuiOpen := true
     
     ; 创建GUI
-    noteGui := Gui("+AlwaysOnTop +Resize", "速记")
+    global noteGui := Gui("+AlwaysOnTop +Resize", "速记")
     
     ; 设置自定义图标（如果存在）
     iconPath := A_ScriptDir . "\Icon\QuickNote.ico"
@@ -4269,19 +4329,32 @@ ShowQuickNote() {
     }
     
     ; 添加多行编辑框（添加滚动条），预先填入"## "
-    noteEdit := noteGui.Add("Edit", "vNoteContent r10 w500 WantTab +VScroll", "## ")
-    
+    global noteEdit := noteGui.Add("Edit", "x10 y40 r10 w500 WantTab +VScroll", "## ")
+
     ; 添加状态栏显示帮助信息
-    statusBar := noteGui.Add("StatusBar", "", "提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存")
-    
+    global statusBar := noteGui.Add("StatusBar", "", "提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存")
+
+    ; 添加查看模式控件（顶行）
+    global viewToggleBtn := noteGui.Add("Button", "x10 y10 w80 h25", "查看速记")
+    global searchLabel := noteGui.Add("Text", "x+10 y15 w50", "搜索:")
+    global searchEdit := noteGui.Add("Edit", "x+5 y10 w150 h25 vNoteSearch +Hidden", "")
+
+    ; ListView 用于显示文件列表
+    global noteListView := noteGui.Add("ListView", "x10 y40 w480 h200 +ReadOnly +AltSubmit +Hidden", ["文件名", "修改时间", "目标", "路径"])
+    noteListView.OnEvent("DoubleClick", NoteFileClick)
+
     ; 添加按钮
     buttonBar := noteGui.Add("Text", "w500 h30 Section", "")
     saveBtn := noteGui.Add("Button", "xp y+5 w80 h25 Default", "保存")
-    cancelBtn := noteGui.Add("Button", "x+10 yp w80 h25", "取消")
-    
+    cancelBtn := noteGui.Add("Button", "x+90 yp w80 h25", "取消")
+    global deleteBtn := noteGui.Add("Button", "x+90 yp w80 h25 +Hidden", "删除选中")
+    deleteBtn.OnEvent("Click", DeleteSelectedNote)
+
     ; 设置按钮事件
     saveBtn.OnEvent("Click", SaveNoteHandler)
     cancelBtn.OnEvent("Click", CloseNoteGui)
+    viewToggleBtn.OnEvent("Click", ToggleNoteViewHandler)
+    searchEdit.OnEvent("Change", NoteSearchHandler)
     
     ; 设置窗口关闭事件
     noteGui.OnEvent("Close", CloseNoteGui)
@@ -4289,7 +4362,9 @@ ShowQuickNote() {
     
     ; 关闭窗口处理函数
     CloseNoteGui(*) {
+        global currentEditingFile
         isNoteGuiOpen := false
+        currentEditingFile := ""
         noteGui.Destroy()
     }
     
@@ -4297,21 +4372,23 @@ ShowQuickNote() {
     GuiResize(thisGui, minMax, width, height) {
         if (minMax = -1)  ; 窗口被最小化
             return
-            
-        ; 调整编辑框大小
-        noteEdit.Move(,, width, height - 70)
-        
+
+        ; 调整编辑框和ListView大小
+        noteEdit.Move(10, 40, width - 20, height - 110)
+        noteListView.Move(10, 40, width - 20, height - 110)
+
         ; 调整按钮位置
-        buttonBar.Move(,, width)
-        saveBtn.Move(, height - 60)
-        cancelBtn.Move(width - 90, height - 60)
+        buttonBar.Move(10, height - 60, width - 20)
+        saveBtn.Move(10, height - 55)
+        cancelBtn.Move(100, height - 55)
+        deleteBtn.Move(190, height - 55)
     }
     
     ; 设置大小调整事件
     noteGui.OnEvent("Size", GuiResize)
     
     ; 显示GUI并聚焦到编辑框
-    noteGui.Show()
+    noteGui.Show("w500 h400")
     WinWaitActive("速记")
     ControlFocus("Edit1", "速记")
     
@@ -4325,21 +4402,49 @@ ShowQuickNote() {
     
     ; 保存笔记处理函数
     SaveNoteHandler(*) {
+        global currentEditingFile
+
         ; 获取内容
         content := noteEdit.Value
-        
-        ; 解析内容
-        lines := StrSplit(content, "`n")
-        title := ""
-        targetName := ""
-        targetFile := ""
-        
+
         ; 检查是否为空内容
         if (content = "") {
             MsgBox("笔记内容为空，未保存", "速记", "Icon!")
             return
         }
-        
+
+        ; 如果正在编辑已有文件，直接覆盖保存
+        if (currentEditingFile != "" && FileExist(currentEditingFile)) {
+            try {
+                ; 直接写入文件（覆盖模式）
+                FileDelete(currentEditingFile)
+                FileAppend(content, currentEditingFile)
+
+                ToolTip("已保存到「" . currentEditingFile . "」")
+                SetTimer () => ToolTip(), -2000
+
+                ; 清空当前编辑文件标记
+                currentEditingFile := ""
+
+                ; 关闭窗口
+                isNoteGuiOpen := false
+                noteGui.Destroy()
+                return
+            } catch as e {
+                MsgBox("保存失败: " . e.Message, "速记", "Icon!")
+                return
+            }
+        }
+
+        ; 重置当前编辑文件标记
+        currentEditingFile := ""
+
+        ; 解析内容
+        lines := StrSplit(content, "`n")
+        title := ""
+        targetName := ""
+        targetFile := ""
+
         ; 检查第一行是否为有效标题 (以"## "开头且后面有内容)
         if (lines.Length > 0 && RegExMatch(lines[1], "^##\s+(.+)$", &match)) {
             titleText := Trim(match[1])
@@ -4347,7 +4452,7 @@ ShowQuickNote() {
             if (titleText != "")
                 title := titleText
         }
-        
+
         ; 检查最后一行是否指定目标文件
         if (lines.Length > 0) {
             lastLine := lines[lines.Length]
@@ -4355,7 +4460,7 @@ ShowQuickNote() {
                 targetName := Trim(match[1])
                 ; 移除最后一行
                 lines.Pop()
-                
+
                 ; 检查是否为预设目标
                 if (noteTargets.Has(targetName)) {
                     targetFile := noteTargets[targetName]
@@ -4560,7 +4665,7 @@ EnsureNoteDirectories() {
     global noteConfig, noteTargets
     
     ; 确保主速记目录存在
-    noteDir := GetDesktopPath() . "速记\"
+    noteDir := A_ScriptDir . "\速记\"
     if (!FileExist(noteDir)) {
         try {
             DirCreate(noteDir)
@@ -4599,6 +4704,169 @@ EnsureNoteDirectories() {
     }
     
     return true
+}
+
+; 切换查看/编辑模式
+ToggleNoteViewHandler(*) {
+    global noteViewMode, noteEdit, noteListView, searchEdit, searchLabel, statusBar, currentEditingFile, deleteBtn, noteGui, viewToggleBtn
+
+    noteViewMode := !noteViewMode
+
+    if (noteViewMode) {
+        ; 切换到查看模式
+        noteEdit.Opt("+ReadOnly")
+        noteEdit.Value := ""
+        noteEdit.Visible := false
+        noteListView.Visible := true
+        searchEdit.Visible := true
+        searchLabel.Visible := true
+        deleteBtn.Visible := true
+        viewToggleBtn.Text := "新建速记"
+        LoadNoteFilesToList()
+
+        ; 更新状态栏
+        statusBar.SetText("提示: 双击文件加载 | 选择后点击删除选中")
+    } else {
+        ; 切换到编辑模式
+        noteEdit.Opt("-ReadOnly")
+        noteEdit.Value := "## "
+        noteEdit.Visible := true
+        noteListView.Visible := false
+        searchEdit.Visible := false
+        searchLabel.Visible := false
+        deleteBtn.Visible := false
+        viewToggleBtn.Text := "查看速记"
+
+        ; 恢复状态栏
+        if (currentEditingFile != "") {
+            statusBar.SetText("提示: 正在编辑 | Ctrl+S保存")
+        } else {
+            statusBar.SetText("提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存")
+        }
+
+        ; 将光标定位到"## "之后
+        SendInput("{End}")
+    }
+}
+
+; 加载速记文件列表到 ListView
+LoadNoteFilesToList(filter := "") {
+    global noteListView, noteTargets, noteConfig
+
+    ; 清空现有列表
+    noteListView.Delete()
+
+    ; 获取速记目录
+    noteDir := noteConfig.defaultDir
+
+    ; 收集所有速记文件
+    noteFiles := []
+
+    ; 1. 添加 noteTargets 中的文件
+    for targetName, filePath in noteTargets {
+        if (FileExist(filePath)) {
+            SplitPath(filePath, &fileName)
+
+            ; 搜索过滤
+            if (filter = "" || InStr(fileName, filter) || InStr(targetName, filter)) {
+                noteFiles.Push({
+                    name: fileName,
+                    path: filePath,
+                    target: targetName
+                })
+            }
+        }
+    }
+
+    ; 2. 遍历默认目录中的所有 .txt 文件
+    Loop Files noteDir . "*.txt" {
+        ; 跳过目标文件中已添加的
+        isInTargets := false
+        for _, noteFile in noteFiles {
+            if (noteFile.path = A_LoopFilePath)
+                isInTargets := true
+        }
+
+        if (!isInTargets) {
+            SplitPath(A_LoopFilePath, &fileName)
+
+            ; 搜索过滤
+            if (filter = "" || InStr(fileName, filter)) {
+                noteFiles.Push({
+                    name: fileName,
+                    path: A_LoopFilePath,
+                    target: "默认"
+                })
+            }
+        }
+    }
+
+    ; 按修改时间排序（最新的在前）- 冒泡排序
+    loop noteFiles.Length - 1 {
+        swapped := false
+        loop noteFiles.Length - A_Index {
+            if (FileGetTime(noteFiles[A_Index].path, "M") < FileGetTime(noteFiles[A_Index + 1].path, "M")) {
+                temp := noteFiles[A_Index]
+                noteFiles[A_Index] := noteFiles[A_Index + 1]
+                noteFiles[A_Index + 1] := temp
+                swapped := true
+            }
+        }
+        if (!swapped)
+            break
+    }
+
+    ; 添加到 ListView
+    for _, noteFile in noteFiles {
+        modTime := FileGetTime(noteFile.path, "M")
+        modTimeStr := FormatTime(modTime, "yyyy-MM-dd HH:mm")
+
+        noteListView.Add("", noteFile.name, modTimeStr, noteFile.target, noteFile.path)
+    }
+
+    ; 自动调整列宽
+    noteListView.ModifyCol(1, 220)
+    noteListView.ModifyCol(2, 140)
+    noteListView.ModifyCol(3, 80)
+    ; 第4列是路径，隐藏它
+    noteListView.ModifyCol(4, 0)
+}
+
+; 搜索框内容变化处理
+NoteSearchHandler(*) {
+    global noteSearchText, searchEdit
+    noteSearchText := searchEdit.Value
+    LoadNoteFilesToList(noteSearchText)
+}
+
+
+; 删除选中的速记文件
+DeleteSelectedNote(*) {
+    global noteListView
+
+    selectedRow := noteListView.GetNext()
+    if (!selectedRow) {
+        MsgBox("请先选择一个速记文件", "删除速记", "Icon!")
+        return
+    }
+
+    ; 获取文件路径（第4列）
+    filePath := noteListView.GetText(selectedRow, 4)
+    fileName := noteListView.GetText(selectedRow, 1)
+
+    if (!filePath) {
+        return
+    }
+
+    ; 直接删除
+    try {
+        FileDelete(filePath)
+        LoadNoteFilesToList()  ; 刷新列表
+        ToolTip("已删除「" . fileName . "」")
+        SetTimer () => ToolTip(), -2000
+    } catch as e {
+        MsgBox("删除失败: " . e.Message, "错误", "Icon!")
+    }
 }
 
 ; 清理文件名函数 - 将标题中的非法字符替换为安全字符
