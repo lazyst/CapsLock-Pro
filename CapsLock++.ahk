@@ -53,30 +53,11 @@ CustomizeTrayMenu() {
     ; 清除默认菜单项
     trayMenu.Delete()
     
-    ; 添加临时禁用选项
-    trayMenu.Add("临时禁用", DisableCapsLockPlusPlus)
-    
     ; 添加分隔线
     trayMenu.Add()
-    
+
     ; 添加退出选项
     trayMenu.Add("退出", (*) => ExitApp())
-}
-
-; 临时禁用CapsLock++的函数
-DisableCapsLockPlusPlus(*) {
-    ; 检查文件是否存在并决定使用哪个扩展名
-    capsLockNative := A_ScriptDir "\CapsLockNative.ahk"
-    if (!FileExist(capsLockNative))
-        capsLockNative := A_ScriptDir "\CapsLockNative.exe"
-    
-    ; 启动原生CapsLock脚本
-    Try {
-        Run(capsLockNative)
-        ExitApp  ; 切换后退出当前脚本
-    } Catch as err {
-        ShowTooltip("无法启动原生CapsLock模式: " err.Message)
-    }
 }
 
 ; 主程序初始化
@@ -127,38 +108,6 @@ if (!A_IsAdmin) {
     Run("*RunAs " A_ScriptFullPath)
     ExitApp
 }
-
-; 临时禁用/启用CapsLock++热键 - 改为切换到原生CapsLock脚本
-#HotIf GetKeyState("CapsLock", "P")
-Escape::
-{
-    ; 标记为按下了其他键
-    global otherKeyPressed := true
-    ; 获取当前菜单窗口信息
-    global currentMenuGui
-    
-    ; 如果当前菜单窗口存在，则关闭菜单
-    if (currentMenuGui && WinExist("ahk_id " currentMenuGui)) {
-        CloseMenu()
-    }
-    
-    ; 检查文件是否存在并决定使用哪个扩展名
-    capsLockNative := A_ScriptDir "\CapsLockNative.ahk"
-    if (!FileExist(capsLockNative))
-        capsLockNative := A_ScriptDir "\CapsLockNative.exe"
-    
-    ; 启动原生CapsLock脚本
-    Try {
-        Run(capsLockNative)
-    } Catch as err {
-        ShowTooltip("无法启动原生CapsLock模式: " err.Message)
-        Return
-    }
-    
-    ; 退出当前脚本
-    ExitApp
-}
-#HotIf
 
 ; 任务栏应用切换
 ; 功能：
