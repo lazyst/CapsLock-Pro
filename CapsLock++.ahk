@@ -16,10 +16,6 @@ InitializeGlobalVariables() {
     global useTaskbarOrder := false
     global includeMultipleInstances := true
     
-    ; 虚拟环境相关
-    global virtualEnvEnabled := false
-    global virtualEnvWindows := []
-    
     ; 首次运行标志
     global isFirstRun := true
 
@@ -93,9 +89,6 @@ InitializeApp() {
     
     ; 创建定时器，定期检查并确保CapsLock处于关闭状态
     SetTimer(CheckCapsLockState, 2000)
-    
-    ; 创建定时器，定期检查虚拟环境窗口是否存在
-    SetTimer(CleanupVirtualEnvWindows, 5000)  ; 每5秒检查一次
     
     ; 设置自定义任务托盘图标
     SetCustomTrayIcon()
@@ -215,34 +208,9 @@ SetCapsLockState("AlwaysOff")
 ; =====================================================================
 ; 黑名单设置
 ; =====================================================================
-; 黑名单程序路径，这些程序不会出现在切换列表中
-; 黑名单程序路径读取 - 使用循环读取所有条目
+; 黑名单进程和窗口类（保留用于将来扩展）
 blacklist := []
-i := 1
-Loop {
-    key := "black" . i
-    value := IniRead(A_ScriptDir "\CapsLock++.ini", "blacklist_virtual_env", key, "")
-    if (value = "")
-        break
-    blacklist.Push(value)
-    i++
-}
-
-; 黑名单窗口类名读取 - 使用循环读取所有条目
 blacklistClasses := []
-i := 1
-Loop {
-    key := "blackclasses" . i
-    value := IniRead(A_ScriptDir "\CapsLock++.ini", "blacklist_classes_virtual_env", key, "")
-    if (value = "")
-        break
-    blacklistClasses.Push(value)
-    i++
-}
-
-; 虚拟环境相关变量
-virtualEnvEnabled := false      ; 是否启用虚拟环境
-virtualEnvWindows := []         ; 存储虚拟环境中的窗口信息（包含hwnd, title, processName等）
 
 ; 为了提高效率，预先创建黑名单进程名称的缓存
 blacklistProcessNames := []
@@ -459,23 +427,7 @@ WheelUp::
 ; =====================================================================
 ; 虚拟环境管理
 ; =====================================================================
-; CapsLock+中键: 智能添加/移除当前窗口到虚拟环境(与Alt+中键相同)
-
 #HotIf GetKeyState("CapsLock", "P")
-MButton::
-{
-    ; 标记为按下了其他键
-    global otherKeyPressed := true
-    
-    ; 检查Alt键是否被按下
-    if (GetKeyState("Alt", "P")) {
-        ; Alt被按下，清空虚拟环境
-        ClearVirtualEnv()
-    } else {
-        ; Alt未被按下，执行智能添加/移除功能
-        SmartVirtualEnvToggle()
-    }
-}
 
 ; CapsLock+右键: 置顶/取消置顶光标所在窗口
 RButton::
@@ -586,10 +538,8 @@ global workspaceCleanupMode := "minimize"  ; 当前模式：minimize或restore
 
 ; 清理工作区热键处理函数
 ; 功能：
-;   1. 当虚拟环境启用时：最小化除虚拟环境窗口外的所有窗口
-;   2. 当虚拟环境未启用时：最小化除光标下窗口外的所有窗口
-;   3. 再次按下时，恢复之前最小化的窗口（如果窗口状态未被手动改变）
-;   4. 黑名单窗口和特殊UI元素不会被处理
+;   1. 最小化除光标下窗口外的所有窗口
+;   2. 再次按下时，恢复之前最小化的窗口（如果窗口状态未被手动改变）
 CleanupWorkspaceHotkey() {
     global minimizedWindows, lastWorkspaceCleanupTime, workspaceCleanupMode
     
@@ -664,7 +614,7 @@ CheckWindowStateChanged() {
 
 ; 最小化工作区窗口
 MinimizeWorkspaceWindows() {
-    global minimizedWindows, virtualEnvEnabled, virtualEnvWindows
+    global minimizedWindows
     
     ; 清空之前的记录
     minimizedWindows := []
@@ -688,119 +638,14 @@ MinimizeWorkspaceWindows() {
         }
     }
     
-    ; 如果虚拟环境已启用且有窗口，则最小化非虚拟环境窗口
-    if (virtualEnvEnabled && virtualEnvWindows.Length > 0) {
-        MinimizeNonVirtualEnvWindows(cursorHwnd)
-    } 
-    ; 否则，最小化除了光标下窗口之外的所有窗口
-    else if (cursorHwnd && WinExist("ahk_id " cursorHwnd)) {
+    ; 最小化除了光标下窗口之外的所有窗口
+    if (cursorHwnd && WinExist("ahk_id " cursorHwnd)) {
         MinimizeCursorWindowOrOthers(cursorHwnd)
-    } 
-    ; 如果没有有效窗口，提示用户
-    else {
+    } else {
+        ; 如果没有有效窗口，提示用户
         ToolTip("无法获取有效窗口，清理操作取消")
         SetTimer () => ToolTip(), -2000
     }
-}
-
-; 最小化非虚拟环境窗口
-MinimizeNonVirtualEnvWindows(excludeHwnd := 0) {
-    global minimizedWindows, virtualEnvWindows, blacklistProcessNames, blacklistClasses, pinnedWindows
-    
-    ; 获取所有任务栏窗口
-    winList := WinGetList(,, "Program Manager")
-    minimizedCount := 0
-    
-    ; 创建虚拟环境窗口句柄的哈希表，用于快速查找
-    virtualEnvHwnds := Map()
-    for _, win in virtualEnvWindows {
-        virtualEnvHwnds[win.hwnd] := true
-    }
-    
-    ; 创建置顶窗口句柄的哈希表，用于快速查找
-    pinnedHwndsMap := Map()
-    for _, pinnedHwnd in pinnedWindows {
-        pinnedHwndsMap[pinnedHwnd] := true
-    }
-    
-    ; 遍历所有窗口
-    for hwnd in winList {
-        ; 跳过不是任务栏窗口的窗口
-        if (!IsTaskbarWindow(hwnd))
-            continue
-            
-        ; 跳过排除的窗口
-        if (hwnd = excludeHwnd)
-            continue
-            
-        ; 检查窗口是否在黑名单中
-        className := WinGetClass("ahk_id " hwnd)
-        
-        ; 获取窗口进程信息
-        pid := WinGetPID("ahk_id " hwnd)
-        processPath := ProcessGetPath(pid)
-        SplitPath(processPath, &processName)
-        
-        ; 检查进程名是否在黑名单中
-        if (HasVal(blacklistProcessNames, processName))
-            continue
-            
-        ; 检查类名是否在黑名单中
-        isBlacklistedClass := false
-        for blackClass in blacklistClasses {
-            if (InStr(className, blackClass) || className = blackClass) {
-                isBlacklistedClass := true
-                break
-            }
-        }
-        
-        if (isBlacklistedClass)
-            continue
-            
-        ; 检查窗口是否置顶 - 跳过置顶窗口
-        exStyle := WinGetExStyle("ahk_id " hwnd)
-        isPinned := (exStyle & 0x8) != 0  ; WS_EX_TOPMOST
-        
-        ; 如果窗口在置顶列表中或者有置顶标志，跳过
-        if (isPinned || pinnedHwndsMap.Has(hwnd))
-            continue
-            
-        ; 如果窗口不在虚拟环境中，则最小化它
-        if (!virtualEnvHwnds.Has(hwnd)) {
-            ; 记录窗口当前状态
-            wasMinimized := WinGetMinMax("ahk_id " hwnd) = -1
-            
-            ; 如果窗口未最小化，则最小化它
-            if (!wasMinimized) {
-                ; 获取窗口信息用于显示
-                title := WinGetTitle("ahk_id " hwnd)
-                simpleName := RegExReplace(processName, "\.exe$", "")
-                
-                ; 最小化窗口
-                WinMinimize("ahk_id " hwnd)
-                
-                ; 记录被最小化的窗口信息
-                minimizedWindows.Push({
-                    hwnd: hwnd,
-                    title: title,
-                    processName: processName,
-                    simpleName: simpleName,
-                    wasMinimized: wasMinimized
-                })
-                
-                minimizedCount++
-            }
-        }
-    }
-    
-    ; 显示操作结果
-    if (minimizedCount > 0) {
-        ToolTip("已最小化 " minimizedCount " 个非虚拟环境窗口`n再次按Ctrl+Win+Z恢复")
-    } else {
-        ToolTip("没有需要最小化的非虚拟环境窗口")
-    }
-    
-    SetTimer () => ToolTip(), -2000
 }
 
 ; 最小化光标下的窗口或所有其他窗口
@@ -1163,13 +1008,7 @@ IsTaskbarWindow(hwnd) {
 
 ; 任务栏窗口切换主函数
 SwitchTaskbarWindow(direction) {
-    ; 自动检测并切换到正确的窗口切换函数
-    
-    ; 如果虚拟环境中有窗口，优先使用虚拟环境切换
-    if (virtualEnvEnabled && virtualEnvWindows.Length > 0)
-        SwitchVirtualEnvWindow(direction)
-    else
-        SwitchNormalTaskbarWindow(direction)
+    SwitchNormalTaskbarWindow(direction)
 }
 
 ; 普通任务栏窗口切换函数
@@ -1376,421 +1215,6 @@ MinimizeOtherMaximizedWindows(activeHwnd, taskbarWindows) {
     }
 }
 
-; =====================================================================
-; 虚拟环境功能
-; =====================================================================
-
-; 清理虚拟环境中无效的窗口
-CleanupVirtualEnvWindows() {
-    global virtualEnvWindows, virtualEnvEnabled, showDebugTooltips
-    
-    if (virtualEnvWindows.Length = 0)
-        return
-        
-    oldCount := virtualEnvWindows.Length
-    validWindows := []
-    for win in virtualEnvWindows {
-        if WinExist("ahk_id " win.hwnd) {
-            validWindows.Push(win)
-        }
-    }
-    
-    newCount := validWindows.Length
-    virtualEnvWindows := validWindows
-    
-    ; 如果清理后没有窗口，禁用虚拟环境
-    if (newCount = 0) {
-        virtualEnvEnabled := false
-    }
-    
-    ; 如果有窗口被移除，显示提示
-    if (oldCount > newCount && showDebugTooltips) {
-        ToolTip("已自动清理 " (oldCount - newCount) " 个已关闭的虚拟环境窗口`n剩余 " newCount " 个窗口")
-        SetTimer () => ToolTip(), -2000
-    }
-}
-
-; 添加窗口到虚拟环境
-AddToVirtualEnv(hwnd) {
-    global virtualEnvEnabled, virtualEnvWindows
-    
-    try {
-        ; 验证窗口是否有效
-        if !WinExist("ahk_id " hwnd) {
-            ToolTip("无效的窗口句柄")
-            SetTimer () => ToolTip(), -2000
-            return
-        }
-        
-        ; 获取窗口信息
-        title := WinGetTitle("ahk_id " hwnd)
-        
-        ; 检查窗口是否有效
-        if !IsTaskbarWindow(hwnd) {
-            ToolTip("当前窗口不是任务栏窗口，无法添加到虚拟环境")
-            SetTimer () => ToolTip(), -2000
-            return
-        }
-        
-        ; 获取窗口进程信息
-        pid := WinGetPID("ahk_id " hwnd)
-        processPath := ProcessGetPath(pid)
-        SplitPath(processPath, &processName)
-        
-        ; 简化进程名称，移除.exe扩展名
-        simpleName := RegExReplace(processName, "\.exe$", "")
-        
-        ; 检查窗口是否已在虚拟环境中
-        for win in virtualEnvWindows {
-            if win.hwnd = hwnd {
-                ToolTip("窗口已在虚拟环境中: " simpleName)
-                SetTimer () => ToolTip(), -2000
-                return
-            }
-        }
-        
-        ; 添加窗口到虚拟环境
-        virtualEnvWindows.Push({
-            hwnd: hwnd,
-            title: title,
-            processName: processName,
-            simpleName: simpleName,
-            pid: pid
-        })
-        
-        ; 启用虚拟环境
-        virtualEnvEnabled := true
-        
-        ; 显示添加成功消息，使用简化的进程名
-        windowCount := virtualEnvWindows.Length
-        ToolTip("已添加窗口到虚拟环境: " simpleName "`n虚拟环境中现有 " windowCount " 个窗口")
-        SetTimer () => ToolTip(), -2000
-        
-    } catch as e {
-        ToolTip("添加窗口到虚拟环境失败: " e.Message)
-        SetTimer () => ToolTip(), -2000
-    }
-}
-
-; 从虚拟环境中移除窗口
-RemoveFromVirtualEnv(hwnd) {
-    global virtualEnvEnabled, virtualEnvWindows
-    
-    if !virtualEnvEnabled || virtualEnvWindows.Length = 0 {
-        ToolTip("虚拟环境未启用或为空")
-        SetTimer () => ToolTip(), -2000
-        return
-    }
-    
-    try {
-        ; 获取窗口标题和简化名称
-        title := WinGetTitle("ahk_id " hwnd)
-        simpleName := ""
-        
-        ; 查找窗口在虚拟环境中的位置
-        windowIndex := 0
-        for i, win in virtualEnvWindows {
-            if win.hwnd = hwnd {
-                windowIndex := i
-                ; 使用try-catch来检查属性是否存在
-                try {
-                    simpleName := win.simpleName
-                } catch {
-                    ; 如果访问simpleName属性出错，使用进程名的简化版本
-                    simpleName := RegExReplace(win.processName, "\.exe$", "")
-                }
-                break
-            }
-        }
-        
-        ; 如果找到窗口，则从虚拟环境中移除
-        if windowIndex > 0 {
-            ; 从虚拟环境中移除窗口
-            virtualEnvWindows.RemoveAt(windowIndex)
-            
-            ; 显示通知，使用简化的进程名
-            windowCount := virtualEnvWindows.Length
-            ToolTip("已从虚拟环境中移除窗口: " simpleName "`n虚拟环境中还有 " windowCount " 个窗口")
-            
-            ; 如果移除后虚拟环境为空，则自动退出虚拟环境
-            if windowCount = 0 {
-                virtualEnvEnabled := false
-                ToolTip("虚拟环境现已为空，已自动退出虚拟环境模式")
-            }
-            
-            SetTimer () => ToolTip(), -2000
-        } else {
-            ToolTip("当前窗口不在虚拟环境中")
-            SetTimer () => ToolTip(), -2000
-        }
-        
-    } catch as e {
-        ToolTip("移除窗口失败: " e.Message)
-        SetTimer () => ToolTip(), -2000
-    }
-}
-
-; 清除虚拟环境
-ClearVirtualEnv() {
-    global virtualEnvEnabled, virtualEnvWindows
-    
-    if virtualEnvEnabled || virtualEnvWindows.Length > 0 {
-        virtualEnvEnabled := false
-        windowCount := virtualEnvWindows.Length
-        virtualEnvWindows := []
-        
-        ToolTip("已清除虚拟环境，移除了 " windowCount " 个窗口")
-        SetTimer () => ToolTip(), -2000
-    } else {
-        ToolTip("虚拟环境已是空的")
-        SetTimer () => ToolTip(), -2000
-    }
-}
-
-; 智能虚拟环境切换函数 - 如果窗口在虚拟环境中则移除，否则添加
-SmartVirtualEnvToggle() {
-    ShowDebugTooltip("SmartVirtualEnvToggle触发")
-    global virtualEnvEnabled, virtualEnvWindows
-    
-    ; 先清理虚拟环境中已关闭的窗口
-    CleanupVirtualEnvWindows()
-    
-    try {
-        ; 获取光标下的窗口，而不是当前活动窗口
-        targetHwnd := GetWindowUnderCursor()
-        
-        ; 确保窗口有效
-        if (!targetHwnd || !WinExist("ahk_id " targetHwnd)) {
-            ToolTip("光标下无有效窗口，无法管理虚拟环境")
-            SetTimer () => ToolTip(), -2000
-            return
-        }
-        
-        targetTitle := WinGetTitle("ahk_id " targetHwnd)
-        
-        ; 获取窗口进程信息
-        pid := WinGetPID("ahk_id " targetHwnd)
-        processPath := ProcessGetPath(pid)
-        SplitPath(processPath, &processName)
-        
-        ; 简化进程名称，移除.exe扩展名
-        simpleName := RegExReplace(processName, "\.exe$", "")
-        
-        ; 检查窗口是否有效
-        if !IsTaskbarWindow(targetHwnd) {
-            ToolTip("光标下的窗口不是任务栏窗口，无法管理虚拟环境")
-            SetTimer () => ToolTip(), -2000
-            return
-        }
-        
-        ; 检查窗口是否已在虚拟环境中
-        windowIndex := 0
-        for i, win in virtualEnvWindows {
-            if win.hwnd = targetHwnd {
-                windowIndex := i
-                break
-            }
-        }
-        
-        ; 如果窗口在虚拟环境中，则移除它
-        if (windowIndex > 0) {
-            RemoveFromVirtualEnv(targetHwnd)
-        } 
-        ; 否则添加到虚拟环境
-        else {
-            AddToVirtualEnv(targetHwnd)
-        }
-        
-    } catch as e {
-        ToolTip("操作窗口失败: " e.Message)
-        SetTimer () => ToolTip(), -2000
-    }
-}
-
-; 在虚拟环境窗口间切换
-SwitchVirtualEnvWindow(direction) {
-    global virtualEnvWindows, virtualEnvEnabled, showDebugTooltips
-    
-    ; 清理无效窗口（可能已经关闭的窗口）
-    validWindows := []
-    for win in virtualEnvWindows {
-        if WinExist("ahk_id " win.hwnd) {
-            ; 确保每个窗口对象都有simpleName属性
-            try {
-                simpleName := win.simpleName
-            } catch {
-                ; 如果无法直接访问simpleName，创建并添加
-                win.simpleName := RegExReplace(win.processName, "\.exe$", "")
-            }
-            validWindows.Push(win)
-        }
-    }
-    virtualEnvWindows := validWindows
-    
-    ; 如果没有有效窗口，则退出虚拟环境
-    if virtualEnvWindows.Length = 0 {
-        ClearVirtualEnv()
-        return
-    }
-    
-    ; 调试输出虚拟环境窗口列表
-    if showDebugTooltips {
-        debugText := "虚拟环境窗口列表 (共" virtualEnvWindows.Length "个):`n"
-        for i, win in virtualEnvWindows {
-            ; 使用简化的进程名
-            try {
-                simpleName := win.simpleName
-            } catch {
-                simpleName := RegExReplace(win.processName, "\.exe$", "")
-            }
-            debugText .= i ": " simpleName "`n"
-            if (i > 5)  ; 只显示前5个
-                break
-        }
-        ToolTip(debugText)
-        SetTimer () => ToolTip(), -3000
-    }
-    
-    ; 如果虚拟环境中只有一个窗口，不执行切换，而是激活该窗口并提示用户
-    if virtualEnvWindows.Length = 1 {
-        singleHwnd := virtualEnvWindows[1].hwnd
-        try {
-            simpleName := virtualEnvWindows[1].simpleName
-        } catch {
-            simpleName := RegExReplace(virtualEnvWindows[1].processName, "\.exe$", "")
-        }
-        
-        ; 检查当前活动窗口是否就是虚拟环境中的那个窗口
-        try {
-            activeHwnd := WinGetID("A")
-            if (activeHwnd = singleHwnd) {
-                ; 如果当前已经在虚拟环境的窗口中，提示用户
-                if showDebugTooltips {
-                    ToolTip("虚拟环境中只有一个窗口: " simpleName)
-                    SetTimer () => ToolTip(), -2000
-                }
-                return
-            }
-        } catch {
-            ; 如果无法获取活动窗口，直接激活虚拟环境中的窗口
-        }
-        
-        ; 激活虚拟环境中的唯一窗口
-        WinActivate("ahk_id " singleHwnd)
-        if showDebugTooltips {
-            ToolTip("已激活虚拟环境中的唯一窗口: " simpleName)
-            SetTimer () => ToolTip(), -2000
-        }
-        
-        ; 检查新激活的窗口是否是最大化的
-        Sleep(30)
-        if (WinGetMinMax("ahk_id " singleHwnd) = 1) {
-            ; 获取所有任务栏窗口用于最小化其他最大化窗口
-            winList := WinGetList(,, "Program Manager")
-            taskbarWindows := []
-            for hwnd in winList {
-                if IsTaskbarWindow(hwnd) {
-                    taskbarWindows.Push({ hwnd: hwnd })
-                }
-            }
-            MinimizeOtherMaximizedWindows(singleHwnd, taskbarWindows)
-        }
-        
-        return
-    }
-    
-    ; 获取当前活动窗口
-    try {
-        activeHwnd := WinGetID("A")
-    } catch {
-        ; 如果无法获取活动窗口，激活第一个窗口
-        if virtualEnvWindows.Length > 0 {
-            nextIndex := direction > 0 ? 1 : virtualEnvWindows.Length
-            nextHwnd := virtualEnvWindows[nextIndex].hwnd
-            WinActivate("ahk_id " nextHwnd)
-            
-            ; 检查新激活的窗口是否是最大化的
-            Sleep(30)
-            if (WinGetMinMax("ahk_id " nextHwnd) = 1) {
-                ; 获取所有任务栏窗口用于最小化其他最大化窗口
-                winList := WinGetList(,, "Program Manager")
-                taskbarWindows := []
-                for hwnd in winList {
-                    if IsTaskbarWindow(hwnd) {
-                        taskbarWindows.Push({ hwnd: hwnd })
-                    }
-                }
-                MinimizeOtherMaximizedWindows(nextHwnd, taskbarWindows)
-            }
-        }
-        return
-    }
-    
-    ; 查找当前活动窗口在虚拟环境中的位置
-    currentIndex := 0
-    for i, win in virtualEnvWindows {
-        if win.hwnd = activeHwnd {
-            currentIndex := i
-            break
-        }
-    }
-    
-    ; 如果当前活动窗口不在虚拟环境中，激活第一个虚拟环境窗口
-    if currentIndex = 0 {
-        nextIndex := (direction > 0) ? 1 : virtualEnvWindows.Length
-    } else {
-        nextIndex := currentIndex + direction
-        
-        ; 处理索引越界
-        if nextIndex > virtualEnvWindows.Length
-            nextIndex := 1
-        else if nextIndex < 1
-            nextIndex := virtualEnvWindows.Length
-    }
-    
-    ; 获取下一个窗口的句柄
-    if !virtualEnvWindows.Has(nextIndex)
-        return
-        
-    nextHwnd := virtualEnvWindows[nextIndex].hwnd
-    
-    ; 如果下一个窗口就是当前窗口，不进行操作
-    if (nextHwnd = activeHwnd) {
-        if showDebugTooltips {
-            ToolTip("下一个窗口就是当前窗口，跳过激活")
-            SetTimer () => ToolTip(), -2000
-        }
-        return
-    }
-    
-    ; 调试输出切换信息
-    if showDebugTooltips {
-        ToolTip("从窗口 " currentIndex " 切换到窗口 " nextIndex)
-        SetTimer () => ToolTip(), -2000
-    }
-    
-    ; 激活下一个窗口
-    WinActivate("ahk_id " nextHwnd)
-    
-    ; 等待窗口激活
-    Sleep(30)
-    
-    ; 检查新激活的窗口是否是最大化的
-    if (WinGetMinMax("ahk_id " nextHwnd) = 1) {
-        ; 获取所有任务栏窗口用于最小化其他最大化窗口
-        winList := WinGetList(,, "Program Manager")
-        taskbarWindows := []
-        for hwnd in winList {
-            if IsTaskbarWindow(hwnd) {
-                taskbarWindows.Push({ hwnd: hwnd })
-            }
-        }
-        MinimizeOtherMaximizedWindows(nextHwnd, taskbarWindows)
-    }
-}
-
-; =====================================================================
-; CapsLock+ 兼容模块 - 文本编辑增强与鼠标控制
 ; =====================================================================
 
 ; 全局设置
@@ -5543,10 +4967,11 @@ GetActionFromString(actionStr) {
                 return (*) => WebsiteLogin(wlUrl)
             }
 
-            runCustomPattern := 'i)^RunCustomCommand\(\s*"(.*?)"\s*\)$'
-            if RegExMatch(actionStr, runCustomPattern, &customMatch) {
-                cmdName := customMatch[1]
-                return (*) => RunCustomCommandByName(cmdName)
+            runCmdPattern := 'i)^RunCommand\(\s*"(.*?)"\s*,\s*"(.*?)"\s*\)$'
+            if RegExMatch(actionStr, runCmdPattern, &cmdMatch) {
+                cmdStr := cmdMatch[1]
+                workdir := cmdMatch[2]
+                return (*) => RunCommand(cmdStr, workdir)
             }
 
             ; 匹配 ActivateOrRun("param1", param2_content)
@@ -8092,26 +7517,13 @@ DragWindowTimer() {
     WinMove(newX, newY, , , "ahk_id " dragHwnd)
 }
 
-RunCustomCommandByName(cmdName) {
-    i := 1
-    Loop {
-        name := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CustomCommands", "cmd" i "_name", "")
-        if (name = "")
-            break
-        if (name = cmdName) {
-            command := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CustomCommands", "cmd" i "_command", "")
-            workdir := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "CustomCommands", "cmd" i "_workdir", "")
-            if (workdir = "")
-                workdir := A_Desktop
-            try {
-                Run(command, workdir)
-                ShowTooltip("执行: " name)
-            } catch Error as e {
-                ShowTooltip("执行失败: " e.Message, 3000)
-            }
-            return
-        }
-        i++
+RunCommand(cmdStr, workdir := "") {
+    if (workdir = "")
+        workdir := A_Desktop
+    try {
+        Run(cmdStr, workdir)
+        ShowTooltip("执行: " cmdStr)
+    } catch Error as e {
+        ShowTooltip("执行失败: " e.Message, 3000)
     }
-    ShowTooltip("未找到自定义命令: " cmdName, 3000)
 }

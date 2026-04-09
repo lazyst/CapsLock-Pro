@@ -33,20 +33,16 @@ ShowConfigHelper() {
     cfgGui.SetFont("s10", "Segoe UI")
     cfgGui.OnEvent("Close", (*) => ExitApp())
 
-    tabs := cfgGui.Add("Tab3", "x0 y0 w800 h560", ["黑名单窗口", "速记路径", "菜单配置", "进程管理", "网站配置", "自定义命令"])
+    tabs := cfgGui.Add("Tab3", "x0 y0 w800 h560", ["菜单配置", "速记路径", "进程管理", "网站配置"])
 
     tabs.UseTab(1)
-    BuildBlacklistPage(cfgGui)
+    BuildMenuPage(cfgGui)
     tabs.UseTab(2)
     BuildNotePage(cfgGui)
     tabs.UseTab(3)
-    BuildMenuPage(cfgGui)
-    tabs.UseTab(4)
     BuildProcessPage(cfgGui)
-    tabs.UseTab(5)
+    tabs.UseTab(4)
     BuildWebsitePage(cfgGui)
-    tabs.UseTab(6)
-    BuildCustomCmdPage(cfgGui)
     tabs.UseTab(0)
 
     cfgGui.Add("Button", "x580 y570 w100 h32", "重新加载").OnEvent("Click", (*) => ConfigReload())
@@ -54,89 +50,6 @@ ShowConfigHelper() {
 
     cfgGui.Show("w800 h610")
     ConfigReload()
-}
-
-BuildBlacklistPage(gui) {
-    gui.Add("GroupBox", "x10 y30 w380 h460", "进程黑名单")
-    global blProcLV := gui.Add("ListView", "x20 y55 w360 h400 -HDR -Multi", ["进程路径"])
-    blProcLV.ModifyCol(1, 340)
-    gui.Add("GroupBox", "x410 y30 w380 h460", "窗口类名黑名单")
-    global blClassLV := gui.Add("ListView", "x420 y55 w360 h400 -HDR -Multi", ["窗口类名"])
-    blClassLV.ModifyCol(1, 340)
-    gui.Add("Button", "x10 y500 w80 h28", "添加进程").OnEvent("Click", BLAddProc)
-    gui.Add("Button", "x100 y500 w80 h28", "编辑进程").OnEvent("Click", BLEditProc)
-    gui.Add("Button", "x190 y500 w80 h28", "删除进程").OnEvent("Click", BLDelProc)
-    gui.Add("Button", "x410 y500 w80 h28", "添加类名").OnEvent("Click", BLAddClass)
-    gui.Add("Button", "x500 y500 w80 h28", "编辑类名").OnEvent("Click", BLEditClass)
-    gui.Add("Button", "x590 y500 w80 h28", "删除类名").OnEvent("Click", BLDelClass)
-    gui.Add("Button", "x700 y500 w90 h28", "捕获窗口").OnEvent("Click", BLCaptureWindow)
-}
-
-BLAddProc(*) {
-    result := InputBox("输入进程名或路径", "添加进程黑名单")
-    if (result.Result = "OK" && result.Value != "")
-        blProcLV.Add("", result.Value)
-}
-
-BLEditProc(*) {
-    row := blProcLV.GetNext()
-    if (!row)
-        return
-    current := blProcLV.GetText(row, 1)
-    result := InputBox("编辑进程黑名单", "编辑进程",, current)
-    if (result.Result = "OK" && result.Value != "")
-        blProcLV.Modify(row, "", result.Value)
-}
-
-BLDelProc(*) {
-    row := blProcLV.GetNext()
-    if (row)
-        blProcLV.Delete(row)
-}
-
-BLAddClass(*) {
-    result := InputBox("输入窗口类名", "添加类名黑名单")
-    if (result.Result = "OK" && result.Value != "")
-        blClassLV.Add("", result.Value)
-}
-
-BLEditClass(*) {
-    row := blClassLV.GetNext()
-    if (!row)
-        return
-    current := blClassLV.GetText(row, 1)
-    result := InputBox("编辑类名黑名单", "编辑类名",, current)
-    if (result.Result = "OK" && result.Value != "")
-        blClassLV.Modify(row, "", result.Value)
-}
-
-BLDelClass(*) {
-    row := blClassLV.GetNext()
-    if (row)
-        blClassLV.Delete(row)
-}
-
-BLCaptureWindow(*) {
-    ShowTooltip("3秒后捕获鼠标下窗口信息...")
-    Sleep(3000)
-    MouseGetPos(, , &mouseWin)
-    if (mouseWin) {
-        className := WinGetClass("ahk_id " mouseWin)
-        pid := WinGetPID("ahk_id " mouseWin)
-        try {
-            processPath := ProcessGetPath(pid)
-            SplitPath(processPath, &processName)
-        } catch Error {
-            processName := ""
-        }
-        if (processName)
-            blProcLV.Add("", processName)
-        if (className)
-            blClassLV.Add("", className)
-        ShowTooltip("已捕获: " processName " / " className)
-    } else {
-        ShowTooltip("未捕获到窗口")
-    }
 }
 
 BuildNotePage(gui) {
@@ -311,25 +224,17 @@ MenuGroupMoveDown(*) {
     MenuGroupFocus(menuGroupLV, target)
 }
 
-GetCustomCmdNames() {
-    names := []
-    Loop customCmdLV.GetCount() {
-        names.Push(customCmdLV.GetText(A_Index, 1))
-    }
-    return names
-}
-
 DetectActionType(action) {
-    if (RegExMatch(action, "i)^RunCustomCommand\("))
+    if (RegExMatch(action, "i)^RunCommand\("))
         return "自定义命令"
     if (RegExMatch(action, "i)^ActivateOrRun\("))
         return "启动程序"
     return "预设功能"
 }
 
-ExtractCustomCmdName(action) {
-    if RegExMatch(action, 'i)^RunCustomCommand\(\s*"(.*?)"\s*\)$', &m)
-        return m[1]
+ExtractRunCommandParams(action) {
+    if RegExMatch(action, 'i)^RunCommand\(\s*"(.*?)"\s*,\s*"(.*?)"\s*\)$', &m)
+        return {command: m[1], workdir: m[2]}
     return ""
 }
 
@@ -360,10 +265,11 @@ MenuAddItem(*) {
     atcb := dlg.Add("ComboBox", "x100 y88 w260", ["预设功能", "自定义命令", "启动程序"])
     atcb.Choose(1)
 
-    cmdLabel := dlg.Add("Text", "x10 y118", "选择命令:")
-    cmdCb := dlg.Add("ComboBox", "x100 y115 w170", GetCustomCmdNames())
-    newCmdBtn := dlg.Add("Button", "x275 y114 w80 h24", "新建命令")
-    newCmdBtn.OnEvent("Click", CreateNewCustomCmd.Bind(cmdCb, ne))
+    cmdLabel := dlg.Add("Text", "x10 y118", "命令:")
+    cmdEdit := dlg.Add("Edit", "x100 y115 w260", "")
+    workdirLabel := dlg.Add("Text", "x10 y148", "工作目录:")
+    workdirEdit := dlg.Add("Edit", "x100 y145 w200", "")
+    dlg.Add("Text", "x305 y148 w60 h20", "(可选)")
 
     apNeLabel := dlg.Add("Text", "x10 y118", "程序名:")
     apNe := dlg.Add("Edit", "x100 y115 w110", "")
@@ -377,30 +283,32 @@ MenuAddItem(*) {
     ]
     elb := dlg.Add("ComboBox", "x100 y115 w260", templates)
 
-    dlg.Add("Text", "x10 y148", "生成的动作:")
-    ae := dlg.Add("Edit", "x100 y145 w260 +ReadOnly", "")
+    dlg.Add("Text", "x10 y178", "生成的动作:")
+    ae := dlg.Add("Edit", "x100 y175 w260 +ReadOnly", "")
 
-    atcb.OnEvent("Change", OnActionTypeChange.Bind(atcb, cmdCb, cmdLabel, newCmdBtn, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae, ne))
-    cmdCb.OnEvent("Change", OnCustomCmdSelect.Bind(cmdCb, ae, ne))
+    atcb.OnEvent("Change", OnActionTypeChange.Bind(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae))
+    cmdEdit.OnEvent("Change", OnRunCommandChange.Bind(cmdEdit, workdirEdit, ae))
+    workdirEdit.OnEvent("Change", OnRunCommandChange.Bind(cmdEdit, workdirEdit, ae))
     apNe.OnEvent("Change", OnActivateOrRunChange.Bind(apNe, apPe, ae))
     apPe.OnEvent("Change", OnActivateOrRunChange.Bind(apNe, apPe, ae))
     elb.OnEvent("Change", OnTemplateSelect.Bind(elb, ae))
 
-    OnActionTypeChange(atcb, cmdCb, cmdLabel, newCmdBtn, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae, ne)
-    dlg.Add("Button", "x120 y190 w80", "确定").OnEvent("Click", OnMenuAddSubmit.Bind(ne, ie, itcb, ae, dlg))
-    dlg.Add("Button", "x210 y190 w80", "取消").OnEvent("Click", (*) => dlg.Destroy())
+    OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae)
+    dlg.Add("Button", "x120 y210 w80", "确定").OnEvent("Click", OnMenuAddSubmit.Bind(ne, ie, itcb, ae, dlg))
+    dlg.Add("Button", "x210 y210 w80", "取消").OnEvent("Click", (*) => dlg.Destroy())
     dlg.OnEvent("Close", (*) => dlg.Destroy())
-    dlg.Show("w375 h225")
+    dlg.Show("w375 h250")
 }
 
-OnActionTypeChange(atcb, cmdCb, cmdLabel, newCmdBtn, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae, ne, *) {
+OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae, *) {
     t := atcb.Text
     isCustom := (t = "自定义命令")
     isApp := (t = "启动程序")
     isPreset := (t = "预设功能")
-    cmdCb.Visible := isCustom
+    cmdEdit.Visible := isCustom
     cmdLabel.Visible := isCustom
-    newCmdBtn.Visible := isCustom
+    workdirEdit.Visible := isCustom
+    workdirLabel.Visible := isCustom
     apNe.Visible := isApp
     apPe.Visible := isApp
     apNeLabel.Visible := isApp
@@ -408,9 +316,7 @@ OnActionTypeChange(atcb, cmdCb, cmdLabel, newCmdBtn, apNe, apPe, apNeLabel, apPe
     elb.Visible := isPreset
     tmplLabel.Visible := isPreset
     if (isCustom) {
-        ae.Value := 'RunCustomCommand("' cmdCb.Text '")'
-        if (cmdCb.Text != "" && ne.Value = "")
-            ne.Value := cmdCb.Text
+        OnRunCommandChange(cmdEdit, workdirEdit, ae, "")
     } else if (isApp) {
         dq := Chr(34)
         ae.Value := 'ActivateOrRun(' dq apNe.Value dq ', ' dq apPe.Value dq ')'
@@ -419,10 +325,9 @@ OnActionTypeChange(atcb, cmdCb, cmdLabel, newCmdBtn, apNe, apPe, apNeLabel, apPe
     }
 }
 
-OnCustomCmdSelect(cmdCb, ae, ne, *) {
-    ae.Value := 'RunCustomCommand("' cmdCb.Text '")'
-    if (cmdCb.Text != "" && ne.Value = "")
-        ne.Value := cmdCb.Text
+OnRunCommandChange(cmdEdit, workdirEdit, ae, *) {
+    dq := Chr(34)
+    ae.Value := 'RunCommand(' dq cmdEdit.Value dq ', ' dq workdirEdit.Value dq ')'
 }
 
 OnActivateOrRunChange(apNe, apPe, ae, *) {
@@ -432,34 +337,6 @@ OnActivateOrRunChange(apNe, apPe, ae, *) {
 
 OnTemplateSelect(elb, ae, *) {
     ae.Value := elb.Text
-}
-
-CreateNewCustomCmd(cmdCb, ne, *) {
-    sub := Gui("+Owner", "新建自定义命令")
-    sub.SetFont("s10", "Segoe UI")
-    sub.Add("Text",, "命令名称:")
-    sne := sub.Add("Edit", "w300")
-    sub.Add("Text",, "系统命令:")
-    sce := sub.Add("Edit", "w300")
-    sub.Add("Text",, "工作目录 (可选):")
-    swe := sub.Add("Edit", "w300")
-    sub.Add("Button", "w80", "确定").OnEvent("Click", OnCreateNewCmdSubmit.Bind(sne, sce, swe, cmdCb, ne, sub))
-    sub.Add("Button", "x+10 wp", "取消").OnEvent("Click", (*) => sub.Destroy())
-    sub.OnEvent("Close", (*) => sub.Destroy())
-    sub.Show()
-}
-
-OnCreateNewCmdSubmit(sne, sce, swe, cmdCb, ne, sub, *) {
-    if (sne.Value = "" || sce.Value = "")
-        return
-    customCmdLV.Add("", sne.Value, sce.Value, swe.Value)
-    cmdCb.Delete()
-    names := GetCustomCmdNames()
-    for n in names
-        cmdCb.Add([n])
-    cmdCb.Choose(names.Length)
-    ne.Value := sne.Value
-    sub.Destroy()
 }
 
 OnMenuAddSubmit(ne, ie, itcb, ae, dlg, *) {
@@ -506,22 +383,18 @@ MenuEditItem(*) {
     else
         atcb.Choose(1)
 
-    cmdLabel := dlg.Add("Text", "x10 y118", "选择命令:")
-    cmdNames := GetCustomCmdNames()
-    cmdCb := dlg.Add("ComboBox", "x100 y115 w170", cmdNames)
+    cmdLabel := dlg.Add("Text", "x10 y118", "命令:")
+    cmdEdit := dlg.Add("Edit", "x100 y115 w260", "")
+    workdirLabel := dlg.Add("Text", "x10 y148", "工作目录:")
+    workdirEdit := dlg.Add("Edit", "x100 y145 w200", "")
+    dlg.Add("Text", "x305 y148 w60 h20", "(可选)")
     if (detectedType = "自定义命令") {
-        cmdName := ExtractCustomCmdName(action)
-        if (cmdName != "") {
-            for idx, n in cmdNames {
-                if (n = cmdName) {
-                    cmdCb.Choose(idx)
-                    break
-                }
-            }
+        params := ExtractRunCommandParams(action)
+        if (params != "") {
+            cmdEdit.Value := params.command
+            workdirEdit.Value := params.workdir
         }
     }
-    newCmdBtn := dlg.Add("Button", "x275 y114 w80 h24", "新建命令")
-    newCmdBtn.OnEvent("Click", CreateNewCustomCmd.Bind(cmdCb, ne))
 
     apNeLabel := dlg.Add("Text", "x10 y118", "程序名:")
     apNe := dlg.Add("Edit", "x100 y115 w110", "")
@@ -550,20 +423,21 @@ MenuEditItem(*) {
         }
     }
 
-    dlg.Add("Text", "x10 y148", "生成的动作:")
-    ae := dlg.Add("Edit", "x100 y145 w260 +ReadOnly", action)
+    dlg.Add("Text", "x10 y178", "生成的动作:")
+    ae := dlg.Add("Edit", "x100 y175 w260 +ReadOnly", action)
 
-    atcb.OnEvent("Change", OnActionTypeChange.Bind(atcb, cmdCb, cmdLabel, newCmdBtn, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae, ne))
-    cmdCb.OnEvent("Change", OnCustomCmdSelect.Bind(cmdCb, ae, ne))
+    atcb.OnEvent("Change", OnActionTypeChange.Bind(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae))
+    cmdEdit.OnEvent("Change", OnRunCommandChange.Bind(cmdEdit, workdirEdit, ae))
+    workdirEdit.OnEvent("Change", OnRunCommandChange.Bind(cmdEdit, workdirEdit, ae))
     apNe.OnEvent("Change", OnActivateOrRunChange.Bind(apNe, apPe, ae))
     apPe.OnEvent("Change", OnActivateOrRunChange.Bind(apNe, apPe, ae))
     elb.OnEvent("Change", OnTemplateSelect.Bind(elb, ae))
 
-    OnActionTypeChange(atcb, cmdCb, cmdLabel, newCmdBtn, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae, ne)
-    dlg.Add("Button", "x120 y190 w80", "确定").OnEvent("Click", OnMenuEditSubmit.Bind(ne, ie, itcb, ae, row, dlg))
-    dlg.Add("Button", "x210 y190 w80", "取消").OnEvent("Click", (*) => dlg.Destroy())
+    OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae)
+    dlg.Add("Button", "x120 y210 w80", "确定").OnEvent("Click", OnMenuEditSubmit.Bind(ne, ie, itcb, ae, row, dlg))
+    dlg.Add("Button", "x210 y210 w80", "取消").OnEvent("Click", (*) => dlg.Destroy())
     dlg.OnEvent("Close", (*) => dlg.Destroy())
-    dlg.Show("w375 h225")
+    dlg.Show("w375 h250")
 }
 
 OnMenuEditSubmit(ne, ie, itcb, ae, row, dlg, *) {
@@ -749,96 +623,8 @@ WebsiteAdd(*) {
     websiteLV.Add("", nameResult.Value, urlResult.Value)
 }
 
-BuildCustomCmdPage(gui) {
-    gui.Add("Text", "x10 y35 w780 h20", "自定义命令 - 通过菜单项的 RunCustomCommand 调用")
-    global customCmdLV := gui.Add("ListView", "x10 y60 w780 h400 -Multi", ["命令名称", "系统命令", "工作目录(可选)"])
-    customCmdLV.ModifyCol(1, 150)
-    customCmdLV.ModifyCol(2, 380)
-    customCmdLV.ModifyCol(3, 220)
-    gui.Add("Button", "x10 y470 w80 h28", "添加").OnEvent("Click", CustomCmdAdd)
-    gui.Add("Button", "x100 y470 w80 h28", "编辑").OnEvent("Click", CustomCmdEdit)
-    gui.Add("Button", "x190 y470 w80 h28", "删除").OnEvent("Click", (*) => LVDelItem(customCmdLV))
-    gui.Add("Button", "x280 y470 w60 h28", "上移").OnEvent("Click", (*) => LVMove(customCmdLV, -1))
-    gui.Add("Button", "x350 y470 w60 h28", "下移").OnEvent("Click", (*) => LVMove(customCmdLV, 1))
-}
-
-CustomCmdAdd(*) {
-    dlg := Gui("+Owner", "添加自定义命令")
-    dlg.SetFont("s10", "Segoe UI")
-    dlg.Add("Text",, "命令名称:")
-    ne := dlg.Add("Edit", "w350")
-    dlg.Add("Text",, "系统命令:")
-    ce := dlg.Add("Edit", "w350")
-    dlg.Add("Text",, "工作目录(可选):")
-    we := dlg.Add("Edit", "w350")
-    dlg.Add("Button", "w80", "确定").OnEvent("Click", OnCustomCmdAddSubmit.Bind(ne, ce, we, dlg))
-    dlg.Add("Button", "x+10 wp", "取消").OnEvent("Click", (*) => dlg.Destroy())
-    dlg.OnEvent("Close", (*) => dlg.Destroy())
-    dlg.Show()
-}
-
-OnCustomCmdAddSubmit(ne, ce, we, dlg, *) {
-    if (ne.Value != "" && ce.Value != "") {
-        customCmdLV.Add("", ne.Value, ce.Value, we.Value)
-        dlg.Destroy()
-    }
-}
-
-CustomCmdEdit(*) {
-    row := customCmdLV.GetNext()
-    if (!row)
-        return
-    name := customCmdLV.GetText(row, 1)
-    cmd := customCmdLV.GetText(row, 2)
-    workdir := customCmdLV.GetText(row, 3)
-    dlg := Gui("+Owner", "编辑自定义命令")
-    dlg.SetFont("s10", "Segoe UI")
-    dlg.Add("Text",, "命令名称:")
-    ne := dlg.Add("Edit", "w350", name)
-    dlg.Add("Text",, "系统命令:")
-    ce := dlg.Add("Edit", "w350", cmd)
-    dlg.Add("Text",, "工作目录(可选):")
-    we := dlg.Add("Edit", "w350", workdir)
-    dlg.Add("Button", "w80", "确定").OnEvent("Click", OnCustomCmdEditSubmit.Bind(ne, ce, we, row, dlg))
-    dlg.Add("Button", "x+10 wp", "取消").OnEvent("Click", (*) => dlg.Destroy())
-    dlg.OnEvent("Close", (*) => dlg.Destroy())
-    dlg.Show()
-}
-
-OnCustomCmdEditSubmit(ne, ce, we, row, dlg, *) {
-    customCmdLV.Modify(row, "", ne.Value, ce.Value, we.Value)
-    dlg.Destroy()
-}
-
 ConfigReload() {
     global menuGroupItems, menuGroupEnabled, currentMenuGroup
-
-    blProcLV.Delete()
-    blClassLV.Delete()
-    i := 1
-    Loop {
-        try {
-            val := ReadIniValueUTF8(iniFile, "blacklist_virtual_env", "black" i, "")
-            if (val = "")
-                break
-            blProcLV.Add("", val)
-            i++
-        } catch Error {
-            break
-        }
-    }
-    i := 1
-    Loop {
-        try {
-            val := ReadIniValueUTF8(iniFile, "blacklist_classes_virtual_env", "blackclasses" i, "")
-            if (val = "")
-                break
-            blClassLV.Add("", val)
-            i++
-        } catch Error {
-            break
-        }
-    }
 
     noteLV.Delete()
     i := 1
@@ -883,6 +669,11 @@ ConfigReload() {
                 items.Push({name: itemName, icon: itemIcon, icontype: itemIconType, action: itemAction})
         }
         menuGroupItems[i] := items
+    }
+    
+    if (menuGroupLV.GetCount() > 0) {
+        menuGroupLV.Modify(1, "+Select +Focus")
+        MenuGroupFocus(menuGroupLV, 1)
     }
 
     startProcLV.Delete()
@@ -962,22 +753,6 @@ ConfigReload() {
         }
     }
 
-    customCmdLV.Delete()
-    i := 1
-    Loop {
-        try {
-            n := ReadIniValueUTF8(iniFile, "CustomCommands", "cmd" i "_name", "")
-            if (n = "")
-                break
-            c := ReadIniValueUTF8(iniFile, "CustomCommands", "cmd" i "_command", "")
-            w := ReadIniValueUTF8(iniFile, "CustomCommands", "cmd" i "_workdir", "")
-            customCmdLV.Add("", n, c, w)
-            i++
-        } catch Error {
-            break
-        }
-    }
-
     darkMode := ReadIniValueUTF8(iniFile, "MenuGroupsColourMode", "DarkMode", "true") = "true"
     darkModeCB.Value := darkMode
 
@@ -988,8 +763,6 @@ ConfigSave() {
     global menuGroupItems, menuGroupEnabled, darkModeCB
 
     managedSections := Map(
-        "blacklist_virtual_env", true,
-        "blacklist_classes_virtual_env", true,
         "noteTargets", true,
         "MenuGroupsColourMode", true,
         "MenuGroupsEnable", true,
@@ -1000,8 +773,7 @@ ConfigSave() {
         "ProcessesToTerminate", true,
         "CommonWebsites", true,
         "GUIProcessesToStart", true,
-        "GUIProcessesToTerminate", true,
-        "CustomCommands", true
+        "GUIProcessesToTerminate", true
     )
     Loop 10 {
         managedSections["MenuGroups" A_Index "Items"] := true
@@ -1025,18 +797,6 @@ ConfigSave() {
     }
 
     s := ""
-
-    s .= "[blacklist_virtual_env]`n"
-    Loop blProcLV.GetCount() {
-        s .= "black" A_Index "=" EscapeIniValue(blProcLV.GetText(A_Index, 1)) "`n"
-    }
-    s .= "`n"
-
-    s .= "[blacklist_classes_virtual_env]`n"
-    Loop blClassLV.GetCount() {
-        s .= "blackclasses" A_Index "=" EscapeIniValue(blClassLV.GetText(A_Index, 1)) "`n"
-    }
-    s .= "`n"
 
     s .= "[noteTargets]`n"
     Loop noteLV.GetCount() {
@@ -1131,15 +891,6 @@ ConfigSave() {
         s .= "Item" i "_Name=" EscapeIniValue(guiTermProcLV.GetText(i, 1)) "`n"
         s .= "Item" i "_Path=" EscapeIniValue(guiTermProcLV.GetText(i, 2)) "`n"
         s .= "Item" i "_Checked=" EscapeIniValue(guiTermProcLV.GetText(i, 3)) "`n"
-    }
-    s .= "`n"
-
-    s .= "[CustomCommands]`n"
-    Loop customCmdLV.GetCount() {
-        i := A_Index
-        s .= "cmd" i "_name=" EscapeIniValue(customCmdLV.GetText(i, 1)) "`n"
-        s .= "cmd" i "_command=" EscapeIniValue(customCmdLV.GetText(i, 2)) "`n"
-        s .= "cmd" i "_workdir=" EscapeIniValue(customCmdLV.GetText(i, 3)) "`n"
     }
     s .= "`n"
 
