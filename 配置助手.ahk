@@ -519,80 +519,138 @@ MenuMoveItemDown(*) {
 
 BuildProcessPage(gui) {
     gui.Add("GroupBox", "x10 y30 w380 h220", "直接启用进程")
-    global startProcLV := gui.Add("ListView", "x20 y55 w360 h170 -HDR -Multi", ["进程路径"])
-    startProcLV.ModifyCol(1, 340)
-    gui.Add("Button", "x20 y230 w60 h24", "添加").OnEvent("Click", (*) => LVAddItem(startProcLV, "进程路径"))
-    gui.Add("Button", "x90 y230 w60 h24", "删除").OnEvent("Click", (*) => LVDelItem(startProcLV))
+    global startProcLV := gui.Add("ListView", "x20 y55 w360 h170 -Multi Checked", ["", "进程路径"])
+    startProcLV.ModifyCol(1, 30)
+    startProcLV.ModifyCol(2, 320)
+    gui.Add("Button", "x20 y230 w60 h24", "添加").OnEvent("Click", (*) => StartProcAdd())
+    gui.Add("Button", "x90 y230 w60 h24", "删除").OnEvent("Click", (*) => LVDeleteSelected(startProcLV))
+    gui.Add("Button", "x160 y230 w50 h24", "全选").OnEvent("Click", (*) => LVSelectAll(startProcLV))
     gui.Add("GroupBox", "x410 y30 w380 h220", "直接终止进程")
-    global termProcLV := gui.Add("ListView", "x420 y55 w360 h170 -HDR -Multi", ["进程路径"])
-    termProcLV.ModifyCol(1, 340)
-    gui.Add("Button", "x420 y230 w60 h24", "添加").OnEvent("Click", (*) => LVAddItem(termProcLV, "进程路径"))
-    gui.Add("Button", "x490 y230 w60 h24", "删除").OnEvent("Click", (*) => LVDelItem(termProcLV))
-    gui.Add("GroupBox", "x10 y270 w380 h220", "Ctrl+点击启用进程")
-    global guiStartProcLV := gui.Add("ListView", "x20 y295 w360 h170 -Multi", ["名称", "路径", "默认选中"])
-    guiStartProcLV.ModifyCol(1, 80)
-    guiStartProcLV.ModifyCol(2, 200)
-    guiStartProcLV.ModifyCol(3, 60)
-    gui.Add("Button", "x20 y470 w60 h24", "添加").OnEvent("Click", GUIStartAdd)
-    gui.Add("Button", "x90 y470 w60 h24", "删除").OnEvent("Click", (*) => LVDelItem(guiStartProcLV))
-    gui.Add("GroupBox", "x410 y270 w380 h220", "Ctrl+点击终止进程")
-    global guiTermProcLV := gui.Add("ListView", "x420 y295 w360 h170 -Multi", ["名称", "路径", "默认选中"])
-    guiTermProcLV.ModifyCol(1, 80)
-    guiTermProcLV.ModifyCol(2, 200)
-    guiTermProcLV.ModifyCol(3, 60)
-    gui.Add("Button", "x420 y470 w60 h24", "添加").OnEvent("Click", GUITermAdd)
-    gui.Add("Button", "x490 y470 w60 h24", "删除").OnEvent("Click", (*) => LVDelItem(guiTermProcLV))
+    global termProcLV := gui.Add("ListView", "x420 y55 w360 h170 -Multi Checked", ["", "进程路径"])
+    termProcLV.ModifyCol(1, 30)
+    termProcLV.ModifyCol(2, 320)
+    gui.Add("Button", "x420 y230 w60 h24", "添加").OnEvent("Click", (*) => TermProcAdd())
+    gui.Add("Button", "x490 y230 w60 h24", "删除").OnEvent("Click", (*) => LVDeleteSelected(termProcLV))
+    gui.Add("Button", "x560 y230 w50 h24", "全选").OnEvent("Click", (*) => LVSelectAll(termProcLV))
+    gui.Add("GroupBox", "x10 y270 w380 h220", "Alt+点击启用进程")
+    global guiStartProcLV := gui.Add("ListView", "x20 y295 w360 h170 -Multi Checked", ["", "名称", "路径", "默认选中"])
+    guiStartProcLV.ModifyCol(1, 30)
+    guiStartProcLV.ModifyCol(2, 70)
+    guiStartProcLV.ModifyCol(3, 190)
+    guiStartProcLV.ModifyCol(4, 60)
+    gui.Add("Button", "x20 y470 w60 h24", "添加").OnEvent("Click", (*) => GUIStartAdd())
+    gui.Add("Button", "x90 y470 w60 h24", "删除").OnEvent("Click", (*) => LVDeleteSelected(guiStartProcLV))
+    gui.Add("Button", "x160 y470 w50 h24", "全选").OnEvent("Click", (*) => LVSelectAll(guiStartProcLV))
+    gui.Add("GroupBox", "x410 y270 w380 h220", "Alt+点击终止进程")
+    global guiTermProcLV := gui.Add("ListView", "x420 y295 w360 h170 -Multi Checked", ["", "名称", "路径", "默认选中"])
+    guiTermProcLV.ModifyCol(1, 30)
+    guiTermProcLV.ModifyCol(2, 70)
+    guiTermProcLV.ModifyCol(3, 190)
+    guiTermProcLV.ModifyCol(4, 60)
+    gui.Add("Button", "x420 y470 w60 h24", "添加").OnEvent("Click", (*) => GUITermAdd())
+    gui.Add("Button", "x490 y470 w60 h24", "删除").OnEvent("Click", (*) => LVDeleteSelected(guiTermProcLV))
+    gui.Add("Button", "x560 y470 w50 h24", "全选").OnEvent("Click", (*) => LVSelectAll(guiTermProcLV))
 }
 
-GUIStartAdd(*) {
+OnGUITermSubmit(ne, pe, ccb, dlg, *) {
+    if (ne.Value != "" && pe.Value != "") {
+        guiTermProcLV.Add("", "", ne.Value, pe.Value, ccb.Value ? "true" : "false")
+        dlg.Destroy()
+    }
+}
+
+StartProcAdd() {
+    dlg := Gui("+Owner", "添加启用进程")
+    dlg.SetFont("s10", "Segoe UI")
+    dlg.Add("Text", "x15 y15", "进程路径:")
+    pe := dlg.Add("Edit", "x15 y40 w300 h24")
+    dlg.Add("Button", "x325 y40 w60 h24", "浏览").OnEvent("Click", (*) => BrowseFileProc(pe))
+    dlg.Add("Button", "x145 y75 w70 h28", "确定").OnEvent("Click", OnStartProcAddSubmit.Bind(pe, dlg))
+    dlg.Add("Button", "x225 y75 w70 h28", "取消").OnEvent("Click", (*) => dlg.Destroy())
+    dlg.OnEvent("Close", (*) => dlg.Destroy())
+    dlg.Show()
+}
+
+OnStartProcAddSubmit(pe, dlg, *) {
+    if (pe.Value != "")
+        startProcLV.Add("", "", pe.Value)
+    dlg.Destroy()
+}
+
+BrowseFileProc(editCtrl) {
+    selected := FileSelect(1, "", "选择进程文件", "可执行文件 (*.exe)")
+    if (selected != "")
+        editCtrl.Value := selected
+}
+
+TermProcAdd() {
+    dlg := Gui("+Owner", "添加终止进程")
+    dlg.SetFont("s10", "Segoe UI")
+    dlg.Add("Text", "x15 y15", "进程路径:")
+    pe := dlg.Add("Edit", "x15 y40 w300 h24")
+    dlg.Add("Button", "x325 y40 w60 h24", "浏览").OnEvent("Click", (*) => BrowseFileProc(pe))
+    dlg.Add("Button", "x145 y75 w70 h28", "确定").OnEvent("Click", OnTermProcAddSubmit.Bind(pe, dlg))
+    dlg.Add("Button", "x225 y75 w70 h28", "取消").OnEvent("Click", (*) => dlg.Destroy())
+    dlg.OnEvent("Close", (*) => dlg.Destroy())
+    dlg.Show()
+}
+
+OnTermProcAddSubmit(pe, dlg, *) {
+    if (pe.Value != "")
+        termProcLV.Add("", "", pe.Value)
+    dlg.Destroy()
+}
+
+GUIStartAdd() {
     dlg := Gui("+Owner", "添加Ctrl+启用进程")
     dlg.SetFont("s10", "Segoe UI")
-    dlg.Add("Text",, "显示名称:")
-    ne := dlg.Add("Edit", "w300")
-    dlg.Add("Text",, "进程路径:")
-    pe := dlg.Add("Edit", "w300")
-    ccb := dlg.Add("CheckBox", "checked", "默认选中")
-    dlg.Add("Button", "w80", "确定").OnEvent("Click", OnGUIStartSubmit.Bind(ne, pe, ccb, dlg))
-    dlg.Add("Button", "x+10 wp", "取消").OnEvent("Click", (*) => dlg.Destroy())
+    dlg.Add("Text", "x15 y15", "显示名称:")
+    ne := dlg.Add("Edit", "x15 y40 w300 h24")
+    dlg.Add("Text", "x15 y75", "进程路径:")
+    pe := dlg.Add("Edit", "x15 y100 w300 h24")
+    dlg.Add("Button", "x325 y100 w60 h24", "浏览").OnEvent("Click", (*) => BrowseFileProc(pe))
+    ccb := dlg.Add("CheckBox", "checked x15 y135", "默认选中")
+    dlg.Add("Button", "x105 y170 w70 h28", "确定").OnEvent("Click", OnGUIStartSubmit.Bind(ne, pe, ccb, dlg))
+    dlg.Add("Button", "x185 y170 w70 h28", "取消").OnEvent("Click", (*) => dlg.Destroy())
+    dlg.OnEvent("Close", (*) => dlg.Destroy())
+    dlg.Show()
+}
+
+GUITermAdd() {
+    dlg := Gui("+Owner", "添加Ctrl+终止进程")
+    dlg.SetFont("s10", "Segoe UI")
+    dlg.Add("Text", "x15 y15", "显示名称:")
+    ne := dlg.Add("Edit", "x15 y40 w300 h24")
+    dlg.Add("Text", "x15 y75", "进程路径:")
+    pe := dlg.Add("Edit", "x15 y100 w300 h24")
+    dlg.Add("Button", "x325 y100 w60 h24", "浏览").OnEvent("Click", (*) => BrowseFileProc(pe))
+    ccb := dlg.Add("CheckBox", "checked x15 y135", "默认选中")
+    dlg.Add("Button", "x105 y170 w70 h28", "确定").OnEvent("Click", OnGUITermSubmit.Bind(ne, pe, ccb, dlg))
+    dlg.Add("Button", "x185 y170 w70 h28", "取消").OnEvent("Click", (*) => dlg.Destroy())
     dlg.OnEvent("Close", (*) => dlg.Destroy())
     dlg.Show()
 }
 
 OnGUIStartSubmit(ne, pe, ccb, dlg, *) {
     if (ne.Value != "" && pe.Value != "") {
-        guiStartProcLV.Add("", ne.Value, pe.Value, ccb.Value ? "true" : "false")
+        guiStartProcLV.Add("", "", ne.Value, pe.Value, ccb.Value ? "true" : "false")
         dlg.Destroy()
     }
 }
 
-GUITermAdd(*) {
-    dlg := Gui("+Owner", "添加Ctrl+终止进程")
-    dlg.SetFont("s10", "Segoe UI")
-    dlg.Add("Text",, "显示名称:")
-    ne := dlg.Add("Edit", "w300")
-    dlg.Add("Text",, "进程路径:")
-    pe := dlg.Add("Edit", "w300")
-    ccb := dlg.Add("CheckBox", "checked", "默认选中")
-    dlg.Add("Button", "w80", "确定").OnEvent("Click", OnGUITermSubmit.Bind(ne, pe, ccb, dlg))
-    dlg.Add("Button", "x+10 wp", "取消").OnEvent("Click", (*) => dlg.Destroy())
-    dlg.OnEvent("Close", (*) => dlg.Destroy())
-    dlg.Show()
-}
-
-OnGUITermSubmit(ne, pe, ccb, dlg, *) {
-    if (ne.Value != "" && pe.Value != "") {
-        guiTermProcLV.Add("", ne.Value, pe.Value, ccb.Value ? "true" : "false")
-        dlg.Destroy()
+LVSelectAll(lv) {
+    Loop lv.GetCount() {
+        lv.Modify(A_Index, "Check")
     }
 }
 
-LVAddItem(lv, prompt) {
-    result := InputBox(prompt, "添加")
-    if (result.Result = "OK" && result.Value != "")
-        lv.Add("", result.Value)
+LVDeleteSelected(lv) {
+    while (row := lv.GetNext(0, "Check")) {
+        lv.Delete(row)
+    }
 }
 
-LVDelItem(lv) {
+LVDeleteOne(lv) {
     row := lv.GetNext()
     if (row)
         lv.Delete(row)
@@ -608,7 +666,7 @@ BuildWebsitePage(gui) {
     websiteLV.ModifyCol(1, 200)
     websiteLV.ModifyCol(2, 550)
     gui.Add("Button", "x10 y490 w80 h28", "添加网站").OnEvent("Click", WebsiteAdd)
-    gui.Add("Button", "x100 y490 w80 h28", "删除网站").OnEvent("Click", (*) => LVDelItem(websiteLV))
+    gui.Add("Button", "x100 y490 w80 h28", "删除网站").OnEvent("Click", (*) => LVDeleteOne(websiteLV))
     gui.Add("Button", "x190 y490 w60 h28", "上移").OnEvent("Click", (*) => LVMove(websiteLV, -1))
     gui.Add("Button", "x260 y490 w60 h28", "下移").OnEvent("Click", (*) => LVMove(websiteLV, 1))
 }
@@ -687,7 +745,7 @@ ConfigReload() {
             val := ReadIniValueUTF8(iniFile, "ProcessesToStart", "item" i, "")
             if (val = "")
                 break
-            startProcLV.Add("", val)
+            startProcLV.Add("", "", val)
             i++
         } catch Error {
             break
@@ -699,7 +757,7 @@ ConfigReload() {
             val := ReadIniValueUTF8(iniFile, "ProcessesToTerminate", "item" i, "")
             if (val = "")
                 break
-            termProcLV.Add("", val)
+            termProcLV.Add("", "", val)
             i++
         } catch Error {
             break
@@ -713,7 +771,7 @@ ConfigReload() {
                 break
             p := ReadIniValueUTF8(iniFile, "GUIProcessesToStart", "Item" i "_Path", "")
             c := ReadIniValueUTF8(iniFile, "GUIProcessesToStart", "Item" i "_Checked", "true")
-            guiStartProcLV.Add("", n, p, c)
+            guiStartProcLV.Add("", "", n, p, c)
             i++
         } catch Error {
             break
@@ -727,7 +785,7 @@ ConfigReload() {
                 break
             p := ReadIniValueUTF8(iniFile, "GUIProcessesToTerminate", "Item" i "_Path", "")
             c := ReadIniValueUTF8(iniFile, "GUIProcessesToTerminate", "Item" i "_Checked", "true")
-            guiTermProcLV.Add("", n, p, c)
+            guiTermProcLV.Add("", "", n, p, c)
             i++
         } catch Error {
             break
@@ -857,13 +915,13 @@ ConfigSave() {
 
     s .= "[ProcessesToStart]`n"
     Loop startProcLV.GetCount() {
-        s .= "item" A_Index "=" EscapeIniValue(startProcLV.GetText(A_Index, 1)) "`n"
+        s .= "item" A_Index "=" EscapeIniValue(startProcLV.GetText(A_Index, 2)) "`n"
     }
     s .= "`n"
 
     s .= "[ProcessesToTerminate]`n"
     Loop termProcLV.GetCount() {
-        s .= "item" A_Index "=" EscapeIniValue(termProcLV.GetText(A_Index, 1)) "`n"
+        s .= "item" A_Index "=" EscapeIniValue(termProcLV.GetText(A_Index, 2)) "`n"
     }
     s .= "`n"
 
@@ -879,18 +937,18 @@ ConfigSave() {
     s .= "[GUIProcessesToStart]`n"
     Loop guiStartProcLV.GetCount() {
         i := A_Index
-        s .= "Item" i "_Name=" EscapeIniValue(guiStartProcLV.GetText(i, 1)) "`n"
-        s .= "Item" i "_Path=" EscapeIniValue(guiStartProcLV.GetText(i, 2)) "`n"
-        s .= "Item" i "_Checked=" EscapeIniValue(guiStartProcLV.GetText(i, 3)) "`n"
+        s .= "Item" i "_Name=" EscapeIniValue(guiStartProcLV.GetText(i, 2)) "`n"
+        s .= "Item" i "_Path=" EscapeIniValue(guiStartProcLV.GetText(i, 3)) "`n"
+        s .= "Item" i "_Checked=" EscapeIniValue(guiStartProcLV.GetText(i, 4)) "`n"
     }
     s .= "`n"
 
     s .= "[GUIProcessesToTerminate]`n"
     Loop guiTermProcLV.GetCount() {
         i := A_Index
-        s .= "Item" i "_Name=" EscapeIniValue(guiTermProcLV.GetText(i, 1)) "`n"
-        s .= "Item" i "_Path=" EscapeIniValue(guiTermProcLV.GetText(i, 2)) "`n"
-        s .= "Item" i "_Checked=" EscapeIniValue(guiTermProcLV.GetText(i, 3)) "`n"
+        s .= "Item" i "_Name=" EscapeIniValue(guiTermProcLV.GetText(i, 2)) "`n"
+        s .= "Item" i "_Path=" EscapeIniValue(guiTermProcLV.GetText(i, 3)) "`n"
+        s .= "Item" i "_Checked=" EscapeIniValue(guiTermProcLV.GetText(i, 4)) "`n"
     }
     s .= "`n"
 

@@ -6114,7 +6114,8 @@ ManageProcess(action) {
                 if (processToTerminate = "")  ; 没有更多条目
                     break
                 try {
-                    ProcessClose(processToTerminate)
+                    SplitPath(processToTerminate, &processName)
+                    ProcessClose(processName)
                     terminatedCount++
                 } catch Error as e {
                     ; 忽略终止错误，可能是进程不存在
@@ -6505,7 +6506,8 @@ ProcessSelection(action, listView, processList, gui) {
             ; 终止选中的进程
             for _, item in selectedItems {
                 try {
-                    ProcessClose(item.path)
+                    SplitPath(item.path, &processName)
+                    ProcessClose(processName)
                 } catch {
                     ; 忽略终止错误
                 }
@@ -6535,7 +6537,8 @@ ProcessSingleItem(action, listView, processList, gui) {
             }
         } else {
             try {
-                ProcessClose(proc.path)
+                SplitPath(proc.path, &processName)
+                ProcessClose(processName)
                 ShowTooltip("已终止: " . proc.name)
             } catch {
                 ShowTooltip("无法终止: " . proc.name)
