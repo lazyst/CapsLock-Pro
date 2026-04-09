@@ -1149,7 +1149,10 @@ ConfigSave() {
     f.Write(s)
     f.Close()
 
-    FileDelete(A_ScriptDir "\.reload_signal")
+    try {
+        FileDelete(A_ScriptDir "\.reload_signal")
+    } catch {
+    }
     FileAppend("1", A_ScriptDir "\.reload_signal")
 
     ShowTooltip("配置已保存，主程序将自动重新加载")
