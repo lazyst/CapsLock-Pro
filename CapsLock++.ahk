@@ -4208,7 +4208,7 @@ n::
 
 ; 单击 ListView 文件加载内容
 NoteFileClick(*) {
-    global noteEdit, noteViewMode, currentEditingFile, statusBar, noteListView, searchEdit, searchLabel, noteGui
+    global noteEdit, noteViewMode, currentEditingFile, statusBar, noteListView, searchEdit, searchLabel, noteGui, newNoteBtn
 
     selectedRow := noteListView.GetNext()
     if (!selectedRow)
@@ -4241,10 +4241,12 @@ NoteFileClick(*) {
         noteListView.Visible := false
         searchEdit.Visible := false
         searchLabel.Visible := false
+        deleteBtn.Visible := false
+        newNoteBtn.Visible := true
         viewToggleBtn.Text := "查看速记"
 
         ; 更新状态栏
-        statusBar.SetText("提示: 正在编辑 | Ctrl+S保存")
+        statusBar.SetText("提示: 正在编辑 | Ctrl+S保存 | 新建速记按钮可写新内容")
 
         ; 聚焦编辑框
         noteGui.Show()
@@ -4295,12 +4297,14 @@ ShowQuickNote() {
     ; 添加按钮
     buttonBar := noteGui.Add("Text", "w500 h30 Section", "")
     saveBtn := noteGui.Add("Button", "xp y+5 w80 h25 Default", "保存")
-    cancelBtn := noteGui.Add("Button", "x+90 yp w80 h25", "取消")
-    global deleteBtn := noteGui.Add("Button", "x+90 yp w80 h25 +Hidden", "删除选中")
+    global newNoteBtn := noteGui.Add("Button", "x+10 yp w80 h25", "新建速记")
+    cancelBtn := noteGui.Add("Button", "x+10 yp w80 h25", "取消")
+    global deleteBtn := noteGui.Add("Button", "x+10 yp w80 h25 +Hidden", "删除选中")
     deleteBtn.OnEvent("Click", DeleteSelectedNote)
 
     ; 设置按钮事件
     saveBtn.OnEvent("Click", SaveNoteHandler)
+    newNoteBtn.OnEvent("Click", NewNoteHandler)
     cancelBtn.OnEvent("Click", CloseNoteGui)
     viewToggleBtn.OnEvent("Click", ToggleNoteViewHandler)
     searchEdit.OnEvent("Change", NoteSearchHandler)
@@ -4329,8 +4333,9 @@ ShowQuickNote() {
         ; 调整按钮位置
         buttonBar.Move(10, height - 60, width - 20)
         saveBtn.Move(10, height - 55)
-        cancelBtn.Move(100, height - 55)
-        deleteBtn.Move(190, height - 55)
+        newNoteBtn.Move(100, height - 55)
+        cancelBtn.Move(190, height - 55)
+        deleteBtn.Move(280, height - 55)
     }
     
     ; 设置大小调整事件
@@ -4350,6 +4355,14 @@ ShowQuickNote() {
     HotIf()
     
     ; 保存笔记处理函数
+    NewNoteHandler(*) {
+        global currentEditingFile
+        currentEditingFile := ""
+        noteEdit.Value := "## "
+        statusBar.SetText("提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存")
+        ControlFocus(noteEdit)
+    }
+
     SaveNoteHandler(*) {
         global currentEditingFile
 
@@ -4365,19 +4378,16 @@ ShowQuickNote() {
         ; 如果正在编辑已有文件，直接覆盖保存
         if (currentEditingFile != "" && FileExist(currentEditingFile)) {
             try {
-                ; 直接写入文件（覆盖模式）
+                timeStamp := FormatTime(, "yyyy-MM-dd HH:mm:ss")
+                content := RegExReplace(content, "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]", "[" . timeStamp . "]", , 1)
+
                 FileDelete(currentEditingFile)
                 FileAppend(content, currentEditingFile)
 
                 ToolTip("已保存到「" . currentEditingFile . "」")
                 SetTimer () => ToolTip(), -2000
 
-                ; 清空当前编辑文件标记
-                currentEditingFile := ""
-
-                ; 关闭窗口
-                isNoteGuiOpen := false
-                noteGui.Destroy()
+                ControlFocus(noteEdit)
                 return
             } catch as e {
                 MsgBox("保存失败: " . e.Message, "速记", "Icon!")
@@ -4429,20 +4439,26 @@ ShowQuickNote() {
         }
         
         ; 根据解析结果保存内容
+        savedPath := ""
         if (targetFile && FileExist(targetFile)) {
-            ; 保存到指定文件
-            SaveToSpecificFile(targetFile, lines, title, targetName)
+            savedPath := SaveToSpecificFile(targetFile, lines, title, targetName)
         } else if (targetName && noteTargets.Has(targetName)) {
-            ; 保存到预定义文件
-            SaveToTargetFile(targetName, lines, title)
+            savedPath := SaveToTargetFile(targetName, lines, title)
         } else {
-            ; 创建新文件或追加到同名文件
-            SaveToNewFile(lines, title)
+            savedPath := SaveToNewFile(lines, title)
         }
         
-        ; 关闭窗口
-        isNoteGuiOpen := false
-        noteGui.Destroy()
+        if (savedPath && FileExist(savedPath)) {
+            currentEditingFile := savedPath
+            try {
+                fileContent := FileRead(savedPath, "UTF-8")
+            } catch {
+                fileContent := FileRead(savedPath)
+            }
+            noteEdit.Value := fileContent
+            statusBar.SetText("提示: 正在编辑 | Ctrl+S保存 | 新建速记按钮可写新内容")
+        }
+        ControlFocus(noteEdit)
     }
 }
 
@@ -4483,13 +4499,13 @@ SaveToNewFile(lines, title) {
                 }
             }
             
-            ; 先添加标题（如果有）
+            ; 先添加时间戳和标题（如果有）
             if (hasNewTitle) {
-                content .= newTitle . "`n"
+                content .= "[" . timeStamp . "]`n"
+                content .= newTitle . "`n`n"
+            } else {
+                content .= "[" . timeStamp . "]`n`n"
             }
-            
-            ; 添加时间戳作为普通标记（不是标题）
-            content .= "[" . timeStamp . "]`n`n"
             
             ; 添加正文
             for i, line in lines {
@@ -4520,19 +4536,17 @@ SaveToNewFile(lines, title) {
                 }
                 
                 if (hasTitle) {
-                    ; 第一行是有效标题，保留它并添加时间戳
                     for i, line in lines {
                         if (i = 1) {
-                            content .= line . "`n"
-                            content .= "[" . timeStamp . "]`n`n"  ; 在标题后添加时间戳
+                            content .= "[" . timeStamp . "]`n"
+                            content .= line . "`n`n"
                         } else {
                             content .= line . "`n"
                         }
                     }
                 } else {
-                    ; 第一行不是有效标题，添加标题和时间戳
-                    content .= "## " . title . "`n"
-                    content .= "[" . timeStamp . "]`n`n"
+                    content .= "[" . timeStamp . "]`n"
+                    content .= "## " . title . "`n`n"
                     
                     ; 添加所有行
                     for i, line in lines {
@@ -4557,8 +4571,10 @@ SaveToNewFile(lines, title) {
         }
         
         SetTimer () => ToolTip(), -2000
+        return filePath
     } catch as e {
         MsgBox("保存失败: " . e.Message, "速记", "Icon!")
+        return ""
     }
 }
 
@@ -4573,11 +4589,10 @@ SaveToTargetFile(targetName, lines, title) {
         
         ; 添加标题和时间戳
         if (title) {
-            content .= "## " . title . "`n"  ; 使用Markdown格式的标题
-            content .= "[" . timeStamp . "]`n`n"  ; 在标题后添加时间戳
+            content .= "[" . timeStamp . "]`n"
+            content .= "## " . title . "`n`n"
         } else {
-            ; 无标题，只添加时间戳（不作为标题）
-            content .= "[" . timeStamp . "]`n`n"  ; 使用方括号格式的时间戳
+            content .= "[" . timeStamp . "]`n`n"
         }
         
         ; 添加正文
@@ -4595,8 +4610,10 @@ SaveToTargetFile(targetName, lines, title) {
         ; 显示成功消息
         ToolTip("已保存到「" . targetName . "」")
         SetTimer () => ToolTip(), -2000
+        return filePath
     } catch as e {
         MsgBox("保存失败: " . e.Message, "速记", "Icon!")
+        return ""
     }
 }
 
@@ -4657,7 +4674,7 @@ EnsureNoteDirectories() {
 
 ; 切换查看/编辑模式
 ToggleNoteViewHandler(*) {
-    global noteViewMode, noteEdit, noteListView, searchEdit, searchLabel, statusBar, currentEditingFile, deleteBtn, noteGui, viewToggleBtn
+    global noteViewMode, noteEdit, noteListView, searchEdit, searchLabel, statusBar, currentEditingFile, deleteBtn, noteGui, viewToggleBtn, newNoteBtn
 
     noteViewMode := !noteViewMode
 
@@ -4670,7 +4687,8 @@ ToggleNoteViewHandler(*) {
         searchEdit.Visible := true
         searchLabel.Visible := true
         deleteBtn.Visible := true
-        viewToggleBtn.Text := "新建速记"
+        newNoteBtn.Visible := false
+        viewToggleBtn.Text := "编辑速记"
         LoadNoteFilesToList()
 
         ; 更新状态栏
@@ -4684,14 +4702,12 @@ ToggleNoteViewHandler(*) {
         searchEdit.Visible := false
         searchLabel.Visible := false
         deleteBtn.Visible := false
+        newNoteBtn.Visible := true
         viewToggleBtn.Text := "查看速记"
+        currentEditingFile := ""
 
         ; 恢复状态栏
-        if (currentEditingFile != "") {
-            statusBar.SetText("提示: 正在编辑 | Ctrl+S保存")
-        } else {
-            statusBar.SetText("提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存")
-        }
+        statusBar.SetText("提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存")
 
         ; 将光标定位到"## "之后
         SendInput("{End}")
@@ -4843,11 +4859,10 @@ SaveToSpecificFile(filePath, lines, title, displayName) {
         
         ; 添加标题和时间戳
         if (title) {
-            content .= "## " . title . "`n"  ; 使用Markdown格式的标题
-            content .= "[" . timeStamp . "]`n`n"  ; 在标题后添加时间戳
+            content .= "[" . timeStamp . "]`n"
+            content .= "## " . title . "`n`n"
         } else {
-            ; 无标题，只添加时间戳（不作为标题）
-            content .= "[" . timeStamp . "]`n`n"  ; 使用方括号格式的时间戳
+            content .= "[" . timeStamp . "]`n`n"
         }
         
         ; 添加正文
@@ -4870,8 +4885,10 @@ SaveToSpecificFile(filePath, lines, title, displayName) {
             ToolTip("已保存到「" . fileName . "」")
         }
         SetTimer () => ToolTip(), -2000
+        return filePath
     } catch as e {
         MsgBox("保存失败: " . e.Message, "速记", "Icon!")
+        return ""
     }
 }
 
