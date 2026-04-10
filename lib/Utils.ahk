@@ -1,0 +1,206 @@
+; =====================================================================
+; CapsLock++ 公共工具函数
+; =====================================================================
+
+; 显示临时提示
+ShowTooltip(text, duration := 2000) {
+    ToolTip()
+    ToolTip(text, 800, 100)
+    SetTimer(ToolTipClear, -duration)
+}
+
+; 显示在鼠标旁边的提示
+ShowTooltipNearMouse(text, duration := 2000) {
+    ToolTip()
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mouseX, &mouseY)
+    ToolTip(text, mouseX + 20, mouseY + 20)
+    SetTimer(ToolTipClear, -duration)
+}
+
+; 清除ToolTip的回调函数
+ToolTipClear() {
+    ToolTip()
+}
+
+; 格式化数字，保留2位小数
+FormatNumber(num) {
+    return Round(num, 2)
+}
+
+; 切换调试提示的显示状态
+ToggleDebugTooltips() {
+    global showDebugTooltips
+    showDebugTooltips := !showDebugTooltips
+    ToolTip("调试信息显示: " (showDebugTooltips ? "开启" : "关闭"))
+    SetTimer () => ToolTip(), -tipDuration
+}
+
+; 显示调试信息提示
+ShowDebugTooltip(text, duration := 3000) {
+    global showDebugTooltips, debugTipDuration
+    
+    if !showDebugTooltips
+        return
+        
+    ToolTip(text)
+    SetTimer () => ToolTip(), -duration
+}
+
+; 检查值是否在数组中
+HasVal(arr, val) {
+    for v in arr {
+        if v = val
+            return true
+    }
+    return false
+}
+
+; 字符串哈希算法，用于区分同一程序的不同窗口
+StrHash(str) {
+    hash := 0
+    if (StrLen(str) == 0)
+        return hash
+        
+    for i, char in StrSplit(str) {
+        hash := ((hash << 5) - hash) + Ord(char)
+        hash := hash & hash
+    }
+    
+    return hash
+}
+
+; 添加CapsLock+兼容性处理，用于调试可能的按键冲突问题
+ShowKeyPressDebug(keyName, source := "AHK") {
+    global showDebugTooltips
+    
+    if !showDebugTooltips
+        return
+        
+    ToolTip("按键检测：" keyName " (来源: " source ")")
+    SetTimer () => ToolTip(), -1000
+}
+
+; 定义常用程序的优先级映射
+GetProcessPriority(processName) {
+    return 900 + Mod(StrHash(processName), 100)
+}
+
+; 判断窗口是否为任务栏窗口
+IsTaskbarWindow(hwnd) {
+    global showDebugTooltips, blacklistClasses, blacklistProcessNames
+    
+    if !WinExist("ahk_id " hwnd) || !DllCall("IsWindowVisible", "Ptr", hwnd)
+        return false
+    
+    title := WinGetTitle("ahk_id " hwnd)
+    
+    if title = ""
+        return false
+    
+    className := WinGetClass("ahk_id " hwnd)
+    
+    pid := WinGetPID("ahk_id " hwnd)
+    processPath := ProcessGetPath(pid)
+    SplitPath(processPath, &processName)
+    
+    if HasVal(blacklistProcessNames, processName) {
+        if (showDebugTooltips) {
+            ToolTip("排除黑名单进程: " processName)
+            SetTimer () => ToolTip(), -1000
+        }
+        return false
+    }
+        
+    for blackClass in blacklistClasses {
+        if (InStr(className, blackClass) || className = blackClass) {
+            if (showDebugTooltips) {
+                ToolTip("排除黑名单类名: " className)
+                SetTimer () => ToolTip(), -1000
+            }
+            return false
+        }
+    }
+    
+    exStyle := WinGetExStyle("ahk_id " hwnd)
+    if (exStyle & 0x80)  ; WS_EX_TOOLWINDOW
+        return false
+    
+    if (exStyle & 0x40000) && !(exStyle & 0x100)  ; WS_EX_APPWINDOW without WS_EX_CONTROLPARENT
+        return true
+    
+    if (className = "Shell_TrayWnd" || className = "Shell_SecondaryTrayWnd")
+        return false
+    
+    if (className = "Progman" || className = "WorkerW")
+        return false
+    
+    if (WinGetMinMax("ahk_id " hwnd) = -1)
+        return false
+    
+    return true
+}
+
+; 读取INI文件的值，并使用UTF-8编码
+ReadIniValueUTF8(filePath, section, key, defaultValue := "") {
+    try {
+        fileContent := FileRead(filePath, "UTF-8")
+        
+        sectionPattern := "\[" section "\]\s*(?:\r?\n|\r)([^\[]*)"
+        if RegExMatch(fileContent, sectionPattern, &sectionMatch) {
+            sectionContent := sectionMatch[1]
+            
+            keyPattern := "(?m)^" key "\s*=\s*(.*?)(?:\r?\n|\r|$)"
+            if RegExMatch(sectionContent, keyPattern, &keyMatch) {
+                value := Trim(keyMatch[1])
+                
+                dq := Chr(34)
+                if (SubStr(value, 1, 1) = dq) and (SubStr(value, -1) = dq)
+                    value := SubStr(value, 2, -1)
+                value := StrReplace(value, '\"', dq)
+                
+                if (value != "")
+                    return value
+            }
+        }
+    } catch Error as e {
+        ; 文件读取失败
+    }
+    
+    try {
+        return IniRead(filePath, section, key, defaultValue)
+    } catch Error {
+        return defaultValue
+    }
+}
+
+; URL编码函数
+UrlEncode(str) {
+    enc := ""
+    Loop Parse, str {
+        char := A_LoopField
+        if (RegExMatch(char, "^[A-Za-z0-9\-_.~]$"))
+            enc .= char
+        else {
+            code := Ord(char)
+            if (code < 128)
+                enc .= "%" . Format("{:02X}", code)
+            else if (code < 2048) {
+                enc .= "%" . Format("{:02X}", 0xC0 | (code >> 6))
+                enc .= "%" . Format("{:02X}", 0x80 | (code & 0x3F))
+            } else {
+                enc .= "%" . Format("{:02X}", 0xE0 | (code >> 12))
+                enc .= "%" . Format("{:02X}", 0x80 | ((code >> 6) & 0x3F))
+                enc .= "%" . Format("{:02X}", 0x80 | (code & 0x3F))
+            }
+        }
+    }
+    return enc
+}
+
+; 清除所有ToolTip
+ClearAllToolTips() {
+    Loop 20 {
+        ToolTip("", , , A_Index)
+    }
+}
