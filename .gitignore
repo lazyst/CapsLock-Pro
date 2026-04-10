@@ -9,6 +9,9 @@ Release.zip
 .vscode/
 .idea/
 
+# Claude 配置目录
+.claude/
+
 # 系统文件
 Thumbs.db
 .DS_Store
@@ -16,4 +19,7 @@ Thumbs.db
 # Python缓存
 __pycache__/
 *.pyc
-*.pyo 
+*.pyo
+
+# 速记目录
+速记/ 
