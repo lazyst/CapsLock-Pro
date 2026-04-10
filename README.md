@@ -21,12 +21,23 @@
 - **CapsLock 单击(≤0.3s):** 发送Esc键
 - **CapsLock 长按(≥0.3s):** 犹豫操作, 不触发Esc
 
-### 1.2 CapsLock状态管理
+### 1.2 CapsLock 状态管理
 
 - **自动维持 CapsLock 关闭状态**
 - **Ctrl+CapsLock:** 手动切换 CapsLock 状态
 
-### 1.3 控制与调试
+### 1.3 工具临时禁用
+
+- **启用状态 → 禁用：CapsLock+Esc（无论短按长按）**
+  - 禁用后所有 CapsLock 增强功能暂时失效
+  - CapsLock 恢复原生大小写切换功能
+  - 状态切换时显示提示
+- **禁用状态 → 启用：长按 CapsLock+Esc（≥300ms）**
+  - 工具恢复所有 CapsLock 增强功能
+  - 状态切换时显示提示
+- **禁用状态下短按 CapsLock（<300ms）：** 正常切换大小写
+
+### 1.4 控制与调试
 
 - **Alt+CapsLock+R:** 手动重启脚本
 - **Ctrl+Alt+I:** 显示调试信息

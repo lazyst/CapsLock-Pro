@@ -87,12 +87,16 @@ InitializeApp() {
 
 ; 检查并维持CapsLock状态
 CheckCapsLockState() {
-    global capsLockManuallyEnabled
-    
+    global capsLockManuallyEnabled, isToolEnabled
+
+    ; 如果工具已禁用，不执行任何CapsLock状态检查
+    if (!isToolEnabled)
+        return
+
     ; 如果CapsLock已关闭，不需要操作
     if !GetKeyState("CapsLock", "T")
         return
-    
+
     ; 如果CapsLock开启，但不是手动开启的，则强制关闭
     if !capsLockManuallyEnabled {
         SetCapsLockState("AlwaysOff")
@@ -139,10 +143,32 @@ global capsLockPressTime := 0                      ; 记录CapsLock按下时间
 global capsLockReleaseTime := 0                    ; 记录CapsLock释放时间
 global otherKeyPressed := false                    ; 记录是否按下了其他键
 
+; 工具临时禁用功能
+global isToolEnabled := true                      ; 工具是否启用（默认启用）
+global capsLockEscPressed := false                 ; CapsLock按下时Esc是否同时按下
+
 ; 显示临时提示
 ShowTooltip(text, duration := 2000) {
-    ToolTip(text)
-    SetTimer () => ToolTip(), -duration
+    ; 先清除所有已存在的ToolTip
+    ToolTip()
+    ; 显示新提示（位于屏幕顶部中央）
+    ToolTip(text, 800, 100)
+    SetTimer(ToolTipClear, -duration)
+}
+
+; 显示在鼠标旁边的提示
+ShowTooltipNearMouse(text, duration := 2000) {
+    ToolTip()
+    ; 获取鼠标位置，在其旁边显示提示
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mouseX, &mouseY)
+    ToolTip(text, mouseX + 20, mouseY + 20)
+    SetTimer(ToolTipClear, -duration)
+}
+
+; 清除ToolTip的回调函数
+ToolTipClear() {
+    ToolTip()
 }
 
 ; 确保CapsLock始终关闭
@@ -193,22 +219,19 @@ global capsLockIsDown := false  ; 新增：跟踪CapsLock是否已经处于按�
 ~CapsLock::
 {
     ; 声明所有需要的全局变量
-    global capsLockIsDown, capsLockPressTime, otherKeyPressed, capsLockManuallyEnabled, showDebugTooltips
-    
+    global capsLockIsDown, capsLockPressTime, otherKeyPressed, capsLockManuallyEnabled
+    global isToolEnabled, capsLockEscPressed
+
     ; 只在首次按下时记录时间
     if (!capsLockIsDown) {
         capsLockIsDown := true
         capsLockPressTime := A_TickCount
         otherKeyPressed := false
-        
-        if (showDebugTooltips) {
-            ToolTip("CapsLock按下，开始计时: " capsLockPressTime)
-            SetTimer () => ToolTip(), -1000
-        }
+        capsLockEscPressed := GetKeyState("Escape", "P")
     }
-    
-    ; 确保CapsLock保持关闭状态（除非手动启用）
-    if (!capsLockManuallyEnabled)
+
+    ; 只有工具启用时才强制关闭CapsLock（除非手动启用）
+    if (isToolEnabled && !capsLockManuallyEnabled)
         SetCapsLockState("AlwaysOff")
 }
 
@@ -216,37 +239,76 @@ global capsLockIsDown := false  ; 新增：跟踪CapsLock是否已经处于按�
 ~CapsLock Up::
 {
     ; 声明所有需要的全局变量
-    global capsLockIsDown, capsLockPressTime, otherKeyPressed, capsLockManuallyEnabled, showDebugTooltips
-    
+    global capsLockIsDown, capsLockPressTime, otherKeyPressed, capsLockManuallyEnabled
+    global isToolEnabled, capsLockEscPressed, showDebugTooltips
+
     ; 只有当我们记录了按下状态时才处理释放
     if (capsLockIsDown) {
         ; 计算持续时间
         pressDuration := A_TickCount - capsLockPressTime
-        
+
         ; 重置按下状态
         capsLockIsDown := false
-        
-        ; 确保CapsLock保持在预期状态
+
+        ; ====== 工具禁用状态下的特殊处理 ======
+        if (!isToolEnabled) {
+            ; 工具禁用时
+            if (capsLockEscPressed && pressDuration >= 300) {
+                ; 工具禁用 + CapsLock+Esc 长按(>=300ms) = 启用工具
+                isToolEnabled := true
+                ShowTooltipNearMouse("CapsLock++ 已启用")
+            } else if (!capsLockEscPressed && pressDuration < 300) {
+                ; 工具禁用 + 短按CapsLock(<300ms)无Esc = 正常CapsLock切换大小写
+                otherKeyPressed := true
+                if GetKeyState("CapsLock", "T") {
+                    SetCapsLockState("AlwaysOff")
+                    capsLockManuallyEnabled := false
+                } else {
+                    SetCapsLockState("AlwaysOn")
+                    capsLockManuallyEnabled := true
+                }
+            }
+            ; 其他情况：工具禁用 + CapsLock+Esc短按 或 其他按键组合，不做处理
+
+            ; 重置状态并返回
+            capsLockEscPressed := false
+            otherKeyPressed := false
+            return
+        }
+
+        ; ====== 工具启用状态下的处理 ======
+        ; 工具启用时，保持CapsLock关闭
         if (!capsLockManuallyEnabled)
             SetCapsLockState("AlwaysOff")
-        
-        ; 如果没有按下其他键且持续时间小于阈值，发送Esc
-        if (!otherKeyPressed && pressDuration < 300) {
-            SendInput("{Esc}")
-            
-            if (showDebugTooltips) {
-                ToolTip("CapsLock单击，发送Esc (" pressDuration "ms)")
-                SetTimer () => ToolTip(), -1000
-            }
-        } else if (showDebugTooltips) {
-            ToolTip("CapsLock释放，" 
-                  . (otherKeyPressed ? "按下了其他键" : "超过阈值") 
-                  . " (" pressDuration "ms)")
-            SetTimer () => ToolTip(), -1000
+
+        ; 工具启用 + CapsLock+Esc（不论短按长按）= 禁用工具
+        if (capsLockEscPressed && !otherKeyPressed) {
+            isToolEnabled := false
+            ShowTooltipNearMouse("CapsLock++ 已禁用")
+            capsLockEscPressed := false
+            otherKeyPressed := false
+            return
         }
-        
+
+        ; 原有的短按发送Esc逻辑（无Esc按键时）
+        if (!otherKeyPressed && pressDuration < 300 && !capsLockEscPressed) {
+            SendInput("{Esc}")
+        }
+
         ; 重置其他状态
+        capsLockEscPressed := false
         otherKeyPressed := false
+    }
+}
+
+; Escape键处理：跟踪在CapsLock按下期间是否按下了Esc
+~Escape::
+{
+    global capsLockIsDown, capsLockEscPressed
+
+    ; 如果CapsLock正处于按下状态，记录Esc被按下
+    if (capsLockIsDown) {
+        capsLockEscPressed := true
     }
 }
 
@@ -280,7 +342,7 @@ OnExit((*) => SetCapsLockState("AlwaysOff"))
 ; 窗口切换
 ; --------------------------------------------------------------------
 ; 基本窗口切换功能 - CapsLock 替代 Alt
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 WheelDown::
 {
     ; 标记为按下了其他键
@@ -376,7 +438,7 @@ WheelUp::
 ; =====================================================================
 ; 虚拟环境管理
 ; =====================================================================
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 
 ; CapsLock+右键: 置顶/取消置顶光标所在窗口
 RButton::
@@ -473,7 +535,7 @@ global lastWorkspaceCleanupTime := 0  ; 上次清理工作区的时间
 global workspaceCleanupMode := "minimize"  ; 当前模式：minimize或restore
 
 ; 工作区清理功能 - 确保热键定义正确且唯一
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 #z::CleanupWorkspaceHotkey()
 #HotIf
 
@@ -2261,7 +2323,7 @@ Enter::ExecuteJump()
 
 #HotIf
 
-#HotIf GetKeyState("CapsLock", "P") && !GetKeyState("Alt", "P") && jumpActive
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled && !GetKeyState("Alt", "P") && jumpActive
 s::Send("")
 f::Send("")
 e::Send("")
@@ -2453,7 +2515,7 @@ MouseWheelDown(repeat := 1) {
 ; =====================================================================
 
 ; 光标移动键映射
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 a::
 {
     ; 标记为按下了其他键
@@ -2624,7 +2686,7 @@ r::
 #HotIf
 
 ; 文本选择键映射
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 h::
 {
     ; 标记为按下了其他键
@@ -3125,7 +3187,7 @@ global interruptCheckTimer := 0
 global initialCapsLockReleased := false  ; 追踪CapsLock是否已经释放过
 
 ; 主查找热键 - 只在CapsLock按下且未处于查找状态时触发
-#HotIf GetKeyState("CapsLock", "P") && !isSeekingSymbol
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled && !isSeekingSymbol
 p::
 {
     ; 标记为按下了其他键并启动搜索状态
@@ -3540,7 +3602,7 @@ CapsLock::
 #HotIf
 
 ; 放大镜功能(调用win11原生放大镜)
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 Tab::
 {
    ; 标记为按下了其他键
@@ -3576,7 +3638,7 @@ ProcessExist(processName) {
 }
 
 ; 暂时空置其他按键, 未来按需添加, 也可以通过这些空置键来取消映射esc避免误触
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 
 -::
 {
@@ -4196,7 +4258,7 @@ LoadNoteTargetsFromINI()
 ; 初始化速记目录
 EnsureNoteDirectories()
 
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 n::
 {
     ; 标记为按下了其他键
@@ -4892,7 +4954,7 @@ SaveToSpecificFile(filePath, lines, title, displayName) {
     }
 }
 
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 q::
 {
     ; 标记为按下了其他键
@@ -5791,7 +5853,7 @@ ExecuteMenuItem(groupIndex, itemIndex) {
 ; 数字键绑定 - 显示对应的菜单或执行操作
 ;=====================================================================
 
-#HotIf GetKeyState("CapsLock", "P")
+#HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 1::
 {
     ; 标记为按下了其他键
