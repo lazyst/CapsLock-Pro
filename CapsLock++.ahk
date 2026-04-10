@@ -41,6 +41,7 @@ if (!A_IsAdmin) {
 #Include lib\ProcessManage.ahk
 #Include lib\WebsiteManage.ahk
 #Include lib\WindowClip.ahk
+#Include lib\ConfigHelper.ahk
 
 ; =====================================================================
 ; 初始化应用

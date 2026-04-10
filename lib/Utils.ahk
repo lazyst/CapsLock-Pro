@@ -30,7 +30,7 @@ FormatNumber(num) {
 
 ; 切换调试提示的显示状态
 ToggleDebugTooltips() {
-    global showDebugTooltips
+    global showDebugTooltips, tipDuration
     showDebugTooltips := !showDebugTooltips
     ToolTip("调试信息显示: " (showDebugTooltips ? "开启" : "关闭"))
     SetTimer () => ToolTip(), -tipDuration

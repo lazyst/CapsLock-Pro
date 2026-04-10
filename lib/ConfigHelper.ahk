@@ -1,21 +1,9 @@
-#Requires AutoHotkey v2.0
-#SingleInstance Force
-
-global iniFile := A_ScriptDir "\CapsLock++.ini"
-global currentMenuGroup := 0
-
-ReadIniValueUTF8(file, section, key, default := "") {
-    try {
-        val := IniRead(file, section, key, default)
-        dq := Chr(34)
-        if (SubStr(val, 1, 1) = dq) and (SubStr(val, -1) = dq)
-            val := SubStr(val, 2, -1)
-        val := StrReplace(val, '\"', dq)
-        return val
-    } catch Error {
-        return default
-    }
-}
+; =====================================================================
+; CapsLock++ 配置助手模块
+; 包含：菜单配置、速记路径、进程管理、网站配置的GUI编辑功能
+; 通过 CapsLock+\ 快捷键启动
+; 工具函数（ReadIniValueUTF8, ShowTooltip）在 lib/Utils.ahk 中声明
+; =====================================================================
 
 EscapeIniValue(val) {
     dq := Chr(34)
@@ -23,15 +11,22 @@ EscapeIniValue(val) {
     return dq val dq
 }
 
-ShowTooltip(text, duration := 1500) {
-    ToolTip(text)
-    SetTimer(() => ToolTip(), -duration)
+EscapeQuotes(str) {
+    return StrReplace(str, '"', '\"')
+}
+
+UnescapeQuotes(str) {
+    return StrReplace(str, '\"', '"')
+}
+
+EnsureDataSync() {
+    SyncMenuItemLVToArray()
 }
 
 ShowConfigHelper() {
     cfgGui := Gui("+Resize", "CapsLock++ 配置助手")
     cfgGui.SetFont("s10", "Segoe UI")
-    cfgGui.OnEvent("Close", (*) => ExitApp())
+    cfgGui.OnEvent("Close", (*) => cfgGui.Destroy())
 
     tabs := cfgGui.Add("Tab3", "x0 y0 w800 h560", ["菜单配置", "速记路径", "进程管理", "网站配置"])
 
@@ -45,7 +40,7 @@ ShowConfigHelper() {
     BuildWebsitePage(cfgGui)
     tabs.UseTab(0)
 
-    cfgGui.Add("Button", "x580 y570 w100 h32", "重新加载").OnEvent("Click", (*) => ConfigReload())
+    cfgGui.Add("Button", "x580 y570 w100 h32", "重新加载").OnEvent("Click", (*) => ConfigReloadWithConfirm())
     cfgGui.Add("Button", "x690 y570 w100 h32", "保存配置").OnEvent("Click", (*) => ConfigSave())
 
     cfgGui.Show("w800 h610")
@@ -58,7 +53,7 @@ BuildNotePage(gui) {
     noteLV.ModifyCol(1, 150)
     noteLV.ModifyCol(2, 600)
     gui.Add("Button", "x10 y490 w80 h28", "添加").OnEvent("Click", NoteAdd)
-    gui.Add("Button", "x100 y490 w80 h28", "编辑").OnEvent("Click", NoteEdit)
+    gui.Add("Button", "x100 y490 w80 h28", "编辑").OnEvent("Click", ConfigNoteEdit)
     gui.Add("Button", "x190 y490 w80 h28", "删除").OnEvent("Click", NoteDel)
     gui.Add("Button", "x280 y490 w60 h28", "上移").OnEvent("Click", (*) => LVMove(noteLV, -1))
     gui.Add("Button", "x350 y490 w60 h28", "下移").OnEvent("Click", (*) => LVMove(noteLV, 1))
@@ -74,16 +69,16 @@ NoteAdd(*) {
     noteLV.Add("", kwResult.Value, pathResult.Value)
 }
 
-NoteEdit(*) {
+ConfigNoteEdit(*) {
     row := noteLV.GetNext()
     if (!row)
         return
     kw := noteLV.GetText(row, 1)
     path := noteLV.GetText(row, 2)
-    kwResult := InputBox("编辑关键词", "编辑速记目标",, kw)
+    kwResult := InputBox("编辑关键词", "编辑速记目标", , kw)
     if (kwResult.Result != "OK")
         return
-    pathResult := InputBox("编辑文件路径", "编辑速记目标",, path)
+    pathResult := InputBox("编辑文件路径", "编辑速记目标", , path)
     if (pathResult.Result != "OK")
         return
     noteLV.Modify(row, "", kwResult.Value, pathResult.Value)
@@ -105,7 +100,7 @@ LVMove(lv, direction) {
     cols := lv.GetCount("Col")
     rowData := []
     targetRowData := []
-    Loop cols {
+    loop cols {
         rowData.Push(lv.GetText(row, A_Index))
         targetRowData.Push(lv.GetText(target, A_Index))
     }
@@ -137,7 +132,8 @@ BuildMenuPage(gui) {
     gui.Add("Button", "x545 y425 w40 h24", "▼").OnEvent("Click", MenuMoveItemDown)
     global menuGroupEnabled := []
     global menuGroupItems := []
-    Loop 10 {
+    global currentMenuGroup := 0
+    loop 10 {
         menuGroupEnabled.Push(true)
         menuGroupItems.Push([])
     }
@@ -145,6 +141,21 @@ BuildMenuPage(gui) {
 
 MenuGroupFocus(ctrl, itemNum) {
     global menuGroupItems, currentMenuGroup
+
+    if (currentMenuGroup >= 1 && currentMenuGroup <= menuGroupItems.Length && currentMenuGroup != itemNum) {
+        items := []
+        loop menuItemLV.GetCount() {
+            i := A_Index
+            items.Push({
+                name: menuItemLV.GetText(i, 1),
+                icon: menuItemLV.GetText(i, 2),
+                icontype: menuItemLV.GetText(i, 3),
+                action: menuItemLV.GetText(i, 4)
+            })
+        }
+        menuGroupItems[currentMenuGroup] := items
+    }
+
     currentMenuGroup := itemNum
     menuItemLV.Delete()
     if (itemNum < 1 || itemNum > menuGroupItems.Length)
@@ -155,14 +166,19 @@ MenuGroupFocus(ctrl, itemNum) {
     }
 }
 
+ExtractMenuGroupName(displayText) {
+    if (SubStr(displayText, 1, 2) = "✓ " || SubStr(displayText, 1, 2) = "✗ ")
+        return SubStr(displayText, 3)
+    return displayText
+}
+
 MenuEditGroup(*) {
     row := menuGroupLV.GetNext()
     if (!row)
         return
     current := menuGroupLV.GetText(row, 1)
-    RegExMatch(current, "[✓✗] (.+)", &m)
-    realName := m ? m[1] : current
-    result := InputBox("输入新的菜单组名称", "编辑组名称",, realName)
+    realName := ExtractMenuGroupName(current)
+    result := InputBox("输入新的菜单组名称", "编辑组名称", , realName)
     if (result.Result = "OK" && result.Value != "") {
         state := menuGroupEnabled[row] ? "✓ " : "✗ "
         menuGroupLV.Modify(row, "", state result.Value)
@@ -177,8 +193,7 @@ MenuToggleGroup(*) {
     menuGroupEnabled[row] := !menuGroupEnabled[row]
     state := menuGroupEnabled[row] ? "✓ " : "✗ "
     name := menuGroupLV.GetText(row, 1)
-    RegExMatch(name, "[✓✗] (.+)", &m)
-    realName := m ? m[1] : name
+    realName := ExtractMenuGroupName(name)
     menuGroupLV.Modify(row, "", state realName)
 }
 
@@ -233,14 +248,14 @@ DetectActionType(action) {
 }
 
 ExtractRunCommandParams(action) {
-    if RegExMatch(action, 'i)^RunCommand\(\s*"(.*?)"\s*,\s*"(.*?)"\s*\)$', &m)
-        return {command: m[1], workdir: m[2]}
+    if RegExMatch(action, 'i)^RunCommand\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)$', &m)
+        return { command: UnescapeQuotes(m[1]), workdir: UnescapeQuotes(m[2]) }
     return ""
 }
 
 ExtractActivateOrRunParams(action) {
-    if RegExMatch(action, 'i)^ActivateOrRun\(\s*"(.*?)"\s*,\s*"(.*?)"\s*\)$', &m)
-        return {name: m[1], path: m[2]}
+    if RegExMatch(action, 'i)^ActivateOrRun\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)$', &m)
+        return { name: UnescapeQuotes(m[1]), path: UnescapeQuotes(m[2]) }
     return ""
 }
 
@@ -283,24 +298,31 @@ MenuAddItem(*) {
     ]
     elb := dlg.Add("ComboBox", "x100 y115 w260", templates)
 
-    dlg.Add("Text", "x10 y178", "生成的动作:")
-    ae := dlg.Add("Edit", "x100 y175 w260 +ReadOnly", "")
+    customPresetLabel := dlg.Add("Text", "x10 y148", "自定义预设:")
+    customPresetEdit := dlg.Add("Edit", "x100 y145 w260 h24", "")
+    customPresetEdit.OnEvent("Change", (*) => ae.Value := customPresetEdit.Value)
 
-    atcb.OnEvent("Change", OnActionTypeChange.Bind(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae))
+    dlg.Add("Text", "x10 y208", "生成的动作:")
+    ae := dlg.Add("Edit", "x100 y205 w260 +ReadOnly", "")
+
+    atcb.OnEvent("Change", OnActionTypeChange.Bind(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe,
+        apNeLabel, apPeLabel, elb, tmplLabel, ae, customPresetEdit, customPresetLabel))
     cmdEdit.OnEvent("Change", OnRunCommandChange.Bind(cmdEdit, workdirEdit, ae))
     workdirEdit.OnEvent("Change", OnRunCommandChange.Bind(cmdEdit, workdirEdit, ae))
     apNe.OnEvent("Change", OnActivateOrRunChange.Bind(apNe, apPe, ae))
     apPe.OnEvent("Change", OnActivateOrRunChange.Bind(apNe, apPe, ae))
     elb.OnEvent("Change", OnTemplateSelect.Bind(elb, ae))
 
-    OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae)
-    dlg.Add("Button", "x120 y210 w80", "确定").OnEvent("Click", OnMenuAddSubmit.Bind(ne, ie, itcb, ae, dlg))
-    dlg.Add("Button", "x210 y210 w80", "取消").OnEvent("Click", (*) => dlg.Destroy())
+    OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb,
+        tmplLabel, ae, customPresetEdit, customPresetLabel)
+    dlg.Add("Button", "x120 y240 w80", "确定").OnEvent("Click", OnMenuAddSubmit.Bind(ne, ie, itcb, ae, dlg))
+    dlg.Add("Button", "x210 y240 w80", "取消").OnEvent("Click", (*) => dlg.Destroy())
     dlg.OnEvent("Close", (*) => dlg.Destroy())
-    dlg.Show("w375 h250")
+    dlg.Show("w375 h280")
 }
 
-OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae, *) {
+OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel,
+    ae, customPresetEdit := "", customPresetLabel := "", *) {
     t := atcb.Text
     isCustom := (t = "自定义命令")
     isApp := (t = "启动程序")
@@ -315,11 +337,15 @@ OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apP
     apPeLabel.Visible := isApp
     elb.Visible := isPreset
     tmplLabel.Visible := isPreset
+    if (customPresetEdit != "") {
+        customPresetEdit.Visible := isPreset
+        customPresetLabel.Visible := isPreset
+    }
     if (isCustom) {
         OnRunCommandChange(cmdEdit, workdirEdit, ae, "")
     } else if (isApp) {
         dq := Chr(34)
-        ae.Value := 'ActivateOrRun(' dq apNe.Value dq ', ' dq apPe.Value dq ')'
+        ae.Value := 'ActivateOrRun(' dq EscapeQuotes(apNe.Value) dq ', ' dq EscapeQuotes(apPe.Value) dq ')'
     } else {
         ae.Value := elb.Text
     }
@@ -327,12 +353,12 @@ OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apP
 
 OnRunCommandChange(cmdEdit, workdirEdit, ae, *) {
     dq := Chr(34)
-    ae.Value := 'RunCommand(' dq cmdEdit.Value dq ', ' dq workdirEdit.Value dq ')'
+    ae.Value := 'RunCommand(' dq EscapeQuotes(cmdEdit.Value) dq ', ' dq EscapeQuotes(workdirEdit.Value) dq ')'
 }
 
 OnActivateOrRunChange(apNe, apPe, ae, *) {
     dq := Chr(34)
-    ae.Value := 'ActivateOrRun(' dq apNe.Value dq ', ' dq apPe.Value dq ')'
+    ae.Value := 'ActivateOrRun(' dq EscapeQuotes(apNe.Value) dq ', ' dq EscapeQuotes(apPe.Value) dq ')'
 }
 
 OnTemplateSelect(elb, ae, *) {
@@ -341,12 +367,18 @@ OnTemplateSelect(elb, ae, *) {
 
 OnMenuAddSubmit(ne, ie, itcb, ae, dlg, *) {
     global menuGroupItems, currentMenuGroup
-    if (ne.Value = "")
+    if (ne.Value = "") {
+        ShowTooltip("名称不能为空")
         return
+    }
+    if (ae.Value = "") {
+        ShowTooltip("动作不能为空")
+        return
+    }
     menuItemLV.Add("", ne.Value, ie.Value, itcb.Text, ae.Value)
     if (currentMenuGroup >= 1 && currentMenuGroup <= menuGroupItems.Length) {
         items := menuGroupItems[currentMenuGroup]
-        items.Push({name: ne.Value, icon: ie.Value, icontype: itcb.Text, action: ae.Value})
+        items.Push({ name: ne.Value, icon: ie.Value, icontype: itcb.Text, action: ae.Value })
     }
     dlg.Destroy()
 }
@@ -414,39 +446,61 @@ MenuEditItem(*) {
         'WebsiteLogin()', 'WebsiteLogin("www.bilibili.com")'
     ]
     elb := dlg.Add("ComboBox", "x100 y115 w260", templates)
+
+    customPresetLabel := dlg.Add("Text", "x10 y148", "自定义预设:")
+    customPresetEdit := dlg.Add("Edit", "x100 y145 w260 h24", "")
+
+    foundInTemplates := false
     if (detectedType = "预设功能") {
         for idx, tmpl in templates {
             if (tmpl = action) {
                 elb.Choose(idx)
+                foundInTemplates := true
                 break
             }
         }
+        if (!foundInTemplates) {
+            customPresetEdit.Value := action
+        }
     }
 
-    dlg.Add("Text", "x10 y178", "生成的动作:")
-    ae := dlg.Add("Edit", "x100 y175 w260 +ReadOnly", action)
+    customPresetEdit.OnEvent("Change", (*) => ae.Value := customPresetEdit.Value)
 
-    atcb.OnEvent("Change", OnActionTypeChange.Bind(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae))
+    dlg.Add("Text", "x10 y208", "生成的动作:")
+    ae := dlg.Add("Edit", "x100 y205 w260 +ReadOnly", action)
+
+    atcb.OnEvent("Change", OnActionTypeChange.Bind(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe,
+        apNeLabel, apPeLabel, elb, tmplLabel, ae, customPresetEdit, customPresetLabel))
     cmdEdit.OnEvent("Change", OnRunCommandChange.Bind(cmdEdit, workdirEdit, ae))
     workdirEdit.OnEvent("Change", OnRunCommandChange.Bind(cmdEdit, workdirEdit, ae))
     apNe.OnEvent("Change", OnActivateOrRunChange.Bind(apNe, apPe, ae))
     apPe.OnEvent("Change", OnActivateOrRunChange.Bind(apNe, apPe, ae))
     elb.OnEvent("Change", OnTemplateSelect.Bind(elb, ae))
 
-    OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb, tmplLabel, ae)
-    dlg.Add("Button", "x120 y210 w80", "确定").OnEvent("Click", OnMenuEditSubmit.Bind(ne, ie, itcb, ae, row, dlg))
-    dlg.Add("Button", "x210 y210 w80", "取消").OnEvent("Click", (*) => dlg.Destroy())
+    OnActionTypeChange(atcb, cmdEdit, cmdLabel, workdirEdit, workdirLabel, apNe, apPe, apNeLabel, apPeLabel, elb,
+        tmplLabel, ae, customPresetEdit, customPresetLabel)
+    dlg.Add("Button", "x120 y240 w80", "确定").OnEvent("Click", OnMenuEditSubmit.Bind(ne, ie, itcb, ae, row, dlg))
+    dlg.Add("Button", "x210 y240 w80", "取消").OnEvent("Click", (*) => dlg.Destroy())
     dlg.OnEvent("Close", (*) => dlg.Destroy())
-    dlg.Show("w375 h250")
+    dlg.Show("w375 h280")
 }
 
 OnMenuEditSubmit(ne, ie, itcb, ae, row, dlg, *) {
     global menuGroupItems, currentMenuGroup
+    EnsureDataSync()
+    if (ne.Value = "") {
+        ShowTooltip("名称不能为空")
+        return
+    }
+    if (ae.Value = "") {
+        ShowTooltip("动作不能为空")
+        return
+    }
     menuItemLV.Modify(row, "", ne.Value, ie.Value, itcb.Text, ae.Value)
     if (currentMenuGroup >= 1 && currentMenuGroup <= menuGroupItems.Length) {
         items := menuGroupItems[currentMenuGroup]
         if (row >= 1 && row <= items.Length) {
-            items[row] := {name: ne.Value, icon: ie.Value, icontype: itcb.Text, action: ae.Value}
+            items[row] := { name: ne.Value, icon: ie.Value, icontype: itcb.Text, action: ae.Value }
         }
     }
     dlg.Destroy()
@@ -454,6 +508,7 @@ OnMenuEditSubmit(ne, ie, itcb, ae, row, dlg, *) {
 
 MenuDelItem(*) {
     global menuGroupItems, currentMenuGroup
+    EnsureDataSync()
     row := menuItemLV.GetNext()
     if (!row)
         return
@@ -467,6 +522,7 @@ MenuDelItem(*) {
 
 MenuMoveItemUp(*) {
     global menuGroupItems, currentMenuGroup
+    EnsureDataSync()
     row := menuItemLV.GetNext()
     if (!row || row <= 1)
         return
@@ -474,7 +530,7 @@ MenuMoveItemUp(*) {
     cols := menuItemLV.GetCount("Col")
     rowData := []
     targetRowData := []
-    Loop cols {
+    loop cols {
         rowData.Push(menuItemLV.GetText(row, A_Index))
         targetRowData.Push(menuItemLV.GetText(target, A_Index))
     }
@@ -493,6 +549,7 @@ MenuMoveItemUp(*) {
 
 MenuMoveItemDown(*) {
     global menuGroupItems, currentMenuGroup
+    EnsureDataSync()
     row := menuItemLV.GetNext()
     if (!row || row >= menuItemLV.GetCount())
         return
@@ -500,7 +557,7 @@ MenuMoveItemDown(*) {
     cols := menuItemLV.GetCount("Col")
     rowData := []
     targetRowData := []
-    Loop cols {
+    loop cols {
         rowData.Push(menuItemLV.GetText(row, A_Index))
         targetRowData.Push(menuItemLV.GetText(target, A_Index))
     }
@@ -639,7 +696,7 @@ OnGUIStartSubmit(ne, pe, ccb, dlg, *) {
 }
 
 LVSelectAll(lv) {
-    Loop lv.GetCount() {
+    loop lv.GetCount() {
         lv.Modify(A_Index, "Check")
     }
 }
@@ -681,12 +738,20 @@ WebsiteAdd(*) {
     websiteLV.Add("", nameResult.Value, urlResult.Value)
 }
 
+ConfigReloadWithConfirm() {
+    result := MsgBox("重新加载将丢弃所有未保存的更改，是否继续？", "确认重新加载", 0x124)
+    if (result = "Yes")
+        ConfigReload()
+}
+
 ConfigReload() {
-    global menuGroupItems, menuGroupEnabled, currentMenuGroup
+    global menuGroupItems, menuGroupEnabled, currentMenuGroup, iniFile
+
+    SyncMenuItemLVToArray()
 
     noteLV.Delete()
     i := 1
-    Loop {
+    loop {
         try {
             kw := ReadIniValueUTF8(iniFile, "noteTargets", "note" i "1", "")
             if (kw = "")
@@ -703,11 +768,11 @@ ConfigReload() {
     menuGroupItems := []
     menuGroupEnabled := []
     currentMenuGroup := 0
-    Loop 10 {
+    loop 10 {
         menuGroupItems.Push([])
         menuGroupEnabled.Push(true)
     }
-    Loop 10 {
+    loop 10 {
         i := A_Index
         name := ReadIniValueUTF8(iniFile, "MenuGroupName", "name" i, "菜单组 " i)
         enabled := ReadIniValueUTF8(iniFile, "MenuGroupsEnable", "enableGroup" i, "false") = "true"
@@ -716,7 +781,7 @@ ConfigReload() {
         menuGroupLV.Add("", prefix name)
         count := Integer(ReadIniValueUTF8(iniFile, "MenuGroupCount", "count" i, "0"))
         items := []
-        Loop count {
+        loop count {
             j := A_Index
             sectionName := "MenuGroups" i "Items"
             itemName := ReadIniValueUTF8(iniFile, sectionName, "name" j, "")
@@ -724,11 +789,11 @@ ConfigReload() {
             itemIconType := ReadIniValueUTF8(iniFile, sectionName, "icontype" j, "")
             itemAction := ReadIniValueUTF8(iniFile, sectionName, "action" j, "")
             if (itemName != "")
-                items.Push({name: itemName, icon: itemIcon, icontype: itemIconType, action: itemAction})
+                items.Push({ name: itemName, icon: itemIcon, icontype: itemIconType, action: itemAction })
         }
         menuGroupItems[i] := items
     }
-    
+
     if (menuGroupLV.GetCount() > 0) {
         menuGroupLV.Modify(1, "+Select +Focus")
         MenuGroupFocus(menuGroupLV, 1)
@@ -740,7 +805,7 @@ ConfigReload() {
     guiTermProcLV.Delete()
 
     i := 1
-    Loop {
+    loop {
         try {
             val := ReadIniValueUTF8(iniFile, "ProcessesToStart", "item" i, "")
             if (val = "")
@@ -752,7 +817,7 @@ ConfigReload() {
         }
     }
     i := 1
-    Loop {
+    loop {
         try {
             val := ReadIniValueUTF8(iniFile, "ProcessesToTerminate", "item" i, "")
             if (val = "")
@@ -764,7 +829,7 @@ ConfigReload() {
         }
     }
     i := 1
-    Loop {
+    loop {
         try {
             n := ReadIniValueUTF8(iniFile, "GUIProcessesToStart", "Item" i "_Name", "")
             if (n = "")
@@ -778,7 +843,7 @@ ConfigReload() {
         }
     }
     i := 1
-    Loop {
+    loop {
         try {
             n := ReadIniValueUTF8(iniFile, "GUIProcessesToTerminate", "Item" i "_Name", "")
             if (n = "")
@@ -798,7 +863,7 @@ ConfigReload() {
 
     websiteLV.Delete()
     i := 1
-    Loop {
+    loop {
         try {
             site := ReadIniValueUTF8(iniFile, "CommonWebsites", "site" i, "")
             if (site = "")
@@ -817,10 +882,127 @@ ConfigReload() {
     ShowTooltip("配置已加载")
 }
 
-ConfigSave() {
-    global menuGroupItems, menuGroupEnabled, darkModeCB
+SerializeNoteTargets() {
+    s := "[noteTargets]`n"
+    loop noteLV.GetCount() {
+        s .= "note" A_Index "1=" EscapeIniValue(noteLV.GetText(A_Index, 1)) "`n"
+        s .= "note" A_Index "2=" EscapeIniValue(noteLV.GetText(A_Index, 2)) "`n"
+    }
+    return s "`n"
+}
 
-    managedSections := Map(
+SerializeMenuColourMode() {
+    s := "[MenuGroupsColourMode]`n"
+    s .= "DarkMode=" (darkModeCB.Value ? "true" : "false") "`n"
+    return s "`n"
+}
+
+SerializeMenuGroupsEnable() {
+    s := "[MenuGroupsEnable]`n"
+    loop 10 {
+        s .= "enableGroup" A_Index "=" (menuGroupEnabled[A_Index] ? "true" : "false") "`n"
+    }
+    return s "`n"
+}
+
+SerializeMenuGroupNum() {
+    enabledCount := 0
+    loop 10 {
+        if (menuGroupEnabled[A_Index])
+            enabledCount++
+    }
+    s := "[MenuGroupNum]`n"
+    s .= "num=" enabledCount "`n"
+    return s "`n"
+}
+
+SerializeMenuGroupCount() {
+    s := "[MenuGroupCount]`n"
+    loop 10 {
+        i := A_Index
+        cnt := (i <= menuGroupItems.Length) ? menuGroupItems[i].Length : 0
+        s .= "count" i "=" cnt "`n"
+    }
+    return s "`n"
+}
+
+SerializeMenuGroupName() {
+    s := "[MenuGroupName]`n"
+    loop 10 {
+        i := A_Index
+        name := menuGroupLV.GetText(i, 1)
+        realName := ExtractMenuGroupName(name)
+        s .= "name" i "=" EscapeIniValue(realName) "`n"
+    }
+    return s "`n"
+}
+
+SerializeMenuGroupItems(index) {
+    global menuGroupItems
+    s := "[MenuGroups" index "Items]`n"
+    if (index <= menuGroupItems.Length) {
+        items := menuGroupItems[index]
+        for j, item in items {
+            s .= "name" j "=" EscapeIniValue(item.name) "`n"
+            s .= "icon" j "=" EscapeIniValue(item.icon) "`n"
+            s .= "icontype" j "=" EscapeIniValue(item.icontype) "`n"
+            s .= "action" j "=" EscapeIniValue(item.action) "`n"
+        }
+    }
+    return s "`n"
+}
+
+SerializeProcessesToStart() {
+    s := "[ProcessesToStart]`n"
+    loop startProcLV.GetCount() {
+        s .= "item" A_Index "=" EscapeIniValue(startProcLV.GetText(A_Index, 2)) "`n"
+    }
+    return s "`n"
+}
+
+SerializeProcessesToTerminate() {
+    s := "[ProcessesToTerminate]`n"
+    loop termProcLV.GetCount() {
+        s .= "item" A_Index "=" EscapeIniValue(termProcLV.GetText(A_Index, 2)) "`n"
+    }
+    return s "`n"
+}
+
+SerializeCommonWebsites() {
+    s := "[CommonWebsites]`n"
+    s .= "default_site=" EscapeIniValue(defaultSiteEdit.Value) "`n"
+    s .= "browser=" EscapeIniValue(browserCombo.Text) "`n"
+    loop websiteLV.GetCount() {
+        s .= "site" A_Index "=" EscapeIniValue(websiteLV.GetText(A_Index, 1)) "`n"
+        s .= "url" A_Index "=" EscapeIniValue(websiteLV.GetText(A_Index, 2)) "`n"
+    }
+    return s "`n"
+}
+
+SerializeGUIProcessesToStart() {
+    s := "[GUIProcessesToStart]`n"
+    loop guiStartProcLV.GetCount() {
+        i := A_Index
+        s .= "Item" i "_Name=" EscapeIniValue(guiStartProcLV.GetText(i, 2)) "`n"
+        s .= "Item" i "_Path=" EscapeIniValue(guiStartProcLV.GetText(i, 3)) "`n"
+        s .= "Item" i "_Checked=" EscapeIniValue(guiStartProcLV.GetText(i, 4)) "`n"
+    }
+    return s "`n"
+}
+
+SerializeGUIProcessesToTerminate() {
+    s := "[GUIProcessesToTerminate]`n"
+    loop guiTermProcLV.GetCount() {
+        i := A_Index
+        s .= "Item" i "_Name=" EscapeIniValue(guiTermProcLV.GetText(i, 2)) "`n"
+        s .= "Item" i "_Path=" EscapeIniValue(guiTermProcLV.GetText(i, 3)) "`n"
+        s .= "Item" i "_Checked=" EscapeIniValue(guiTermProcLV.GetText(i, 4)) "`n"
+    }
+    return s "`n"
+}
+
+BuildManagedSectionsMap() {
+    m := Map(
         "noteTargets", true,
         "MenuGroupsColourMode", true,
         "MenuGroupsEnable", true,
@@ -833,138 +1015,104 @@ ConfigSave() {
         "GUIProcessesToStart", true,
         "GUIProcessesToTerminate", true
     )
-    Loop 10 {
-        managedSections["MenuGroups" A_Index "Items"] := true
+    loop 10 {
+        m["MenuGroups" A_Index "Items"] := true
     }
+    return m
+}
 
-    preservedSections := ""
+CollectPreservedSections(managedSections) {
+    preserved := ""
     try {
         allSections := IniRead(iniFile)
-        Loop Parse, allSections, "`n" {
+        loop parse, allSections, "`n" {
             secName := Trim(A_LoopField)
             if (!managedSections.Has(secName)) {
-                preservedSections .= "[" secName "]`n"
+                preserved .= "[" secName "]`n"
                 secKeys := IniRead(iniFile, secName)
-                Loop Parse, secKeys, "`n" {
-                    preservedSections .= A_LoopField "`n"
+                loop parse, secKeys, "`n" {
+                    preserved .= A_LoopField "`n"
                 }
-                preservedSections .= "`n"
+                preserved .= "`n"
             }
         }
     } catch Error {
     }
-
-    s := ""
-
-    s .= "[noteTargets]`n"
-    Loop noteLV.GetCount() {
-        s .= "note" A_Index "1=" EscapeIniValue(noteLV.GetText(A_Index, 1)) "`n"
-        s .= "note" A_Index "2=" EscapeIniValue(noteLV.GetText(A_Index, 2)) "`n"
-    }
-    s .= "`n"
-
-    s .= "[MenuGroupsColourMode]`n"
-    s .= "DarkMode=" (darkModeCB.Value ? "true" : "false") "`n`n"
-
-    s .= "[MenuGroupsEnable]`n"
-    Loop 10 {
-        s .= "enableGroup" A_Index "=" (menuGroupEnabled[A_Index] ? "true" : "false") "`n"
-    }
-    s .= "`n"
-
-    enabledCount := 0
-    Loop 10 {
-        if (menuGroupEnabled[A_Index])
-            enabledCount++
-    }
-    s .= "[MenuGroupNum]`n"
-    s .= "num=" enabledCount "`n`n"
-
-    s .= "[MenuGroupCount]`n"
-    Loop 10 {
-        i := A_Index
-        cnt := (i <= menuGroupItems.Length) ? menuGroupItems[i].Length : 0
-        s .= "count" i "=" cnt "`n"
-    }
-    s .= "`n"
-
-    s .= "[MenuGroupName]`n"
-    Loop 10 {
-        i := A_Index
-        name := menuGroupLV.GetText(i, 1)
-        RegExMatch(name, "[✓✗] (.+)", &m)
-        realName := m ? m[1] : name
-        s .= "name" i "=" EscapeIniValue(realName) "`n"
-    }
-    s .= "`n"
-
-    Loop 10 {
-        i := A_Index
-        s .= "[MenuGroups" i "Items]`n"
-        if (i <= menuGroupItems.Length) {
-            items := menuGroupItems[i]
-            for j, item in items {
-                s .= "name" j "=" EscapeIniValue(item.name) "`n"
-                s .= "icon" j "=" EscapeIniValue(item.icon) "`n"
-                s .= "icontype" j "=" EscapeIniValue(item.icontype) "`n"
-                s .= "action" j "=" EscapeIniValue(item.action) "`n"
-            }
-        }
-        s .= "`n"
-    }
-
-    s .= "[ProcessesToStart]`n"
-    Loop startProcLV.GetCount() {
-        s .= "item" A_Index "=" EscapeIniValue(startProcLV.GetText(A_Index, 2)) "`n"
-    }
-    s .= "`n"
-
-    s .= "[ProcessesToTerminate]`n"
-    Loop termProcLV.GetCount() {
-        s .= "item" A_Index "=" EscapeIniValue(termProcLV.GetText(A_Index, 2)) "`n"
-    }
-    s .= "`n"
-
-    s .= "[CommonWebsites]`n"
-    s .= "default_site=" EscapeIniValue(defaultSiteEdit.Value) "`n"
-    s .= "browser=" EscapeIniValue(browserCombo.Text) "`n"
-    Loop websiteLV.GetCount() {
-        s .= "site" A_Index "=" EscapeIniValue(websiteLV.GetText(A_Index, 1)) "`n"
-        s .= "url" A_Index "=" EscapeIniValue(websiteLV.GetText(A_Index, 2)) "`n"
-    }
-    s .= "`n"
-
-    s .= "[GUIProcessesToStart]`n"
-    Loop guiStartProcLV.GetCount() {
-        i := A_Index
-        s .= "Item" i "_Name=" EscapeIniValue(guiStartProcLV.GetText(i, 2)) "`n"
-        s .= "Item" i "_Path=" EscapeIniValue(guiStartProcLV.GetText(i, 3)) "`n"
-        s .= "Item" i "_Checked=" EscapeIniValue(guiStartProcLV.GetText(i, 4)) "`n"
-    }
-    s .= "`n"
-
-    s .= "[GUIProcessesToTerminate]`n"
-    Loop guiTermProcLV.GetCount() {
-        i := A_Index
-        s .= "Item" i "_Name=" EscapeIniValue(guiTermProcLV.GetText(i, 2)) "`n"
-        s .= "Item" i "_Path=" EscapeIniValue(guiTermProcLV.GetText(i, 3)) "`n"
-        s .= "Item" i "_Checked=" EscapeIniValue(guiTermProcLV.GetText(i, 4)) "`n"
-    }
-    s .= "`n"
-
-    s .= preservedSections
-
-    f := FileOpen(iniFile, "w", "UTF-8")
-    f.Write(s)
-    f.Close()
-
-    try {
-        FileDelete(A_ScriptDir "\.reload_signal")
-    } catch {
-    }
-    FileAppend("1", A_ScriptDir "\.reload_signal")
-
-    ShowTooltip("配置已保存，主程序将自动重新加载")
+    return preserved
 }
 
-ShowConfigHelper()
+WriteIniContent(filePath, content) {
+    try {
+        f := FileOpen(filePath, "w", "UTF-8")
+        if (!f) {
+            ShowTooltip("错误：无法打开配置文件")
+            return false
+        }
+        f.Write(content)
+        f.Close()
+        return true
+    } catch Error as e {
+        ShowTooltip("错误：保存配置失败 - " e.Message)
+        return false
+    }
+}
+
+SyncMenuItemLVToArray() {
+    global menuGroupItems, currentMenuGroup, menuItemLV
+
+    if (currentMenuGroup < 1 || currentMenuGroup > menuGroupItems.Length)
+        return
+
+    items := []
+    loop menuItemLV.GetCount() {
+        i := A_Index
+        items.Push({
+            name: menuItemLV.GetText(i, 1),
+            icon: menuItemLV.GetText(i, 2),
+            icontype: menuItemLV.GetText(i, 3),
+            action: menuItemLV.GetText(i, 4)
+        })
+    }
+    menuGroupItems[currentMenuGroup] := items
+}
+
+ConfigSave() {
+    SyncMenuItemLVToArray()
+
+    sections := [
+        SerializeNoteTargets(),
+        SerializeMenuColourMode(),
+        SerializeMenuGroupsEnable(),
+        SerializeMenuGroupNum(),
+        SerializeMenuGroupCount(),
+        SerializeMenuGroupName()
+    ]
+    loop 10 {
+        sections.Push(SerializeMenuGroupItems(A_Index))
+    }
+    sections.Push(
+        SerializeProcessesToStart(),
+        SerializeProcessesToTerminate(),
+        SerializeCommonWebsites(),
+        SerializeGUIProcessesToStart(),
+        SerializeGUIProcessesToTerminate()
+    )
+
+    managedSections := BuildManagedSectionsMap()
+    preserved := CollectPreservedSections(managedSections)
+    if (preserved != "")
+        sections.Push(preserved)
+
+    content := ""
+    for sec in sections {
+        content .= sec
+    }
+
+    if (!WriteIniContent(iniFile, content))
+        return
+
+    ReloadMenuGroups()
+    LoadNoteTargetsFromINI()
+
+    ShowTooltip("配置已保存并重新加载")
+}

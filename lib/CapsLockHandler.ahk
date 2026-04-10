@@ -4,23 +4,6 @@
 ;       状态检查、调试切换、退出清理
 ; =====================================================================
 
-InitializeGlobalVariables() {
-    global showDebugTooltips, useTaskbarOrder, includeMultipleInstances
-    global isFirstRun, jumpMode, jumpActive, jumpBuffer, jumpPosition
-    global g_inputHook, isWordJump
-
-    showDebugTooltips := false
-    useTaskbarOrder := false
-    includeMultipleInstances := true
-    isFirstRun := true
-    jumpMode := ""
-    jumpActive := false
-    jumpBuffer := ""
-    jumpPosition := {x: 0, y: 0}
-    g_inputHook := {}
-    isWordJump := false
-}
-
 SetCustomTrayIcon() {
     iconPath := A_ScriptDir . "\Icon\CapsLock++.ico"
 
@@ -41,8 +24,6 @@ CustomizeTrayMenu() {
 }
 
 InitializeApp() {
-    InitializeGlobalVariables()
-
     SetCapsLockState("AlwaysOff")
 
     SetTimer(CheckCapsLockState, 2000)
@@ -72,8 +53,6 @@ CheckCapsLockState() {
 SetCapsLockState("AlwaysOff")
 
 ^!i::ToggleDebugTooltips()
-
-SetCapsLockState("AlwaysOff")
 
 ~CapsLock::
 {

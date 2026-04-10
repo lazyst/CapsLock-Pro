@@ -139,6 +139,9 @@ global hasExecutedSingleClick := false
 ; 剪贴板保存变量
 global ClipboardSaved_Independent := ""
 
+; 配置文件路径
+global iniFile := A_ScriptDir "\CapsLock++.ini"
+
 ; 初始化黑名单进程名称缓存
 for path in blacklist {
     SplitPath(path, &processName)

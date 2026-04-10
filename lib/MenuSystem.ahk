@@ -168,9 +168,9 @@ CheckReloadSignal() {
 }
 
 ReloadMenuGroups() {
-    global menuGroupNum, enableGroup, groupName, groupCount, MenuGroups
+    global menuGroupNum, enableGroup, groupName, groupCount, MenuGroups, iniFile
 
-    menuGroupNum := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupNum", "num", "0")
+    menuGroupNum := ReadIniValueUTF8(iniFile, "MenuGroupNum", "num", "0")
     menuGroupNum := Integer(menuGroupNum)
 
     enableGroup := []
@@ -179,17 +179,17 @@ ReloadMenuGroups() {
 
     Loop 10 {
         i := A_Index
-        enableGroup.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupsEnable", "enableGroup" i, "false") = "true")
+        enableGroup.Push(ReadIniValueUTF8(iniFile, "MenuGroupsEnable", "enableGroup" i, "false") = "true")
     }
 
     Loop 10 {
         i := A_Index
-        groupName.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupName", "name" i, "组 " i))
+        groupName.Push(ReadIniValueUTF8(iniFile, "MenuGroupName", "name" i, "组 " i))
     }
 
     Loop 10 {
         i := A_Index
-        count := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupCount", "count" i, "0")
+        count := ReadIniValueUTF8(iniFile, "MenuGroupCount", "count" i, "0")
         groupCount.Push(Integer(count))
     }
 
@@ -205,10 +205,10 @@ ReloadMenuGroups() {
                 itemIndex := A_Index
                 sectionName := "MenuGroups" groupIndex "Items"
 
-                itemName := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "name" itemIndex, "")
-                itemIcon := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "icon" itemIndex, "")
-                itemIconType := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "icontype" itemIndex, "")
-                itemActionStr := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", sectionName, "action" itemIndex, "")
+                itemName := ReadIniValueUTF8(iniFile, sectionName, "name" itemIndex, "")
+                itemIcon := ReadIniValueUTF8(iniFile, sectionName, "icon" itemIndex, "")
+                itemIconType := ReadIniValueUTF8(iniFile, sectionName, "icontype" itemIndex, "")
+                itemActionStr := ReadIniValueUTF8(iniFile, sectionName, "action" itemIndex, "")
 
                 if (itemName != "") {
                     itemAction := GetActionFromString(itemActionStr)

@@ -28,10 +28,6 @@ MinimizeMagnifierWindow() {
     }
 }
 
-ProcessExist(processName) {
-    return ProcessExist := ProcessWaitClose(processName, 0)
-}
-
 #HotIf GetKeyState("CapsLock", "P") && isToolEnabled
 
 -::
@@ -51,11 +47,7 @@ ProcessExist(processName) {
 \::
 {
     global otherKeyPressed := true
-    if (A_IsCompiled) {
-        Run(A_ScriptDir "\配置助手.exe")
-    } else {
-        Run('"' A_AhkPath '" "' A_ScriptDir '\配置助手.ahk"')
-    }
+    ShowConfigHelper()
 }
 
 '::
@@ -103,24 +95,28 @@ GetDesktopPath() {
 }
 
 LoadNoteTargetsFromINI() {
-    global noteTargets
+    global noteTargets, iniFile
 
     noteTargets := Map()
 
-    Loop 10 {
-        i := A_Index
-        keyName := "note" . i . "1"
-        pathName := "note" . i . "2"
+    i := 1
+    loop {
+        try {
+            keyword := ReadIniValueUTF8(iniFile, "noteTargets", "note" i "1", "")
+            if (keyword = "")
+                break
+            path := ReadIniValueUTF8(iniFile, "noteTargets", "note" i "2", "")
 
-        keyword := IniRead(A_ScriptDir "\CapsLock++.ini", "noteTargets", keyName, "")
-        path := IniRead(A_ScriptDir "\CapsLock++.ini", "noteTargets", pathName, "")
+            if (keyword != "" && path != "") {
+                if (!RegExMatch(path, "^[A-Za-z]:\\")) {
+                    path := GetDesktopPath() . path
+                }
 
-        if (keyword != "" && path != "") {
-            if (!RegExMatch(path, "^[A-Za-z]:\\")) {
-                path := GetDesktopPath() . path
+                noteTargets[keyword] := path
             }
-
-            noteTargets[keyword] := path
+            i++
+        } catch Error {
+            break
         }
     }
 
@@ -187,7 +183,8 @@ n::
 }
 
 NoteFileClick(*) {
-    global noteEdit, noteViewMode, currentEditingFile, statusBar, noteListView, searchEdit, searchLabel, noteGui, newNoteBtn
+    global noteEdit, noteViewMode, currentEditingFile, statusBar, noteListView, searchEdit, searchLabel, noteGui,
+        newNoteBtn
 
     selectedRow := noteListView.GetNext()
     if (!selectedRow)
@@ -254,7 +251,8 @@ ShowQuickNote() {
     global searchLabel := noteGui.Add("Text", "x+10 y15 w50", "搜索:")
     global searchEdit := noteGui.Add("Edit", "x+5 y10 w150 h25 vNoteSearch +Hidden", "")
 
-    global noteListView := noteGui.Add("ListView", "x10 y40 w480 h200 +ReadOnly +AltSubmit +Hidden", ["文件名", "修改时间", "目标", "路径"])
+    global noteListView := noteGui.Add("ListView", "x10 y40 w480 h200 +ReadOnly +AltSubmit +Hidden", ["文件名", "修改时间",
+        "目标", "路径"])
     noteListView.OnEvent("DoubleClick", NoteFileClick)
 
     buttonBar := noteGui.Add("Text", "w500 h30 Section", "")
@@ -327,7 +325,8 @@ ShowQuickNote() {
         if (currentEditingFile != "" && FileExist(currentEditingFile)) {
             try {
                 timeStamp := FormatTime(, "yyyy-MM-dd HH:mm:ss")
-                content := RegExReplace(content, "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]", "[" . timeStamp . "]", , 1)
+                content := RegExReplace(content, "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]", "[" . timeStamp . "]", , 1
+                )
 
                 FileDelete(currentEditingFile)
                 FileAppend(content, currentEditingFile)
@@ -528,14 +527,15 @@ SaveToTargetFile(targetName, lines, title) {
 
 StrRepeat(str, count) {
     result := ""
-    Loop count {
+    loop count {
         result .= str
     }
     return result
 }
 
 ToggleNoteViewHandler(*) {
-    global noteViewMode, noteEdit, noteListView, searchEdit, searchLabel, statusBar, currentEditingFile, deleteBtn, noteGui, viewToggleBtn, newNoteBtn
+    global noteViewMode, noteEdit, noteListView, searchEdit, searchLabel, statusBar, currentEditingFile, deleteBtn,
+        noteGui, viewToggleBtn, newNoteBtn
 
     noteViewMode := !noteViewMode
 
@@ -593,7 +593,7 @@ LoadNoteFilesToList(filter := "") {
         }
     }
 
-    Loop Files noteDir . "*.txt" {
+    loop files noteDir . "*.txt" {
         isInTargets := false
         for _, noteFile in noteFiles {
             if (noteFile.path = A_LoopFilePath)
