@@ -23,27 +23,37 @@ EnsureDataSync() {
     SyncMenuItemLVToArray()
 }
 
-ShowConfigHelper() {
-    cfgGui := Gui("+Resize", "CapsLock++ 配置助手")
-    cfgGui.SetFont("s10", "Segoe UI")
-    cfgGui.OnEvent("Close", (*) => cfgGui.Destroy())
+global configHelperGui := ""
 
-    tabs := cfgGui.Add("Tab3", "x0 y0 w800 h560", ["菜单配置", "速记路径", "进程管理", "网站配置"])
+ShowConfigHelper() {
+    global configHelperGui
+
+    if (configHelperGui != "" && WinExist("ahk_id " configHelperGui.Hwnd)) {
+        configHelperGui.Destroy()
+        configHelperGui := ""
+        return
+    }
+
+    configHelperGui := Gui("+Resize", "CapsLock++ 配置助手")
+    configHelperGui.SetFont("s10", "Segoe UI")
+    configHelperGui.OnEvent("Close", (*) => (configHelperGui := ""))
+
+    tabs := configHelperGui.Add("Tab3", "x0 y0 w800 h560", ["菜单配置", "速记路径", "进程管理", "网站配置"])
 
     tabs.UseTab(1)
-    BuildMenuPage(cfgGui)
+    BuildMenuPage(configHelperGui)
     tabs.UseTab(2)
-    BuildNotePage(cfgGui)
+    BuildNotePage(configHelperGui)
     tabs.UseTab(3)
-    BuildProcessPage(cfgGui)
+    BuildProcessPage(configHelperGui)
     tabs.UseTab(4)
-    BuildWebsitePage(cfgGui)
+    BuildWebsitePage(configHelperGui)
     tabs.UseTab(0)
 
-    cfgGui.Add("Button", "x580 y570 w100 h32", "重新加载").OnEvent("Click", (*) => ConfigReloadWithConfirm())
-    cfgGui.Add("Button", "x690 y570 w100 h32", "保存配置").OnEvent("Click", (*) => ConfigSave())
+    configHelperGui.Add("Button", "x580 y570 w100 h32", "重新加载").OnEvent("Click", (*) => ConfigReloadWithConfirm())
+    configHelperGui.Add("Button", "x690 y570 w100 h32", "保存配置").OnEvent("Click", (*) => ConfigSave())
 
-    cfgGui.Show("w800 h610")
+    configHelperGui.Show("w800 h610")
     ConfigReload()
 }
 
