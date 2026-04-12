@@ -8,6 +8,7 @@ Release.zip
 # IDE配置文件
 .vscode/
 .idea/
+.trae/
 
 # Claude 配置目录
 .claude/
