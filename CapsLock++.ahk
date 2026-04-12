@@ -32,7 +32,6 @@ if (!A_IsAdmin) {
 #Include lib\Workspace.ahk
 #Include lib\WindowPin.ahk
 #Include lib\TextEdit.ahk
-#Include lib\JumpMode.ahk
 #Include lib\MouseControl.ahk
 #Include lib\SymbolJump.ahk
 #Include lib\QuickNote.ahk

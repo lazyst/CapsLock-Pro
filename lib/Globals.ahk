@@ -34,14 +34,6 @@ global blacklist := []
 global blacklistClasses := []
 global blacklistProcessNames := []
 
-; 跳转模式全局变量
-global jumpMode := ""
-global jumpActive := false
-global jumpBuffer := ""
-global jumpPosition := {x: 0, y: 0}
-global g_inputHook := {}
-global isWordJump := false
-
 ; 鼠标控制全局变量
 global mouseModeEnabled := false
 global mouseMoveTimer := 0

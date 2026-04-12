@@ -225,100 +225,28 @@ s::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("left"), -50
-        } else {
-            ActivateJumpMode("left")
-        }
-    } else {
-        MoveLeft()
-    }
+    MoveLeft()
 }
 
 d::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("down"), -50
-        } else {
-            ActivateJumpMode("down")
-        }
-    } else {
-        MoveDown()
-    }
+    MoveDown()
 }
 
 e::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("up"), -50
-        } else {
-            ActivateJumpMode("up")
-        }
-    } else {
-        MoveUp()
-    }
+    MoveUp()
 }
 
 f::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("right"), -50
-        } else {
-            ActivateJumpMode("right")
-        }
-    } else {
-        MoveRight()
-    }
+    MoveRight()
 }
 
 g::
@@ -367,100 +295,28 @@ j::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("selectLeft"), -50
-        } else {
-            ActivateJumpMode("selectLeft")
-        }
-    } else {
-        SelectLeft()
-    }
+    SelectLeft()
 }
 
 k::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("selectDown"), -50
-        } else {
-            ActivateJumpMode("selectDown")
-        }
-    } else {
-        SelectDown()
-    }
+    SelectDown()
 }
 
 i::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("selectUp"), -50
-        } else {
-            ActivateJumpMode("selectUp")
-        }
-    } else {
-        SelectUp()
-    }
+    SelectUp()
 }
 
 l::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("selectRight"), -50
-        } else {
-            ActivateJumpMode("selectRight")
-        }
-    } else {
-        SelectRight()
-    }
+    SelectRight()
 }
 
 `;::
@@ -496,50 +352,14 @@ o::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("deleteLeft"), -50
-        } else {
-            ActivateJumpMode("deleteLeft")
-        }
-    } else {
-        DeleteLeft()
-    }
+    DeleteLeft()
 }
 
 .::
 {
     global otherKeyPressed := true
 
-    if (GetKeyState("Alt", "P")) {
-        global jumpActive, jumpPosition, jumpBuffer, jumpMode
-
-        if(jumpActive) {
-            prevPosition := jumpPosition
-
-            CoordMode("ToolTip", "Screen")
-
-            StopInputHook()
-            jumpActive := false
-            jumpBuffer := ""
-
-            SetTimer () => ActivateJumpMode("deleteRight"), -50
-        } else {
-            ActivateJumpMode("deleteRight")
-        }
-    } else {
-        DeleteRight()
-    }
+    DeleteRight()
 }
 
 BackSpace::

@@ -99,24 +99,7 @@
 - **CapsLock+Alt+?:** 删除到文件末尾
 - **CapsLock+Backspace:** 删除整行
 
-### 3.4 自定义跳转
-
-输入跳转字符数, enter跳转, CapsLock/Esc/Delete/左右键 退出，可以使用BackSpace删除最后一位, 清空后再次BackSpace退出
-
-输入0开启单词模式(针对水平方向SFJL,.有效), 开启后再按BackSpace可退回字符模式
-
-- **CapsLock+Alt+S:** 向左跳转指定字符数
-- **CapsLock+Alt+F:** 向右跳转指定字符数
-- **CapsLock+Alt+E:** 向上跳转指定行数
-- **CapsLock+Alt+D:** 向下跳转指定行数
-- **CapsLock+Alt+J:** 向左选择指定字符数
-- **CapsLock+Alt+L:** 向右选择指定字符数
-- **CapsLock+Alt+I:** 向上选择指定行数
-- **CapsLock+Alt+K:** 向下选择指定行数
-- **CapsLock+Alt+\<:** 向左删除指定字符数
-- **CapsLock+Alt+\>:** 向右删除指定字符数
-
-### 3.5 特殊操作
+### 3.4 特殊操作
 
 - **CapsLock+Z:** 撤销
 - **CapsLock+X:** 剪切 (独立剪切板)
@@ -127,7 +110,7 @@
 - **CapsLock+Enter:** 在当前行末尾插入换行
 - **CapsLock+RShift:** 在当前行上方插入空行
 
-### 3.6 括号输入快捷键
+### 3.5 括号输入快捷键
 
 - **CapsLock+\[:** 输入左花括号 `{`
 - **CapsLock+\]:** 输入右花括号 `}`
@@ -137,7 +120,7 @@
 
 > 💡 这些快捷键设计用于减少编程时频繁在 CapsLock 和 Shift 键之间切换的需求
 
-### 3.7 符号定位功能
+### 3.6 符号定位功能
 
 - **CapsLock+P:** 定位到对应的配对符号位置(再次长按CapsLock或Esc取消)
   - 英文标点: ()、\[\]、{}、\<\>

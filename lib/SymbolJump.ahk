@@ -8,8 +8,7 @@
 ; 依赖：
 ;   lib/Globals.ahk  - isSeekingSymbol, interruptCheckTimer,
 ;                       initialCapsLockReleased, otherKeyPressed, isToolEnabled
-;   lib/Utils.ahk    - 工具函数
-;   lib/JumpMode.ahk - GetCaretPosition()
+;   lib/Utils.ahk    - 工具函数, GetCaretPosition()
 ; ============================================================================
 
 #HotIf GetKeyState("CapsLock", "P") && isToolEnabled && !isSeekingSymbol
