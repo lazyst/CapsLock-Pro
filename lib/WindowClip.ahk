@@ -1,4 +1,4 @@
-﻿; =====================================================================
+; =====================================================================
 ; CapsLock++ 窗口裁切模块
 ; 包含：窗口裁切、区域选择、阴影禁用、裁切区域移动/调整/拖动功能
 ; 使用 Ctrl+Shift+X 裁切光标下的窗口，通过鼠标拖拽选择保留区域，并自动禁用窗口阴影
@@ -22,7 +22,7 @@ LWA_COLORKEY := 0x1
 {
     if (isSelecting) {
         CancelSelection()
-        ShowTooltip("已取消选择")
+        ShowTooltipNearMouse("已取消选择")
     } else {
         RestoreWindow()
     }
@@ -55,7 +55,7 @@ StartClipWindow() {
     MouseGetPos(&mouseX, &mouseY, &hWnd)
     
     if (!hWnd) {
-        ;ShowTooltip("未检测到窗口")
+        ;ShowTooltipNearMouse("未检测到窗口")
         return
     }
     
@@ -68,56 +68,56 @@ StartClipWindow() {
     ; 硬编码排除特定窗口
     ; 排除桌面/Program Manager
     if (className == "Progman" && winTitle == "Program Manager" && processName == "explorer.exe") {
-        ShowTooltip("无法裁剪桌面窗口")
+        ShowTooltipNearMouse("无法裁剪桌面窗口")
         return
     }
     
     ; 排除任务栏
     if (className == "Shell_TrayWnd" && processName == "explorer.exe") {
-        ShowTooltip("无法裁剪任务栏")
+        ShowTooltipNearMouse("无法裁剪任务栏")
         return
     }
     
     ; 排除文件资源管理器
     if (className == "CabinetWClass" && processName == "explorer.exe") {
-        ShowTooltip("无法裁剪资源管理器")
+        ShowTooltipNearMouse("无法裁剪资源管理器")
         return
     }
     
     ; 排除QQ悬浮栏
     if ((processName == "QQ.exe" || processName == "QQScLauncher.exe" || processName == "QQProtect.exe") && InStr(winTitle, "QQ")) {
-        ShowTooltip("无法裁剪QQ悬浮栏")
+        ShowTooltipNearMouse("无法裁剪QQ悬浮栏")
         return
     }
     
     ; 排除VueMinder日历窗口
     if (InStr(className, "WindowsForms10.Window.8.app.0.1a0e24_r10_ad1") && 
         (processName == "VueMinder.exe" || InStr(processPath, "VueMinder.exe"))) {
-        ShowTooltip("无法裁剪VueMinder窗口")
+        ShowTooltipNearMouse("无法裁剪VueMinder窗口")
         return
     }
     
     ; 排除QuinkNote的SwitchPlug插件
     if (InStr(className, "HwndWrapper[SwitchPlug.exe") || 
         InStr(processPath, "QuinkNote\plugins\switchPlug\bin\SwitchPlug.exe")) {
-        ShowTooltip("无法裁剪SwitchPlug窗口")
+        ShowTooltipNearMouse("无法裁剪SwitchPlug窗口")
         return
     }
 
     ; 排除fences的folder portal
     if (className == "ExplorerBrowserOwner" && processName == "explorer.exe") {
-        ShowTooltip("无法裁剪folder portal")
+        ShowTooltipNearMouse("无法裁剪folder portal")
         return
     }
 
     if (className == "TaskManagerWindow" && processName == "Taskmgr.exe"){
-        ShowTooltip("无法裁剪任务管理器")
+        ShowTooltipNearMouse("无法裁剪任务管理器")
         return
     }
     
     ; 检查是否已经在选择中
     if (isSelecting) {
-        ;ShowTooltip("已经在选择区域中，请完成当前操作")
+        ;ShowTooltipNearMouse("已经在选择区域中，请完成当前操作")
         return
     }
     
@@ -128,7 +128,7 @@ StartClipWindow() {
 
     ; 排除OneCommander
     if (InStr(className, "HwndWrapper[OneCommander.exe") || processName == "OneCommander.exe") {
-        ShowTooltip("无法裁剪OneCommander窗口")
+        ShowTooltipNearMouse("无法裁剪OneCommander窗口")
         return
     }
     
@@ -357,7 +357,7 @@ HandleLeftButtonUp(*) {
     ; 检查选择区域是否过小
     if (width < 10 || height < 10) {
         CancelSelection()
-        ShowTooltip("选择区域太小，已取消")
+        ShowTooltipNearMouse("选择区域太小，已取消")
         return
     }
     
@@ -500,10 +500,10 @@ ApplyClipToWindow(hWnd, x, y, width, height) {
                 DllCall("SetLayeredWindowAttributes", "Ptr", hWnd, "UInt", 0, "UChar", 254, "UInt", LWA_ALPHA)
             }
         } else {
-            ShowTooltip("创建区域失败")
+            ShowTooltipNearMouse("创建区域失败")
         }
     } catch as e {
-        ShowTooltip("裁切窗口失败: " e.Message)
+        ShowTooltipNearMouse("裁切窗口失败: " e.Message)
     }
 }
 
@@ -610,7 +610,7 @@ CancelSelection(*) {
         return
     
     CleanupSelection()
-    ShowTooltip("已取消选择")
+    ShowTooltipNearMouse("已取消选择")
 }
 
 ; 清理选择相关资源
@@ -654,7 +654,7 @@ RestoreWindow(hWnd := 0) {
         MouseGetPos(, , &hWnd)
         
         if (!hWnd) {
-            ShowTooltip("未检测到窗口")
+            ShowTooltipNearMouse("未检测到窗口")
             return
         }
     }
@@ -663,7 +663,7 @@ RestoreWindow(hWnd := 0) {
     
     ; 检查是否有保存的窗口状态
     if (!windowStates.Has(hWnd)) {
-        ShowTooltip("未找到窗口原始状态: " winTitle)
+        ShowTooltipNearMouse("未找到窗口原始状态: " winTitle)
         return
     }
     
@@ -689,7 +689,7 @@ RestoreWindow(hWnd := 0) {
     ; 从Map中移除
     windowStates.Delete(hWnd)
     
-    ;ShowTooltip("已恢复窗口: " winTitle)
+    ;ShowTooltipNearMouse("已恢复窗口: " winTitle)
 }
 
 ; 恢复窗口阴影
@@ -766,7 +766,7 @@ ShowClipInfo() {
             infoText := "窗口: " winTitle "`n"
             infoText .= "裁剪区域: x=" region.x ", y=" region.y ", w=" region.w ", h=" region.h
             
-            ShowTooltip(infoText, 3000)
+            ShowTooltipNearMouse(infoText, 3000)
         }
     } catch {
         ; 如果获取窗口信息失败，静默忽略
@@ -816,7 +816,7 @@ MoveClipRegion(direction, step := 50) {
         infoText := "窗口: " WinGetTitle(activeHwnd) "`n"
         infoText .= "裁剪区域: x=" x ", y=" y ", w=" w ", h=" h "`n"
         infoText .= "窗口尺寸: " winWidth "x" winHeight
-        ShowTooltip(infoText, 1000)
+        ShowTooltipNearMouse(infoText, 1000)
         */
     } catch {
         ; 如果获取窗口信息失败，静默忽略
@@ -865,7 +865,7 @@ ResizeClipRegion(action, step := 20) {
         
         ; 显示调整后的区域信息
         infoText := "裁剪区域: " w "×" h
-        ShowTooltip(infoText, 1000)
+        ShowTooltipNearMouse(infoText, 1000)
     } catch {
         ; 如果获取窗口信息失败，静默忽略
         return

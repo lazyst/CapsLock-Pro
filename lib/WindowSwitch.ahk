@@ -276,16 +276,10 @@ WheelDown::
 {
     global otherKeyPressed := true
 
-    if GetKeyState("LAlt", "P") {
-        global mouseSpeedValue
-        mouseSpeedValue := Max(mouseSpeedValue - 1, 1)
-        ShowTooltip("鼠标速度已调整为: " mouseSpeedValue)
-    } else {
-        SwitchTaskbarWindow(1)
+    SwitchTaskbarWindow(1)
 
-        if (showDebugTooltips) {
-            ShowTooltip("CapsLock+WheelDown: 正向切换窗口")
-        }
+    if (showDebugTooltips) {
+        ShowTooltipNearMouse("CapsLock+WheelDown: 正向切换窗口")
     }
 }
 
@@ -293,16 +287,10 @@ WheelUp::
 {
     global otherKeyPressed := true
 
-    if GetKeyState("LAlt", "P") {
-        global mouseSpeedValue
-        mouseSpeedValue := Min(mouseSpeedValue + 1, 20)
-        ShowTooltip("鼠标速度已调整为: " mouseSpeedValue)
-    } else {
-        SwitchTaskbarWindow(-1)
+    SwitchTaskbarWindow(-1)
 
-        if (showDebugTooltips) {
-            ShowTooltip("CapsLock+WheelUp: 反向切换窗口")
-        }
+    if (showDebugTooltips) {
+        ShowTooltipNearMouse("CapsLock+WheelUp: 反向切换窗口")
     }
 }
 #HotIf
@@ -313,7 +301,7 @@ XButton1::
     SwitchTaskbarWindow(1)
 
     if (showDebugTooltips) {
-        ShowTooltip("XButton1: 正向切换窗口")
+        ShowTooltipNearMouse("XButton1: 正向切换窗口")
     }
 }
 
@@ -323,7 +311,7 @@ XButton2::
     SwitchTaskbarWindow(-1)
 
     if (showDebugTooltips) {
-        ShowTooltip("XButton2: 反向切换窗口")
+        ShowTooltipNearMouse("XButton2: 反向切换窗口")
     }
 }
 

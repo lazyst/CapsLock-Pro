@@ -2,17 +2,11 @@
 ; CapsLock++ 公共工具函数
 ; =====================================================================
 
-; 显示临时提示
-ShowTooltip(text, duration := 2000) {
-    ToolTip()
-    ToolTip(text, 800, 100)
-    SetTimer(ToolTipClear, -duration)
-}
-
 ; 显示在鼠标旁边的提示
 ShowTooltipNearMouse(text, duration := 2000) {
     ToolTip()
     CoordMode("Mouse", "Screen")
+    CoordMode("ToolTip", "Screen")
     MouseGetPos(&mouseX, &mouseY)
     ToolTip(text, mouseX + 20, mouseY + 20)
     SetTimer(ToolTipClear, -duration)

@@ -34,10 +34,6 @@ global blacklist := []
 global blacklistClasses := []
 global blacklistProcessNames := []
 
-; 鼠标速度变量
-global mouseSpeedValue := 3
-global mouseOriginalSpeed := 10
-
 ; 跳转模式全局变量
 global jumpMode := ""
 global jumpActive := false
@@ -47,11 +43,7 @@ global g_inputHook := {}
 global isWordJump := false
 
 ; 鼠标控制全局变量
-global mousePrecisionMode := false
-global mousePrecisionFactor := 0.2
-global mouseKeysPressed := Map()
-global mouseMovementActive := false
-global mouseMovementTimer := 0
+global mouseModeEnabled := false
 
 ; 符号跳转全局变量
 global isSeekingSymbol := false

@@ -8,7 +8,7 @@ ManageProcess(action) {
 
     switch action {
         case "启用":
-            ShowTooltip("正在启用指定进程...")
+            ShowTooltipNearMouse("正在启用指定进程...")
             i := 1
             Loop {
                 processToStart := IniRead(A_ScriptDir "\CapsLock++.ini", "ProcessesToStart", "Item" i, "")
@@ -17,10 +17,10 @@ ManageProcess(action) {
                 Run(processToStart)
                 i++
             }
-            ShowTooltip("已尝试启用指定配置进程")
+            ShowTooltipNearMouse("已尝试启用指定配置进程")
 
         case "终止":
-            ShowTooltip("正在终止指定进程...")
+            ShowTooltipNearMouse("正在终止指定进程...")
             i := 1
             terminatedCount := 0
             Loop {
@@ -35,7 +35,7 @@ ManageProcess(action) {
                 }
                 i++
             }
-            ShowTooltip("已尝试终止指定进程 (" terminatedCount " 个成功)")
+            ShowTooltipNearMouse("已尝试终止指定进程 (" terminatedCount " 个成功)")
     }
 }
 
@@ -73,7 +73,7 @@ ShowProcessSelectionGUI(action) {
     }
 
     if (processList.Length = 0) {
-        ShowTooltip("错误: 无法从INI文件读取 " . sectionName . " 列表")
+        ShowTooltipNearMouse("错误: 无法从INI文件读取 " . sectionName . " 列表")
         return
     }
 
@@ -138,7 +138,7 @@ ProcessSelection(action, listView, processList, gui) {
                 } catch {
                 }
             }
-            ShowTooltip("已启用 " . selectedItems.Length . " 个进程")
+            ShowTooltipNearMouse("已启用 " . selectedItems.Length . " 个进程")
         } else {
             for _, item in selectedItems {
                 try {
@@ -147,7 +147,7 @@ ProcessSelection(action, listView, processList, gui) {
                 } catch {
                 }
             }
-            ShowTooltip("已终止 " . selectedItems.Length . " 个进程")
+            ShowTooltipNearMouse("已终止 " . selectedItems.Length . " 个进程")
         }
     }
 }
@@ -162,17 +162,17 @@ ProcessSingleItem(action, listView, processList, gui) {
         if (action = "启用") {
             try {
                 Run(proc.path)
-                ShowTooltip("已启用: " . proc.name)
+                ShowTooltipNearMouse("已启用: " . proc.name)
             } catch {
-                ShowTooltip("无法启用: " . proc.name)
+                ShowTooltipNearMouse("无法启用: " . proc.name)
             }
         } else {
             try {
                 SplitPath(proc.path, &processName)
                 ProcessClose(processName)
-                ShowTooltip("已终止: " . proc.name)
+                ShowTooltipNearMouse("已终止: " . proc.name)
             } catch {
-                ShowTooltip("无法终止: " . proc.name)
+                ShowTooltipNearMouse("无法终止: " . proc.name)
             }
         }
     }

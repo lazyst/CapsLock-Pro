@@ -930,7 +930,7 @@ ActivateOrRun(processName, runCommand) {
         try {
             Run('"' runCommand '"')
         } catch Error as e {
-            ShowTooltip("无法启动程序: `nAction: <" runCommand ">`nError: " e.Message)
+            ShowTooltipNearMouse("无法启动程序: `nAction: <" runCommand ">`nError: " e.Message)
         }
     }
 }
@@ -980,8 +980,8 @@ RunCommand(cmdStr, workdir := "") {
         workdir := A_Desktop
     try {
         Run(cmdStr, workdir)
-        ShowTooltip("执行: " cmdStr)
+        ShowTooltipNearMouse("执行: " cmdStr)
     } catch Error as e {
-        ShowTooltip("执行失败: " e.Message, 3000)
+        ShowTooltipNearMouse("执行失败: " e.Message, 3000)
     }
 }

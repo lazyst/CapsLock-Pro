@@ -232,9 +232,9 @@ MinimizeCursorWindowOrOthers(cursorHwnd) {
     }
     
     if (minimizedCount > 0) {
-        ShowTooltip("已最小化 " minimizedCount " 个其他窗口`n保留窗口: " simpleName "`n再次按Ctrl+Win+Z恢复")
+        ShowTooltipNearMouse("已最小化 " minimizedCount " 个其他窗口`n保留窗口: " simpleName "`n再次按Ctrl+Win+Z恢复")
     } else {
-        ShowTooltip("没有其他需要最小化的窗口")
+        ShowTooltipNearMouse("没有其他需要最小化的窗口")
     }
 }
 
@@ -242,7 +242,7 @@ RestoreMinimizedWindows() {
     global minimizedWindows
     
     if (minimizedWindows.Length = 0) {
-        ShowTooltip("没有需要恢复的窗口")
+        ShowTooltipNearMouse("没有需要恢复的窗口")
         return
     }
     
@@ -267,7 +267,7 @@ RestoreMinimizedWindows() {
                 invalidCount++
             }
         } catch as e {
-            ShowTooltip("恢复窗口时出错: " e.Message)
+            ShowTooltipNearMouse("恢复窗口时出错: " e.Message)
             invalidCount++
         }
     }

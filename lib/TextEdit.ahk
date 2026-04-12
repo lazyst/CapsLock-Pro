@@ -500,49 +500,6 @@ o::
     SelectEnd()
 }
 
-space::
-{
-    global otherKeyPressed := true
-    global lastSpaceTime
-    global pendingOperation
-    global hasExecutedSingleClick
-
-    currentTime := A_TickCount
-
-    if (currentTime - lastSpaceTime < doubleClickThreshold) {
-        pendingOperation := false
-
-        BlockInput("On")
-
-        originalClip := ClipboardAll()
-        A_Clipboard := ""
-        Send("^c")
-        hasSelection := ClipWait(0.05, 0)
-        selectedText := A_Clipboard
-        A_Clipboard := originalClip
-        originalClip := ""
-
-        if (hasSelection && selectedText != "" && (InStr(selectedText, "`n") || InStr(selectedText, "`r"))) {
-            ToolTip("已选中多行内容")
-            SetTimer () => ToolTip(), -800
-        } else {
-            SelectCurrentLine()
-        }
-
-        BlockInput("Off")
-
-        lastSpaceTime := 0
-        hasExecutedSingleClick := false
-    } else {
-        pendingOperation := true
-        hasExecutedSingleClick := false
-
-        SetTimer SelectWordTimer, -60
-
-        lastSpaceTime := currentTime
-    }
-}
-
 ; =====================================================================
 ; 热键映射 - 删除操作
 ; =====================================================================
@@ -716,7 +673,7 @@ v::
     ClipWait(0.3, 0)
     A_Clipboard := ClipboardSaved_Independent
     if (!ClipWait(0.3, 0)) {
-        ShowTooltip("粘贴准备失败")
+        ShowTooltipNearMouse("粘贴准备失败")
         A_Clipboard := originalClip
         originalClip := ""
         return
@@ -741,7 +698,7 @@ t::
     local IsSelected := false
 
     if(GetKeyState("LButton", "P")){
-        ShowTooltip("请先松开左键")
+        ShowTooltipNearMouse("请先松开左键")
         return
     }
 

@@ -11,10 +11,10 @@ Tab::
 
     if (WinExist("ahk_class MagUIClass")) {
         WinClose("ahk_class MagUIClass")
-        ShowTooltip("放大镜已关闭")
+        ShowTooltipNearMouse("放大镜已关闭")
     } else {
         Send("#=")
-        ShowTooltip("放大镜已开启")
+        ShowTooltipNearMouse("放大镜已开启")
 
         SetTimer(MinimizeMagnifierWindow, -1000)
     }
@@ -24,7 +24,7 @@ Tab::
 MinimizeMagnifierWindow() {
     if (WinExist("ahk_class MagUIClass")) {
         WinMinimize("ahk_class MagUIClass")
-        ShowTooltip("放大镜控制窗口已最小化")
+        ShowTooltipNearMouse("放大镜控制窗口已最小化")
     }
 }
 

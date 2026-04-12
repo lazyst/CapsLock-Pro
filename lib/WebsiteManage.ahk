@@ -25,7 +25,7 @@ OpenDefaultWebsite() {
     }
 
     if (site = "") {
-        ShowTooltip("错误: 无法从INI文件读取网站配置")
+        ShowTooltipNearMouse("错误: 无法从INI文件读取网站配置")
         return
     }
 
@@ -79,7 +79,7 @@ ShowWebsiteSelectionGUI() {
     }
 
     if (websiteList.Length = 0) {
-        ShowTooltip("错误: 无法从INI文件读取网站列表，请先配置[CommonWebsites]部分")
+        ShowTooltipNearMouse("错误: 无法从INI文件读取网站列表，请先配置[CommonWebsites]部分")
         return
     }
 
@@ -145,7 +145,7 @@ WebsiteSelection(listView, websiteList, browser, gui) {
             Sleep(200)
         }
     } else {
-        ShowTooltip("未选择任何网站")
+        ShowTooltipNearMouse("未选择任何网站")
     }
 }
 

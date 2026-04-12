@@ -273,7 +273,7 @@ MenuAddItem(*) {
     global currentMenuGroup
     row := menuGroupLV.GetNext()
     if (!row) {
-        ShowTooltip("请先选择一个菜单组")
+        ShowTooltipNearMouse("请先选择一个菜单组")
         return
     }
     dlg := Gui("+Owner", "添加菜单项")
@@ -378,11 +378,11 @@ OnTemplateSelect(elb, ae, *) {
 OnMenuAddSubmit(ne, ie, itcb, ae, dlg, *) {
     global menuGroupItems, currentMenuGroup
     if (ne.Value = "") {
-        ShowTooltip("名称不能为空")
+        ShowTooltipNearMouse("名称不能为空")
         return
     }
     if (ae.Value = "") {
-        ShowTooltip("动作不能为空")
+        ShowTooltipNearMouse("动作不能为空")
         return
     }
     menuItemLV.Add("", ne.Value, ie.Value, itcb.Text, ae.Value)
@@ -499,11 +499,11 @@ OnMenuEditSubmit(ne, ie, itcb, ae, row, dlg, *) {
     global menuGroupItems, currentMenuGroup
     EnsureDataSync()
     if (ne.Value = "") {
-        ShowTooltip("名称不能为空")
+        ShowTooltipNearMouse("名称不能为空")
         return
     }
     if (ae.Value = "") {
-        ShowTooltip("动作不能为空")
+        ShowTooltipNearMouse("动作不能为空")
         return
     }
     menuItemLV.Modify(row, "", ne.Value, ie.Value, itcb.Text, ae.Value)
@@ -889,7 +889,7 @@ ConfigReload() {
     darkMode := ReadIniValueUTF8(iniFile, "MenuGroupsColourMode", "DarkMode", "true") = "true"
     darkModeCB.Value := darkMode
 
-    ShowTooltip("配置已加载")
+    ShowTooltipNearMouse("配置已加载")
 }
 
 SerializeNoteTargets() {
@@ -1055,14 +1055,14 @@ WriteIniContent(filePath, content) {
     try {
         f := FileOpen(filePath, "w", "UTF-8")
         if (!f) {
-            ShowTooltip("错误：无法打开配置文件")
+            ShowTooltipNearMouse("错误：无法打开配置文件")
             return false
         }
         f.Write(content)
         f.Close()
         return true
     } catch Error as e {
-        ShowTooltip("错误：保存配置失败 - " e.Message)
+        ShowTooltipNearMouse("错误：保存配置失败 - " e.Message)
         return false
     }
 }
@@ -1124,5 +1124,5 @@ ConfigSave() {
     ReloadMenuGroups()
     LoadNoteTargetsFromINI()
 
-    ShowTooltip("配置已保存并重新加载")
+    ShowTooltipNearMouse("配置已保存并重新加载")
 }
