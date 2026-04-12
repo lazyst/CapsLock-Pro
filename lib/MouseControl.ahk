@@ -81,6 +81,38 @@ SaveMouseSpeed() {
 }
 
 ; =====================================================================
+; 鼠标滚轮函数
+; =====================================================================
+
+StartMouseWheel(direction) {
+    global mouseWheelTimer, mouseWheelDirection
+
+    mouseWheelDirection := direction
+    if (mouseWheelTimer = 0) {
+        SetTimer(MouseWheelLoop, 50)
+        mouseWheelTimer := 1
+    }
+}
+
+StopMouseWheel() {
+    global mouseWheelTimer
+
+    if (mouseWheelTimer != 0) {
+        if GetKeyState("j", "P") || GetKeyState("k", "P") || GetKeyState("h", "P") || GetKeyState("l", "P")
+            return
+
+        SetTimer(MouseWheelLoop, 0)
+        mouseWheelTimer := 0
+    }
+}
+
+MouseWheelLoop() {
+    global mouseWheelDirection
+
+    Click(mouseWheelDirection)
+}
+
+; =====================================================================
 ; 鼠标模式
 ; =====================================================================
 
@@ -98,6 +130,7 @@ ExitMouseMode() {
     mouseModeEnabled := false
     otherKeyPressed := true
     StopMouseMove()
+    StopMouseWheel()
     ShowTooltipNearMouse("鼠标模式已关闭")
 }
 
@@ -185,22 +218,42 @@ r::
 
 j::
 {
-    Click("WheelDown")
+    StartMouseWheel("WheelDown")
+}
+
+j Up::
+{
+    StopMouseWheel()
 }
 
 k::
 {
-    Click("WheelUp")
+    StartMouseWheel("WheelUp")
+}
+
+k Up::
+{
+    StopMouseWheel()
 }
 
 h::
 {
-    Click("WheelLeft")
+    StartMouseWheel("WheelLeft")
+}
+
+h Up::
+{
+    StopMouseWheel()
 }
 
 l::
 {
-    Click("WheelRight")
+    StartMouseWheel("WheelRight")
+}
+
+l Up::
+{
+    StopMouseWheel()
 }
 
 Esc::
