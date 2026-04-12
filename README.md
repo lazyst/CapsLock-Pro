@@ -134,7 +134,8 @@
 - **CapsLock+Z:** 撤销
 - **CapsLock+X:** 剪切 (独立剪切板)
 - **CapsLock+C:** 复制 (独立剪切板)
-- **CapsLock+V:** 粘贴
+- **CapsLock+V:** 粘贴 (独立剪切板)
+- **CapsLock+B:** 任务视图 (Win+Tab)
 - **CapsLock+Y:** 重做
 - **CapsLock+Enter:** 在当前行末尾插入换行
 - **CapsLock+RShift:** 在当前行上方插入空行

@@ -667,14 +667,16 @@ x::
     A_Clipboard := ""
 
     Send("^x")
-    if (ClipWait(0.2, 0)) {
+    if (ClipWait(0.5, 0)) {
         ClipboardSaved_Independent := A_Clipboard
     } else {
-        ShowTooltip("剪切失败")
+        Sleep(50)
+        if (A_Clipboard != "") {
+            ClipboardSaved_Independent := A_Clipboard
+        }
     }
 
-    A_Clipboard := originalClip
-    originalClip := ""
+    SetTimer(() => (A_Clipboard := originalClip, originalClip := ""), -100)
 }
 
 c::
@@ -686,14 +688,16 @@ c::
     A_Clipboard := ""
 
     Send("^c")
-    if (ClipWait(0.2, 0)) {
+    if (ClipWait(0.5, 0)) {
         ClipboardSaved_Independent := A_Clipboard
     } else {
-        ShowTooltip("复制失败")
+        Sleep(50)
+        if (A_Clipboard != "") {
+            ClipboardSaved_Independent := A_Clipboard
+        }
     }
 
-    A_Clipboard := originalClip
-    originalClip := ""
+    SetTimer(() => (A_Clipboard := originalClip, originalClip := ""), -100)
 }
 
 v::
@@ -709,21 +713,25 @@ v::
     originalClip := ClipboardAll()
 
     A_Clipboard := ""
-    ClipWait(0.1)
+    ClipWait(0.3, 0)
     A_Clipboard := ClipboardSaved_Independent
-    ClipWait(0.1)
+    if (!ClipWait(0.3, 0)) {
+        ShowTooltip("粘贴准备失败")
+        A_Clipboard := originalClip
+        originalClip := ""
+        return
+    }
 
     Send("^v")
 
-    A_Clipboard := originalClip
-    originalClip := ""
+    SetTimer(() => (A_Clipboard := originalClip, originalClip := ""), -150)
 }
 
 b::
 {
     global otherKeyPressed := true
 
-    Send("^b")
+    Send("#{Tab}")
 }
 
 t::
