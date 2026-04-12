@@ -3,6 +3,70 @@
 ; 包含：菜单组配置、菜单GUI创建/显示/关闭、菜单项执行、热键绑定等
 ; =====================================================================
 
+EnableRoundedCorners(hwnd, radius := 12) {
+    DWMWA_WINDOW_CORNER_PREFERENCE := 33
+    DWMWCP_ROUND := 2
+
+    prefBuf := Buffer(4)
+    NumPut("UInt", DWMWCP_ROUND, prefBuf)
+
+    DllCall("dwmapi\DwmSetWindowAttribute",
+        "Ptr", hwnd,
+        "UInt", DWMWA_WINDOW_CORNER_PREFERENCE,
+        "Ptr", prefBuf.Ptr,
+        "UInt", 4)
+}
+
+EnableWindowShadow(hwnd) {
+    CS_DROPSHADOW := 0x20000
+    GCL_STYLE := -26
+
+    style := DllCall("GetClassLongPtr", "Ptr", hwnd, "Int", GCL_STYLE, "Ptr")
+    style |= CS_DROPSHADOW
+    DllCall("SetClassLongPtr", "Ptr", hwnd, "Int", GCL_STYLE, "Ptr", style)
+}
+
+FadeInWindow(hwnd, duration := 150) {
+    global forceKeepMenu
+
+    if (!MenuSettings.AnimationEnabled) {
+        return
+    }
+
+    forceKeepMenu := true
+    try {
+        WinSetTransparent(0, "ahk_id " hwnd)
+        steps := 15
+        stepDuration := duration / steps
+
+        loop steps {
+            alpha := Round(255 * (A_Index / steps))
+            WinSetTransparent(alpha, "ahk_id " hwnd)
+            Sleep(stepDuration)
+        }
+
+        WinSetTransparent("Off", "ahk_id " hwnd)
+    }
+    forceKeepMenu := false
+}
+
+FadeOutWindow(hwnd, duration := 100) {
+    if (!MenuSettings.AnimationEnabled) {
+        return
+    }
+
+    try {
+        steps := 10
+        stepDuration := duration / steps
+
+        loop steps {
+            alpha := Round(255 * (1 - A_Index / steps))
+            WinSetTransparent(alpha, "ahk_id " hwnd)
+            Sleep(stepDuration)
+        }
+    }
+}
+
 CheckActiveWindow(*) {
     global currentMenuGui, forceKeepMenu
 
@@ -33,17 +97,18 @@ InitMenuGroups() {
     groupName := []
     groupCount := []
 
-    Loop 10 {
+    loop 10 {
         i := A_Index
-        enableGroup.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupsEnable", "enableGroup" i, "false") = "true")
+        enableGroup.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupsEnable", "enableGroup" i, "false") =
+        "true")
     }
 
-    Loop 10 {
+    loop 10 {
         i := A_Index
         groupName.Push(ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupName", "name" i, "组 " i))
     }
 
-    Loop 10 {
+    loop 10 {
         i := A_Index
         count := ReadIniValueUTF8(A_ScriptDir "\CapsLock++.ini", "MenuGroupCount", "count" i, "0")
         groupCount.Push(Integer(count))
@@ -51,13 +116,13 @@ InitMenuGroups() {
 
     MenuGroups := Map()
 
-    Loop 10 {
+    loop 10 {
         groupIndex := A_Index
 
         if (enableGroup[groupIndex]) {
             menuItems := []
 
-            Loop groupCount[groupIndex] {
+            loop groupCount[groupIndex] {
                 itemIndex := A_Index
                 sectionName := "MenuGroups" groupIndex "Items"
 
@@ -136,19 +201,19 @@ GetActionFromString(actionStr) {
                         pathPart := SubStr(pathPart, 1, -1)
                     param2 := A_MyDocuments . pathPart
                 } else {
-                     pathPart := param2Raw
-                     if (SubStr(pathPart, 1, 1) = '"')
+                    pathPart := param2Raw
+                    if (SubStr(pathPart, 1, 1) = '"')
                         pathPart := SubStr(pathPart, 2)
-                     if (SubStr(pathPart, -0) = '"')
+                    if (SubStr(pathPart, -0) = '"')
                         pathPart := SubStr(pathPart, 1, -1)
-                     param2 := pathPart
+                    param2 := pathPart
                 }
 
                 return (*) => ActivateOrRun(param1, param2)
 
             } else {
-                 ToolTip("GetActionFromString 无法解析: " actionStr)
-                 SetTimer(() => ToolTip(), -3000)
+                ToolTip("GetActionFromString 无法解析: " actionStr)
+                SetTimer(() => ToolTip(), -3000)
                 return (*) => {}
             }
     }
@@ -177,17 +242,17 @@ ReloadMenuGroups() {
     groupName := []
     groupCount := []
 
-    Loop 10 {
+    loop 10 {
         i := A_Index
         enableGroup.Push(ReadIniValueUTF8(iniFile, "MenuGroupsEnable", "enableGroup" i, "false") = "true")
     }
 
-    Loop 10 {
+    loop 10 {
         i := A_Index
         groupName.Push(ReadIniValueUTF8(iniFile, "MenuGroupName", "name" i, "组 " i))
     }
 
-    Loop 10 {
+    loop 10 {
         i := A_Index
         count := ReadIniValueUTF8(iniFile, "MenuGroupCount", "count" i, "0")
         groupCount.Push(Integer(count))
@@ -195,13 +260,13 @@ ReloadMenuGroups() {
 
     MenuGroups := Map()
 
-    Loop 10 {
+    loop 10 {
         groupIndex := A_Index
 
         if (enableGroup[groupIndex]) {
             menuItems := []
 
-            Loop groupCount[groupIndex] {
+            loop groupCount[groupIndex] {
                 itemIndex := A_Index
                 sectionName := "MenuGroups" groupIndex "Items"
 
@@ -413,7 +478,7 @@ CalculateTextWidth(text, charWidthMap) {
 
     for i, char in StrSplit(text) {
         if (char = " " && spaceWidth > 0)
-             width += spaceWidth
+            width += spaceWidth
         else if (charWidthMap.Has(char))
             width += charWidthMap[char]
         else if (Ord(char) > 127)
@@ -428,34 +493,36 @@ CalculateTextWidth(text, charWidthMap) {
 CreateMenuGUI(menuGroup, groupIndex) {
     global currentMenuGui, checkActiveTimerId
 
-    colors := MenuSettings.DarkMode ? MenuSettings.DarkColors : MenuSettings.LightColors
-
-    menuGui := Gui("-Caption +AlwaysOnTop +ToolWindow +Owner")
-    menuGui.BackColor := colors.Background
+    menuGui := Gui("-Caption +AlwaysOnTop +ToolWindow +Owner +E0x02000000")
+    menuGui.BackColor := MenuSettings.Background
 
     currentMenuGui := menuGui.Hwnd
 
-    menuGui.SetFont("s12 bold c" colors.TitleText, MenuSettings.FontName)
-    menuGui.Add("Text", "x10 y10 w280 Center", menuGroup.name)
+    EnableRoundedCorners(menuGui.Hwnd, MenuSettings.CornerRadius)
+
+    titleBg := menuGui.Add("Text", "x0 y0 w300 h45 Background" MenuSettings.TitleBg " Center +0x200")
+    titleBg.SetFont("s13 bold c" MenuSettings.TitleText, MenuSettings.FontName)
+    titleBg.Value := menuGroup.name
 
     if (menuGroup.HasOwnProp("items") && menuGroup.items.Length > 0) {
-        menuGui.SetFont("s10 c" colors.Text, MenuSettings.FontName)
-
-        y := 50
-        leftMargin := 35
+        y := 55
+        leftMargin := 15
+        rightMargin := 15
+        numWidth := 30
+        btnWidth := 300 - leftMargin - numWidth - rightMargin
+        btnHeight := 42
+        btnGap := 6
 
         charWidthMap := GetCharWidthMap()
         spaceWidth := charWidthMap.Has(" ") ? charWidthMap[" "] : 4
         if (spaceWidth <= 0) spaceWidth := 4
-
-        iconOffsetPixels := 0
+            iconOffsetPixels := 0
         iconTextGapPixels := 15
 
         maxTextWidthPixels := 0
         for i, item in menuGroup.items {
             if (i > 12)
                 continue
-
             textWidth := CalculateTextWidth(item.name, charWidthMap)
             if (textWidth > maxTextWidthPixels)
                 maxTextWidthPixels := textWidth
@@ -465,26 +532,20 @@ CreateMenuGUI(menuGroup, groupIndex) {
             if (i > 12)
                 break
 
-            panel := menuGui.Add("Text", "x10 y" y " w280 h40 -Background")
-
-            numColor := "0x000000"
-            if (i <= 9) {
-                numText := menuGui.Add("Text", "x15 y" y+8 " w20 h24 BackgroundTrans", i)
-                numText.SetFont("s14 bold c" numColor, MenuSettings.FontName)
-            } else if (i = 10) {
-                numText := menuGui.Add("Text", "x15 y" y+8 " w20 h24 BackgroundTrans", "0")
-                numText.SetFont("s14 bold c" numColor, MenuSettings.FontName)
-            }
+            numText := (i <= 9) ? String(i) : "0"
+            numLabel := menuGui.Add("Text", "x" (leftMargin + 5) " y" (y + 10) " w24 h24 BackgroundTrans Center",
+            numText)
+            numLabel.SetFont("s12 bold c" MenuSettings.Accent, MenuSettings.FontName)
 
             prefixSpaceCount := Ceil(iconOffsetPixels / spaceWidth)
             prefixSpaces := ""
-            Loop prefixSpaceCount {
+            loop prefixSpaceCount {
                 prefixSpaces .= " "
             }
 
             gapSpaceCount := Ceil(iconTextGapPixels / spaceWidth)
             gapSpaces := ""
-            Loop gapSpaceCount {
+            loop gapSpaceCount {
                 gapSpaces .= " "
             }
 
@@ -495,37 +556,43 @@ CreateMenuGUI(menuGroup, groupIndex) {
             suffixSpaceCount := Ceil(textGapPixels / spaceWidth)
 
             suffixSpaces := ""
-            Loop suffixSpaceCount {
+            loop suffixSpaceCount {
                 suffixSpaces .= " "
             }
+
+            btnX := leftMargin + 30
+            btnTextX := btnX + 8
 
             if (item.HasOwnProp("iconType") && item.iconType = "file") {
                 fullBtnText := prefixSpaces gapSpaces item.name suffixSpaces
 
-                btn := menuGui.Add("Button", "x" leftMargin " y" y " w255 h40 -TabStop", fullBtnText)
+                btn := menuGui.Add("Button", "x" btnX " y" y " w" btnWidth " h" btnHeight " -TabStop Background" MenuSettings.ButtonBg, fullBtnText)
                 try {
-                    btn.SetFont("s10 c" colors.Text, MenuSettings.FontName)
+                    btn.SetFont("s10 c" MenuSettings.Text, MenuSettings.FontName)
                     AddButtonIcon(btn, item.icon)
                 } catch Error as e {
                     btn.Text := fullBtnText
                 }
             } else {
                 fullBtnText := prefixSpaces item.icon gapSpaces item.name suffixSpaces
-                btn := menuGui.Add("Button", "x" leftMargin " y" y " w255 h40 -TabStop", fullBtnText)
+                btn := menuGui.Add("Button", "x" btnX " y" y " w" btnWidth " h" btnHeight " -TabStop Background" MenuSettings.ButtonBg, fullBtnText)
+                btn.SetFont("s10 c" MenuSettings.Text, MenuSettings.FontName)
             }
 
             btn.OnEvent("Click", item.action)
 
-            y += 50
+            y += btnHeight + btnGap
         }
     }
 
-    y += 10
-    closeBtn := menuGui.Add("Button", "x10 y" y " w280 h30", "关闭")
+    y += 8
+    closeBtnWidth := 300 - leftMargin - rightMargin
+    closeBtn := menuGui.Add("Button", "x" leftMargin " y" y " w" closeBtnWidth " h36 Background" MenuSettings.ButtonBg, "关闭")
+    closeBtn.SetFont("s10 c" MenuSettings.Text, MenuSettings.FontName)
     closeBtn.OnEvent("Click", (*) => CloseMenu())
 
-    guiHeight := y + 40
-
+    y += 44
+    guiHeight := y
     menuWidth := 300
 
     CoordMode("Mouse", "Screen")
@@ -538,8 +605,8 @@ CreateMenuGUI(menuGroup, groupIndex) {
 
     if (showDebugTooltips) {
         ToolTip("鼠标位置: X=" mouseX " Y=" mouseY "`n"
-          . "菜单尺寸: W=" menuWidth " H=" guiHeight "`n"
-          . "菜单中心点: X=" (guiX + menuCenterX) " Y=" (guiY + menuCenterY))
+            . "菜单尺寸: W=" menuWidth " H=" guiHeight "`n"
+            . "菜单中心点: X=" (guiX + menuCenterX) " Y=" (guiY + menuCenterY))
         SetTimer () => ToolTip(), -3000
     }
 
@@ -553,6 +620,8 @@ CreateMenuGUI(menuGroup, groupIndex) {
         guiY := WTop
 
     menuGui.Show("x" guiX " y" guiY " w" menuWidth " h" guiHeight)
+    FadeInWindow(menuGui.Hwnd)
+
     menuGui.OnEvent("Escape", (*) => CloseMenu())
     checkActiveTimerId := SetTimer(CheckActiveWindow, 50)
     menuGui.OnEvent("ContextMenu", (*) => CloseMenu())
@@ -566,6 +635,7 @@ CloseMenu() {
     forceKeepMenu := false
 
     if (currentMenuGui && WinExist("ahk_id " currentMenuGui)) {
+        FadeOutWindow(currentMenuGui)
         WinClose("ahk_id " currentMenuGui)
     }
 
@@ -687,13 +757,13 @@ ExecuteMenuItem(groupIndex, itemIndex) {
 {
     global currentMenuGroup
 
-        try {
-            if (MenuGroups.Has(currentMenuGroup)) {
-                if (MenuGroups[currentMenuGroup].HasOwnProp("items") && MenuGroups[currentMenuGroup].items.Length >= 1) {
-                    ExecuteMenuItem(currentMenuGroup, 1)
-                }
+    try {
+        if (MenuGroups.Has(currentMenuGroup)) {
+            if (MenuGroups[currentMenuGroup].HasOwnProp("items") && MenuGroups[currentMenuGroup].items.Length >= 1) {
+                ExecuteMenuItem(currentMenuGroup, 1)
             }
-        } catch Error as e {
+        }
+    } catch Error as e {
     }
 }
 
@@ -822,7 +892,7 @@ ExecuteMenuItem(groupIndex, itemIndex) {
     }
 }
 
-Escape::CloseMenu()
+Escape:: CloseMenu()
 #HotIf
 
 ActivateOrRun(processName, runCommand) {

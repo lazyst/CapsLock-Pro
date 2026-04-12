@@ -87,23 +87,19 @@ global currentMenuGroup := 0
 global checkActiveTimerId := 0
 global forceKeepMenu := false
 global MenuSettings := {
-    DarkMode: IniRead(A_ScriptDir "\CapsLock++.ini", "MenuGroupsColourMode", "DarkMode", "true") = "true",
     FontName: "Segoe UI",
     FontSize: 10,
-    DarkColors: {
-        Background: "0x202020",
-        Text: "0xFFFFFF",
-        Border: "0x505050",
-        TitleBg: "0x303030",
-        TitleText: "0xFFFFFF"
-    },
-    LightColors: {
-        Background: "0xF0F0F0",
-        Text: "0x000000",
-        Border: "0xD0D0D0",
-        TitleBg: "0xFFFFFF",
-        TitleText: "0x000000"
-    }
+    AnimationEnabled: true,
+    CornerRadius: 12,
+    Background: "0xFFFFFF",
+    Text: "0x1A1A1A",
+    Border: "0xE0E0E0",
+    TitleBg: "0xF5F5F5",
+    TitleText: "0x1A1A1A",
+    HoverBg: "0xE8E8E8",
+    ButtonBg: "0xFFFFFF",
+    ButtonHover: "0xF0F0F0",
+    Accent: "0x0078D4"
 }
 global menuGroupNum := 0
 global enableGroup := []
