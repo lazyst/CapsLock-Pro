@@ -9,18 +9,75 @@
 ; 鼠标移动函数
 ; =====================================================================
 
-MouseMoveRelative(x, y) {
-    static mouseSpeed := 1
+StartMouseMove() {
+    global mouseMoveTimer
 
-    mouseSpeed += 0.3
+    if (mouseMoveTimer = 0) {
+        SetTimer(MouseMoveLoop, 10)
+        mouseMoveTimer := 1
+    }
+}
 
-    if (mouseSpeed > 6)
-        mouseSpeed := 6
+StopMouseMove() {
+    global mouseMoveTimer
 
-    moveX := x * mouseSpeed
-    moveY := y * mouseSpeed
+    if (mouseMoveTimer != 0) {
+        if GetKeyState("e", "P") || GetKeyState("d", "P") || GetKeyState("s", "P") || GetKeyState("f", "P")
+            return
 
-    MouseMove(moveX, moveY, 0, "R")
+        SetTimer(MouseMoveLoop, 0)
+        mouseMoveTimer := 0
+    }
+}
+
+MouseMoveLoop() {
+    global mouseSpeed
+
+    dx := 0
+    dy := 0
+
+    if GetKeyState("e", "P")
+        dy -= 1
+    if GetKeyState("d", "P")
+        dy += 1
+    if GetKeyState("s", "P")
+        dx -= 1
+    if GetKeyState("f", "P")
+        dx += 1
+
+    if (dx != 0 || dy != 0) {
+        if (dx != 0 && dy != 0) {
+            length := Sqrt(dx * dx + dy * dy)
+            dx := dx / length
+            dy := dy / length
+        }
+
+        MouseMove(dx * mouseSpeed, dy * mouseSpeed, 0, "R")
+    }
+}
+
+; =====================================================================
+; 速度调节函数
+; =====================================================================
+
+AdjustMouseSpeed(delta) {
+    global mouseSpeed
+
+    mouseSpeed += delta
+
+    if (mouseSpeed < 1)
+        mouseSpeed := 1
+    if (mouseSpeed > 20)
+        mouseSpeed := 20
+
+    SaveMouseSpeed()
+    ShowTooltipNearMouse("鼠标速度: " . mouseSpeed)
+}
+
+SaveMouseSpeed() {
+    global mouseSpeed, iniFile
+
+    IniWrite(mouseSpeed, iniFile, "MouseMode", "Speed")
 }
 
 ; =====================================================================
@@ -28,19 +85,22 @@ MouseMoveRelative(x, y) {
 ; =====================================================================
 
 EnterMouseMode() {
-    global mouseModeEnabled, otherKeyPressed
+    global mouseModeEnabled, otherKeyPressed, mouseSpeed
 
     mouseModeEnabled := true
     otherKeyPressed := true
-    ShowTooltipNearMouse("鼠标模式已启用")
+    ShowTooltipNearMouse("鼠标模式已启用 (速度: " . mouseSpeed . ")")
 }
 
 ExitMouseMode() {
-    global mouseModeEnabled
+    global mouseModeEnabled, otherKeyPressed
 
     mouseModeEnabled := false
+    otherKeyPressed := true
+    StopMouseMove()
     ShowTooltipNearMouse("鼠标模式已关闭")
 }
+
 ; =====================================================================
 ; 鼠标模式入口热键
 ; =====================================================================
@@ -51,6 +111,7 @@ space::
     EnterMouseMode()
 }
 #HotIf
+
 ; =====================================================================
 ; 鼠标模式热键
 ; =====================================================================
@@ -64,47 +125,87 @@ CapsLock & space::
 
 e::
 {
-    MouseMoveRelative(0, -7)
+    StartMouseMove()
+}
+
+e Up::
+{
+    StopMouseMove()
 }
 
 d::
 {
-    MouseMoveRelative(0, 7)
+    StartMouseMove()
 }
+
+d Up::
+{
+    StopMouseMove()
+}
+
 s::
 {
-    MouseMoveRelative(-7, 0)
+    StartMouseMove()
 }
+
+s Up::
+{
+    StopMouseMove()
+}
+
 f::
 {
-    MouseMoveRelative(7, 0)
+    StartMouseMove()
 }
+
+f Up::
+{
+    StopMouseMove()
+}
+
+q::
+{
+    AdjustMouseSpeed(1)
+}
+
+a::
+{
+    AdjustMouseSpeed(-1)
+}
+
 w::
 {
     Click("Left")
 }
+
 r::
 {
     Click("Right")
 }
+
 j::
 {
     Click("WheelDown")
 }
+
 k::
 {
     Click("WheelUp")
 }
+
 h::
 {
     Click("WheelLeft")
 }
+
 l::
 {
     Click("WheelRight")
 }
+
 Esc::
 {
     ExitMouseMode()
 }
+
 #HotIf

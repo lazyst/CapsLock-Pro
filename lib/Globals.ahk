@@ -44,6 +44,8 @@ global isWordJump := false
 
 ; 鼠标控制全局变量
 global mouseModeEnabled := false
+global mouseMoveTimer := 0
+global mouseSpeed := Integer(IniRead(A_ScriptDir "\CapsLock++.ini", "MouseMode", "Speed", "5"))
 
 ; 符号跳转全局变量
 global isSeekingSymbol := false
