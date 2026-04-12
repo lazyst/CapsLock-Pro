@@ -1,6 +1,6 @@
 ; =====================================================================
 ; CapsLock++ 鼠标控制模块
-; 包含：鼠标模式入口/退出、鼠标点击、滚轮控制
+; 包含：鼠标模式入口/退出、鼠标移动、点击、滚轮控制
 ; 全局变量在 lib/Globals.ahk 中声明
 ; 工具函数在 lib/Utils.ahk 中声明
 ; =====================================================================
@@ -21,94 +21,6 @@ MouseMoveRelative(x, y) {
     moveY := y * mouseSpeed
 
     MouseMove(moveX, moveY, 0, "R")
-}
-
-; =====================================================================
-; 鼠标按键函数
-; =====================================================================
-
-MouseLeftDown() {
-    Click("Left Down")
-}
-
-MouseLeftUp() {
-    Click("Left Up")
-}
-
-MouseRightDown() {
-    Click("Right Down")
-}
-
-MouseRightUp() {
-    Click("Right Up")
-}
-
-MouseWheelUp(repeat := 1) {
-    Loop repeat
-        Click("WheelUp")
-}
-
-MouseWheelDown(repeat := 1) {
-    Loop repeat
-        Click("WheelDown")
-}
-
-; =====================================================================
-; 鼠标点击热键
-; =====================================================================
-
-CapsLock & RAlt::
-{
-    global otherKeyPressed := true
-
-    MouseLeftDown()
-}
-
-CapsLock & RAlt Up::
-{
-    MouseLeftUp()
-}
-
-CapsLock & RCtrl::
-{
-    global otherKeyPressed := true
-
-    MouseRightDown()
-}
-
-CapsLock & RWin::
-{
-    global otherKeyPressed := true
-
-    MouseRightDown()
-}
-
-CapsLock & RCtrl Up::
-{
-    MouseRightUp()
-}
-
-CapsLock & RWin Up::
-{
-    MouseRightUp()
-}
-
-; =====================================================================
-; 鼠标滚轮热键
-; =====================================================================
-
-CapsLock & PgUp::
-{
-    global otherKeyPressed := true
-
-    MouseWheelUp(3)
-}
-
-CapsLock & PgDn::
-{
-    global otherKeyPressed := true
-
-    MouseWheelDown(3)
 }
 
 ; =====================================================================
