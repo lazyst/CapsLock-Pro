@@ -60,11 +60,6 @@ global lastFullscreenWarningTime := 0
 global lastFullscreenWarningHwnd := 0
 global fullscreenWarningTimeout := 1000
 
-; 工作区管理全局变量
-global minimizedWindows := []
-global lastWorkspaceCleanupTime := 0
-global workspaceCleanupMode := "minimize"
-
 ; 速记功能全局变量
 global noteConfig := {
     defaultDir: A_ScriptDir . "\速记\"
@@ -106,21 +101,6 @@ global enableGroup := []
 global groupName := []
 global groupCount := []
 global MenuGroups := Map()
-
-; 窗口裁切全局变量
-global windowStates := Map()
-global closedShadows := Map()
-global isSelecting := false
-global targetWindow := 0
-global selectionBox := 0
-global startX := 0, startY := 0
-global endX := 0, endY := 0
-global winOffsetX := 0, winOffsetY := 0
-global trackingTimer := 0
-global lastTrackX := 0, lastTrackY := 0
-global isDragging := false
-global dragHwnd := 0
-global offsetX := 0, offsetY := 0
 
 ; 文本编辑全局变量
 global lastSpaceTime := 0

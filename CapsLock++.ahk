@@ -29,7 +29,6 @@ if (!A_IsAdmin) {
 ; =====================================================================
 #Include lib\CapsLockHandler.ahk
 #Include lib\WindowSwitch.ahk
-#Include lib\TabSwitch.ahk
 #Include lib\Workspace.ahk
 #Include lib\WindowPin.ahk
 #Include lib\TextEdit.ahk
@@ -40,7 +39,6 @@ if (!A_IsAdmin) {
 #Include lib\MenuSystem.ahk
 #Include lib\ProcessManage.ahk
 #Include lib\WebsiteManage.ahk
-#Include lib\WindowClip.ahk
 #Include lib\ConfigHelper.ahk
 
 ; =====================================================================
