@@ -206,18 +206,6 @@ IndexWherever(){
 }
 
 ; =====================================================================
-; 翻译辅助函数
-; =====================================================================
-
-MiniTranslate(){
-    Send("^m")
-}
-
-SelectTranslate(){
-    Send("{F7}")
-}
-
-; =====================================================================
 ; 热键映射 - 光标移动
 ; =====================================================================
 
@@ -691,35 +679,4 @@ b::
     Send("#{Tab}")
 }
 
-t::
-{
-    global otherKeyPressed := true
-
-    local IsSelected := false
-
-    if(GetKeyState("LButton", "P")){
-        ShowTooltipNearMouse("请先松开左键")
-        return
-    }
-
-    ClipSaved := ClipboardAll()
-    A_Clipboard := ""
-    Send("^c")
-    ClipWait(0.2, 0)
-
-    if (A_Clipboard != "") {
-        IsSelected := true
-    } else {
-        IsSelected := false
-    }
-
-    if (!IsSelected) {
-        MiniTranslate()
-    } else {
-        SetTimer(SelectTranslate, -100)
-    }
-
-    A_Clipboard := ClipSaved
-    ClipSaved := ""
-}
 #HotIf
