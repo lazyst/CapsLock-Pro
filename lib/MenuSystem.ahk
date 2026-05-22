@@ -4,7 +4,6 @@
 ; =====================================================================
 
 #Include "ui\MenuUI.ahk"
-#Include "core\ActionEngine.ahk"
 #Include "core\ConfigManager.ahk"
 #Include "core\Logger.ahk"
 #Include "Utils.ahk"
@@ -23,7 +22,7 @@ InitMenuGroups() {
     settings := configManager.GetSettings()
 
     if settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") {
-        ApplyMenuTheme(settings.ui.darkMode)
+        ApplyMenuTheme.Call(settings.ui.darkMode)
     }
 
     MenuGroups := Map()
@@ -69,15 +68,12 @@ InitMenuGroups() {
 
                 itemIcon := itemData.HasOwnProp("icon") ? itemData.icon : ""
                 itemIconType := itemData.HasOwnProp("iconType") ? itemData.iconType : "emoji"
-                itemAction := itemData.HasOwnProp("action") ? itemData.action : { type: "None", params: {} }
-
-                actionFunc := CreateActionFunction(itemAction)
+                itemAction := itemData.HasOwnProp("action") ? itemData.action : ""
 
                 items.Push({
                     name: itemName,
                     icon: itemIcon,
                     iconType: itemIconType,
-                    action: actionFunc,
                     actionConfig: itemAction
                 })
             }
@@ -99,57 +95,64 @@ InitMenuGroups() {
 }
 
 ; ---------------------------------------------------------------------
-; CreateActionFunction - 为菜单项创建动作执行函数
-; @param actionConfig 动作配置对象
-; @return 执行动作的函数
-; ---------------------------------------------------------------------
-CreateActionFunction(actionConfig) {
-    return (*) => ExecuteActionFromConfig(actionConfig)
-}
-
-; ---------------------------------------------------------------------
 ; ExecuteActionFromConfig - 根据配置执行动作
 ; @param actionConfig 动作配置对象
 ; ---------------------------------------------------------------------
 ExecuteActionFromConfig(actionConfig) {
-    global currentMenuGui
-
     CloseMenu()
 
+    if Type(actionConfig) = "String" {
+        if actionConfig != "" {
+            ExecuteCustomAction(actionConfig)
+        }
+        return
+    }
+
     if !IsObject(actionConfig) {
-        LogError("MenuSystem", "动作配置无效")
-        ShowTooltipNearMouse("动作配置无效")
         return
     }
 
     actionType := actionConfig.HasOwnProp("type") ? actionConfig.type : "None"
     params := actionConfig.HasOwnProp("params") ? actionConfig.params : {}
 
-    LogInfo("MenuSystem", "执行动作", { type: actionType })
+    try {
+        switch actionType {
+            case "None", "":
+                return
 
-    if actionType = "None" || actionType = "" {
-        return
-    }
+            case "RunApp":
+                path := params.HasOwnProp("path") ? params.path : ""
+                workdir := params.HasOwnProp("workdir") ? params.workdir : ""
+                if path != "" {
+                    Run(path, workdir != "" ? workdir : A_Desktop)
+                }
 
-    if actionType = "Custom" {
-        if params.HasOwnProp("code") && params.code != "" {
-            try {
-                ExecuteCustomAction(params.code)
-            } catch Error as e {
-                LogError("MenuSystem", "执行自定义动作失败", { error: e.Message })
-                ShowTooltipNearMouse("执行自定义动作失败: " e.Message)
-            }
+            case "SendKeys":
+                keys := params.HasOwnProp("keys") ? params.keys : ""
+                if keys != "" {
+                    SendInput(keys)
+                }
+
+            case "SendText":
+                text := params.HasOwnProp("text") ? params.text : ""
+                if text != "" {
+                    SendText(text)
+                }
+
+            case "ProcessKill":
+                name := params.HasOwnProp("name") ? params.name : ""
+                if name != "" {
+                    ProcessClose(name)
+                }
+
+            case "Custom":
+                if params.HasOwnProp("code") && params.code != "" {
+                    ExecuteCustomAction(params.code)
+                }
         }
-        return
-    }
-
-    result := ExecuteAction(actionConfig, CreateActionContext())
-
-    if !result.success {
-        LogError("MenuSystem", "动作执行失败", { error: result.error })
-        ShowTooltipNearMouse("动作执行失败: " result.error)
-    } else {
-        LogDebug("MenuSystem", "动作执行成功")
+    } catch Error as e {
+        LogError("MenuSystem", "动作执行失败", { error: e.Message })
+        ShowTooltipNearMouse("动作执行失败: " e.Message)
     }
 }
 
@@ -183,7 +186,9 @@ ExecuteCustomAction(code) {
         return
     }
 
-    ShowTooltipNearMouse("无法解析的自定义动作: " code)
+    if code != "" {
+        RunCommand(code)
+    }
 }
 
 ; ---------------------------------------------------------------------
@@ -256,7 +261,7 @@ ReloadMenuGroups() {
     settings := configManager.GetSettings()
 
     if settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") {
-        ApplyMenuTheme(settings.ui.darkMode)
+        ApplyMenuTheme.Call(settings.ui.darkMode)
     }
 
     MenuGroups := Map()
@@ -302,15 +307,12 @@ ReloadMenuGroups() {
 
                 itemIcon := itemData.HasOwnProp("icon") ? itemData.icon : ""
                 itemIconType := itemData.HasOwnProp("iconType") ? itemData.iconType : "emoji"
-                itemAction := itemData.HasOwnProp("action") ? itemData.action : { type: "None", params: {} }
-
-                actionFunc := CreateActionFunction(itemAction)
+                itemAction := itemData.HasOwnProp("action") ? itemData.action : ""
 
                 items.Push({
                     name: itemName,
                     icon: itemIcon,
                     iconType: itemIconType,
-                    action: actionFunc,
                     actionConfig: itemAction
                 })
             }
@@ -409,9 +411,7 @@ ExecuteMenuItem(groupIndex, itemIndex) {
 
     menuItem := menuGroup.items[itemIndex]
 
-    if menuItem.HasOwnProp("action") && IsObject(menuItem.action) {
-        menuItem.action()
-    } else if menuItem.HasOwnProp("actionConfig") {
+    if menuItem.HasOwnProp("actionConfig") {
         ExecuteActionFromConfig(menuItem.actionConfig)
     }
 }

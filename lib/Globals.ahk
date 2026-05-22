@@ -27,11 +27,6 @@ global longTipDuration := 5000
 ; 调试开关（已废弃，使用 Logger 模块）
 global showDebugTooltips := false
 
-; 动作系统相关变量
-global actionDebugMode := false  ; 动作调试模式开关（已废弃，使用 Logger 模块）
-global actionHandlers := Map()   ; 动作处理器映射
-global actionMetadata := Map()   ; 动作元数据映射
-
 ; 窗口切换配置
 global useTaskbarOrder := false
 global includeMultipleInstances := true

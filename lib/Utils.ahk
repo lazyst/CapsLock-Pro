@@ -24,15 +24,15 @@ FormatNumber(num) {
 
 ; 切换调试提示的显示状态
 ToggleDebugTooltips() {
-    global showDebugTooltips, tipDuration
+    global showDebugTooltips
     showDebugTooltips := !showDebugTooltips
     ToolTip("调试信息显示: " (showDebugTooltips ? "开启" : "关闭"))
-    SetTimer () => ToolTip(), -tipDuration
+    SetTimer () => ToolTip(), -2000
 }
 
 ; 显示调试信息提示
 ShowDebugTooltip(text, duration := 3000) {
-    global showDebugTooltips, debugTipDuration
+    global showDebugTooltips
     
     if !showDebugTooltips
         return
@@ -98,7 +98,7 @@ IsTaskbarWindow(hwnd) {
     processPath := ProcessGetPath(pid)
     SplitPath(processPath, &processName)
     
-    if HasVal(blacklistProcessNames, processName) {
+    if IsSet(blacklistProcessNames) && HasVal(blacklistProcessNames, processName) {
         if (showDebugTooltips) {
             ToolTip("排除黑名单进程: " processName)
             SetTimer () => ToolTip(), -1000
@@ -106,7 +106,7 @@ IsTaskbarWindow(hwnd) {
         return false
     }
         
-    for blackClass in blacklistClasses {
+    for blackClass in (IsSet(blacklistClasses) ? blacklistClasses : []) {
         if (InStr(className, blackClass) || className = blackClass) {
             if (showDebugTooltips) {
                 ToolTip("排除黑名单类名: " className)

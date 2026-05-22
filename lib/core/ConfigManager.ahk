@@ -100,11 +100,8 @@ class ConfigManager {
                         if item.HasOwnProp("iconType")
                             IniWrite(item.iconType, iniPath, section, "icontype" itemCount)
                         actionStr := ""
-                        if item.HasOwnProp("action") {
-                            if IsObject(item.action)
-                                actionStr := ConvertToOldActionString(item.action)
-                            else
-                                actionStr := item.action
+                        if item.HasOwnProp("action") && !IsObject(item.action) {
+                            actionStr := item.action
                         }
                         IniWrite(actionStr, iniPath, section, "action" itemCount)
                     }
@@ -142,17 +139,6 @@ class ConfigManager {
         }
     }
 
-    LoadActions() {
-        return []
-    }
-
-    SaveActions(actions) {
-        return true
-    }
-
-    GetActions() {
-        return this.LoadActions()
-    }
 }
 
 GetConfigManager() {

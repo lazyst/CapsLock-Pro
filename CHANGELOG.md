@@ -2,10 +2,15 @@
 
 所有项目的重要更改都将记录在此文件中。
 
-## \[v1.2.1\] - 2026-05-23
+## \[v1.3.0\] - 2026-05-23
 
 ### ✨ 移除功能
 
+- **动作系统移除**: 移除了 `ActionEngine.ahk` 和 `ActionEditor.ahk` 整个动作管理子系统
+  - 菜单项动作简化为纯字符串格式，不再支持结构化动作对象
+  - 配置助手移除"动作管理"Tab 及相关构建/编辑/转换函数
+  - 菜单项动作可直接输入原始命令，无需 `RunCommand()` 前缀
+  - 向后兼容：旧格式 `RunCommand("...")`/`SendInput("...")`/`ActivateOrRun("...")` 仍可执行
 - **网站管理模块移除**: 移除了 `WebsiteLogin()` 及相关网站配置功能
   - 删除 `lib/WebsiteManage.ahk` 整个模块
   - 清理 `CapsLock++.ini` 中的 `[CommonWebsites]` 配置节
@@ -16,9 +21,9 @@
 - **修复缺失的源码文件**: 创建了 5 个之前缺失的存根模块，使源代码可正常运行：
   - `lib/core/Logger.ahk` — 日志系统
   - `lib/core/ConfigManager.ahk` — 配置管理器（从 INI 读写）
-  - `lib/core/ActionEngine.ahk` — 动作执行引擎
+  - `lib/core/ActionEngine.ahk` — 动作执行引擎（后续已移除）
   - `lib/ui/MenuUI.ahk` — 菜单 UI
-  - `lib/ui/ActionEditor.ahk` — 动作编辑器
+  - `lib/ui/ActionEditor.ahk` — 动作编辑器（后续已移除）
 - **修复括号不匹配**: 删除代码后 `ConfigHelper.ahk` 中 `GetActionSummary` 和 `ConvertToOldActionString` 函数遗留的括号问题
 - **修复缺失变量**: 添加 `iniFile` 全局变量定义
 - **修复参数错误**: `MenuUI.ahk` 中 `MakeMenuItemHandler` 传递给 `ExecuteMenuItem` 的参数数量错误

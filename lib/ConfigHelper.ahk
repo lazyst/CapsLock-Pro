@@ -1,19 +1,9 @@
 ; =====================================================================
 ; CapsLock++ 配置助手模块
-; 包含：菜单配置、速记路径、动作管理的GUI编辑功能
+; 包含：菜单配置、速记路径的GUI编辑功能
 ; 通过 CapsLock+\ 快捷键启动
 ; 工具函数（ShowTooltip）在 lib/Utils.ahk 中声明
 ; =====================================================================
-
-#Include "ui\ActionEditor.ahk"
-
-EscapeQuotes(str) {
-    return StrReplace(str, '"', '\"')
-}
-
-UnescapeQuotes(str) {
-    return StrReplace(str, '\"', '"')
-}
 
 EnsureDataSync() {
     SyncMenuItemLVToArray()
@@ -34,14 +24,12 @@ ShowConfigHelper() {
     configHelperGui.SetFont("s10", "Segoe UI")
     configHelperGui.OnEvent("Close", (*) => (configHelperGui := ""))
 
-    tabs := configHelperGui.Add("Tab3", "x0 y0 w800 h560", ["菜单配置", "速记路径", "动作管理"])
+    tabs := configHelperGui.Add("Tab3", "x0 y0 w800 h560", ["菜单配置", "速记路径"])
 
     tabs.UseTab(1)
     BuildMenuPage(configHelperGui)
     tabs.UseTab(2)
     BuildNotePage(configHelperGui)
-    tabs.UseTab(3)
-    BuildActionPage(configHelperGui)
     tabs.UseTab(0)
 
     configHelperGui.Add("Button", "x580 y570 w100 h32", "重新加载").OnEvent("Click", (*) => ConfigReloadWithConfirm())
@@ -158,22 +146,9 @@ MenuGroupFocus(ctrl, itemNum) {
         return
     items := menuGroupItems[itemNum]
     for item in items {
-        actionDisplay := FormatActionDisplay(item.action)
+        actionDisplay := IsObject(item.action) ? "" : item.action
         menuItemLV.Add("", item.name, item.icon, item.icontype, actionDisplay)
     }
-}
-
-FormatActionDisplay(action) {
-    if IsString(action) {
-        return action
-    }
-    if !IsObject(action) {
-        return ""
-    }
-    if !action.HasOwnProp("type") {
-        return ""
-    }
-    return GetActionSummary(action)
 }
 
 ExtractMenuGroupName(displayText) {
@@ -255,26 +230,6 @@ MenuGroupMoveDown(*) {
     MenuGroupFocus(menuGroupLV, target)
 }
 
-DetectActionType(action) {
-    if (RegExMatch(action, "i)^RunCommand\("))
-        return "自定义命令"
-    if (RegExMatch(action, "i)^ActivateOrRun\("))
-        return "启动程序"
-    return "预设功能"
-}
-
-ExtractRunCommandParams(action) {
-    if RegExMatch(action, 'i)^RunCommand\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)$', &m)
-        return { command: UnescapeQuotes(m[1]), workdir: UnescapeQuotes(m[2]) }
-    return ""
-}
-
-ExtractActivateOrRunParams(action) {
-    if RegExMatch(action, 'i)^ActivateOrRun\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)$', &m)
-        return { name: UnescapeQuotes(m[1]), path: UnescapeQuotes(m[2]) }
-    return ""
-}
-
 MenuAddItem(*) {
     global currentMenuGroup, menuGroupItems
     row := menuGroupLV.GetNext()
@@ -283,13 +238,31 @@ MenuAddItem(*) {
         return
     }
 
-    result := ShowActionEditor("", true)
-    if !IsObject(result) || !result.HasOwnProp("name") || !result.HasOwnProp("action") {
-        return
-    }
+    editGui := Gui("+AlwaysOnTop +ToolWindow", "添加菜单项")
+    editGui.SetFont("s10", "Segoe UI")
+    editGui.Add("Text", "x10 y15 w80 h23", "名称:")
+    nameEdit := editGui.Add("Edit", "x100 y12 w250 h23", "")
+    editGui.Add("Text", "x10 y45 w80 h23", "图标:")
+    iconEdit := editGui.Add("Edit", "x100 y42 w250 h23", "")
+    editGui.Add("Text", "x10 y75 w80 h23", "图标类型:")
+    typeDDL := editGui.Add("DropDownList", "x100 y72 w120", ["emoji", "file"])
+    editGui.Add("Text", "x10 y105 w80 h23", "动作:")
+    actionEdit := editGui.Add("Edit", "x100 y102 w250 h23", "")
 
-    actionDisplay := GetActionSummary(result.action)
-    menuItemLV.Add("", result.name, result.icon, result.icontype, actionDisplay)
+    resultObj := {}
+    editGui.Add("Button", "x180 y140 w80 h30 Default", "确定").OnEvent("Click", (*) => (
+        resultObj.__data := { name: nameEdit.Value, icon: iconEdit.Value, icontype: typeDDL.Text, action: actionEdit.Value },
+        editGui.Destroy()
+    ))
+    editGui.Add("Button", "x270 y140 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
+    editGui.Show("w380 h190")
+    WinWaitClose(editGui.Hwnd)
+
+    if !resultObj.HasOwnProp("__data") || resultObj.__data.name = ""
+        return
+
+    result := resultObj.__data
+    menuItemLV.Add("", result.name, result.icon, result.icontype, result.action)
 
     if (currentMenuGroup >= 1 && currentMenuGroup <= menuGroupItems.Length) {
         items := menuGroupItems[currentMenuGroup]
@@ -311,14 +284,37 @@ MenuEditItem(*) {
         return
 
     currentItem := items[row]
+    oldName := currentItem.name
+    oldIcon := currentItem.icon
+    oldIconType := currentItem.icontype
+    oldAction := IsObject(currentItem.action) ? "" : currentItem.action
 
-    result := ShowActionEditor("", true, currentItem)
-    if !IsObject(result) || !result.HasOwnProp("name") || !result.HasOwnProp("action") {
+    editGui := Gui("+AlwaysOnTop +ToolWindow", "编辑菜单项")
+    editGui.SetFont("s10", "Segoe UI")
+    editGui.Add("Text", "x10 y15 w80 h23", "名称:")
+    nameEdit := editGui.Add("Edit", "x100 y12 w250 h23", oldName)
+    editGui.Add("Text", "x10 y45 w80 h23", "图标:")
+    iconEdit := editGui.Add("Edit", "x100 y42 w250 h23", oldIcon)
+    editGui.Add("Text", "x10 y75 w80 h23", "图标类型:")
+    typeDDL := editGui.Add("DropDownList", "x100 y72 w120", ["emoji", "file"])
+    typeDDL.Choose(oldIconType = "file" ? 2 : 1)
+    editGui.Add("Text", "x10 y105 w80 h23", "动作:")
+    actionEdit := editGui.Add("Edit", "x100 y102 w250 h23", oldAction)
+
+    resultObj := {}
+    editGui.Add("Button", "x180 y140 w80 h30 Default", "确定").OnEvent("Click", (*) => (
+        resultObj.__data := { name: nameEdit.Value, icon: iconEdit.Value, icontype: typeDDL.Text, action: actionEdit.Value },
+        editGui.Destroy()
+    ))
+    editGui.Add("Button", "x270 y140 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
+    editGui.Show("w380 h190")
+    WinWaitClose(editGui.Hwnd)
+
+    if !resultObj.HasOwnProp("__data") || resultObj.__data.name = ""
         return
-    }
 
-    actionDisplay := GetActionSummary(result.action)
-    menuItemLV.Modify(row, "", result.name, result.icon, result.icontype, actionDisplay)
+    result := resultObj.__data
+    menuItemLV.Modify(row, "", result.name, result.icon, result.icontype, result.action)
     items[row] := { name: result.name, icon: result.icon, icontype: result.icontype, action: result.action }
 }
 
@@ -397,7 +393,7 @@ ConfigReloadWithConfirm() {
 }
 
 ConfigReload() {
-    global menuGroupItems, menuGroupEnabled, currentMenuGroup, savedActions, savedActionsLV
+    global menuGroupItems, menuGroupEnabled, currentMenuGroup
 
     SyncMenuItemLVToArray()
 
@@ -437,7 +433,7 @@ ConfigReload() {
                     itemName := item.HasOwnProp("name") ? item.name : ""
                     itemIcon := item.HasOwnProp("icon") ? item.icon : ""
                     itemIconType := item.HasOwnProp("iconType") ? item.iconType : "emoji"
-                    itemAction := item.HasOwnProp("action") ? item.action : { type: "None", params: {} }
+                    itemAction := item.HasOwnProp("action") ? item.action : ""
 
                     if itemName != ""
                         items.Push({ name: itemName, icon: itemIcon, icontype: itemIconType, action: itemAction })
@@ -458,30 +454,10 @@ ConfigReload() {
     }
     darkModeCB.Value := darkMode
 
-    savedActionsLV.Delete()
-    savedActions := []
-    actionsData := configManager.LoadActions()
-    if IsObject(actionsData) {
-        for actionInfo in actionsData {
-            actionName := actionInfo.HasOwnProp("name") ? actionInfo.name : ""
-            actionData := actionInfo.HasOwnProp("data") ? actionInfo.data : ""
-            createTime := actionInfo.HasOwnProp("createTime") ? actionInfo.createTime : ""
-
-            if actionName != "" && IsObject(actionData) && actionData.HasOwnProp("type") {
-                savedActions.Push({ name: actionName, data: actionData, createTime: createTime })
-                summary := GetActionSummary(actionData)
-                typeName := actionData.type
-                savedActionsLV.Add("", actionName, typeName, summary, createTime)
-            }
-        }
-    }
-
     ShowTooltipNearMouse("配置已加载")
 }
 
 ConfigSave() {
-    global savedActions
-
     SyncMenuItemLVToArray()
 
     menus := BuildMenusConfig()
@@ -497,18 +473,6 @@ ConfigSave() {
     if !configManager.SaveSettings(settings) {
         ShowTooltipNearMouse("保存设置配置失败")
         return
-    }
-
-    if IsObject(savedActions) {
-        actionsToSave := []
-        for actionInfo in savedActions {
-            actionsToSave.Push({
-                name: actionInfo.name,
-                data: actionInfo.data,
-                createTime: actionInfo.createTime
-            })
-        }
-        configManager.SaveActions(actionsToSave)
     }
 
     ReloadMenuGroups()
@@ -591,16 +555,11 @@ BuildMenusConfig() {
         if (i <= menuGroupItems.Length) {
             groupItems := menuGroupItems[i]
             for item in groupItems {
-                actionObj := item.action
-                if IsString(actionObj) {
-                    actionObj := ConvertOldActionString(actionObj)
-                }
-
                 items.Push({
                     name: item.name,
                     icon: item.icon,
                     iconType: item.icontype,
-                    action: actionObj
+                    action: IsObject(item.action) ? "" : item.action
                 })
             }
         }
@@ -617,270 +576,7 @@ BuildMenusConfig() {
 }
 
 ; =====================================================================
-; 动作管理页面
-; =====================================================================
-
-global savedActionsLV := ""
-global savedActions := []
-
-BuildActionPage(gui) {
-    global savedActionsLV, savedActions
-    gui.Add("Text", "x10 y35 w780 h20", "已保存动作列表 - 可复用的动作配置")
-    savedActionsLV := gui.Add("ListView", "x10 y60 w780 h420 -Multi", ["名称", "类型", "摘要", "创建时间"])
-    savedActionsLV.ModifyCol(1, 150)
-    savedActionsLV.ModifyCol(2, 100)
-    savedActionsLV.ModifyCol(3, 350)
-    savedActionsLV.ModifyCol(4, 150)
-    savedActionsLV.OnEvent("DoubleClick", ActionListDoubleClick)
-    gui.Add("Button", "x10 y490 w100 h28", "添加新动作").OnEvent("Click", ActionAddNew)
-    gui.Add("Button", "x120 y490 w80 h28", "编辑动作").OnEvent("Click", ActionEdit)
-    gui.Add("Button", "x210 y490 w80 h28", "删除动作").OnEvent("Click", ActionDelete)
-    gui.Add("Button", "x300 y490 w80 h28", "测试动作").OnEvent("Click", ActionTest)
-
-    savedActions := []
-    configManager := GetConfigManager()
-    actionsData := configManager.GetActions()
-    if IsObject(actionsData) {
-        for actionInfo in actionsData {
-            actionName := actionInfo.HasOwnProp("name") ? actionInfo.name : ""
-            actionData := actionInfo.HasOwnProp("data") ? actionInfo.data : ""
-            createTime := actionInfo.HasOwnProp("createTime") ? actionInfo.createTime : ""
-
-            if actionName != "" && IsObject(actionData) && actionData.HasOwnProp("type") {
-                savedActions.Push({ name: actionName, data: actionData, createTime: createTime })
-                summary := GetActionSummary(actionData)
-                typeName := actionData.type
-                savedActionsLV.Add("", actionName, typeName, summary, createTime)
-            }
-        }
-    }
-}
-
-ActionAddNew(*) {
-    nameResult := InputBox("输入动作名称", "添加新动作")
-    if (nameResult.Result != "OK" || nameResult.Value = "")
-        return
-
-    actionName := nameResult.Value
-    actionData := ShowActionEditor("")
-
-    if (!IsObject(actionData) || !actionData.HasOwnProp("type"))
-        return
-
-    summary := GetActionSummary(actionData)
-    typeName := actionData.type
-    createTime := FormatTime(, "yyyy-MM-dd HH:mm:ss")
-
-    savedActions.Push({
-        name: actionName,
-        data: actionData,
-        createTime: createTime
-    })
-
-    savedActionsLV.Add("", actionName, typeName, summary, createTime)
-}
-
-ActionEdit(*) {
-    global savedActions, savedActionsLV
-    row := savedActionsLV.GetNext()
-    if (!row) {
-        ShowTooltipNearMouse("请先选择一个动作")
-        return
-    }
-
-    if (row > savedActions.Length)
-        return
-
-    actionInfo := savedActions[row]
-    actionData := ShowActionEditor(actionInfo.data)
-
-    if (!IsObject(actionData) || !actionData.HasOwnProp("type"))
-        return
-
-    savedActions[row].data := actionData
-    summary := GetActionSummary(actionData)
-    typeName := actionData.type
-
-    savedActionsLV.Modify(row, "", actionInfo.name, typeName, summary, savedActions[row].createTime)
-}
-
-ActionDelete(*) {
-    global savedActions, savedActionsLV
-    row := savedActionsLV.GetNext()
-    if (!row) {
-        ShowTooltipNearMouse("请先选择一个动作")
-        return
-    }
-
-    savedActionsLV.Delete(row)
-    if (row <= savedActions.Length)
-        savedActions.RemoveAt(row)
-}
-
-ActionTest(*) {
-    global savedActions, savedActionsLV
-    row := savedActionsLV.GetNext()
-    if (!row) {
-        ShowTooltipNearMouse("请先选择一个动作")
-        return
-    }
-
-    if (row > savedActions.Length)
-        return
-
-    actionInfo := savedActions[row]
-    actionData := actionInfo.data
-
-    try {
-        context := CreateActionContext()
-        result := ExecuteAction(actionData, context)
-        if (result.success) {
-            ShowTooltipNearMouse("测试成功: " . result.result)
-        } else {
-            ShowTooltipNearMouse("测试失败: " . result.error)
-        }
-    } catch Error as e {
-        ShowTooltipNearMouse("测试出错: " . e.Message)
-    }
-}
-
-ActionListDoubleClick(ctrl, itemNum) {
-    global savedActions
-    if (itemNum < 1 || itemNum > savedActions.Length)
-        return
-
-    actionInfo := savedActions[itemNum]
-    actionData := ShowActionEditor(actionInfo.data)
-
-    if (!IsObject(actionData) || !actionData.HasOwnProp("type"))
-        return
-
-    savedActions[itemNum].data := actionData
-    summary := GetActionSummary(actionData)
-    typeName := actionData.type
-
-    savedActionsLV.Modify(itemNum, "", actionInfo.name, typeName, summary, actionInfo.createTime)
-}
-
-GetActionSummary(actionData) {
-    if (!IsObject(actionData) || !actionData.HasOwnProp("type")) {
-        return "无动作"
-    }
-
-    meta := ActionGetMeta(actionData.type)
-    typeName := meta.HasOwnProp("name") ? meta.name : actionData.type
-
-    if (!actionData.HasOwnProp("params")) {
-        return typeName
-    }
-
-    summary := typeName
-    params := actionData.params
-
-    if (actionData.type = "RunApp" || actionData.type = "ProcessStart") {
-        if (params.HasOwnProp("path")) {
-            path := params.path
-            SplitPath(path, &fileName)
-            summary .= ": " . fileName
-        }
-    } else if (actionData.type = "SendKeys") {
-        if (params.HasOwnProp("keys")) {
-            keys := params.keys
-            if (StrLen(keys) > 20)
-                keys := SubStr(keys, 1, 20) . "..."
-            summary .= ": " . keys
-        }
-    } else if (actionData.type = "SendText") {
-        if (params.HasOwnProp("text")) {
-            text := params.text
-            if (StrLen(text) > 20)
-                text := SubStr(text, 1, 20) . "..."
-            summary .= ": " . text
-        }
-    } else if (actionData.type = "ProcessKill") {
-        if (params.HasOwnProp("name")) {
-            summary .= ": " . params.name
-        } else if (params.HasOwnProp("pid")) {
-            summary .= ": PID " . params.pid
-        }
-    }
-
-    return summary
-}
-
-ConvertOldActionString(actionStr) {
-    if (actionStr = "") {
-        return ""
-    }
-
-    if RegExMatch(actionStr, 'i)^RunCommand\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)$', &m) {
-        command := UnescapeQuotes(m[1])
-        workdir := UnescapeQuotes(m[2])
-        return {
-            type: "RunApp",
-            params: {
-                path: command,
-                workdir: workdir
-            }
-        }
-    }
-
-    if RegExMatch(actionStr, 'i)^ActivateOrRun\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)$', &m) {
-        name := UnescapeQuotes(m[1])
-        path := UnescapeQuotes(m[2])
-        return {
-            type: "RunApp",
-            params: {
-                name: name,
-                path: path
-            }
-        }
-    }
-
-
-    if RegExMatch(actionStr, 'i)^SendInput\(\s*"((?:[^"\\]|\\.)*)"\s*\)$', &m) {
-        keys := UnescapeQuotes(m[1])
-        return {
-            type: "SendKeys",
-            params: {
-                keys: keys
-            }
-        }
-    }
-
-    return {
-        type: "Custom",
-        params: {
-            code: actionStr
-        }
-    }
-}
-
-ConvertToOldActionString(actionData) {
-    if (!IsObject(actionData) || !actionData.HasOwnProp("type")) {
-        return ""
-    }
-
-    type := actionData.type
-    params := actionData.HasOwnProp("params") ? actionData.params : {}
-
-    if (type = "RunApp") {
-        path := params.HasOwnProp("path") ? params.path : ""
-        workdir := params.HasOwnProp("workdir") ? params.workdir : ""
-        name := params.HasOwnProp("name") ? params.name : ""
-
-        if (name != "" && path != "") {
-            return 'ActivateOrRun("' . EscapeQuotes(name) . '", "' . EscapeQuotes(path) . '")'
-        } else if (path != "") {
-            return 'RunCommand("' . EscapeQuotes(path) . '", "' . EscapeQuotes(workdir) . '")'
-        }
-    }
-
-    return ""
-}
-
-; =====================================================================
-; 菜单项动作编辑增强
+; 菜单项动作编辑
 ; =====================================================================
 
 MenuItemDoubleClick(ctrl, itemNum) {
@@ -896,20 +592,13 @@ MenuItemDoubleClick(ctrl, itemNum) {
         return
 
     currentItem := items[itemNum]
-    actionData := currentItem.action
+    oldAction := IsObject(currentItem.action) ? "" : currentItem.action
 
-    if IsString(actionData) {
-        actionData := ConvertOldActionString(actionData)
+    result := InputBox("输入动作字符串", "编辑动作", , oldAction)
+    if (result.Result = "OK") {
+        items[itemNum].action := result.Value
+        menuItemLV.Modify(itemNum, "Col4", result.Value)
     }
-
-    newActionData := ShowActionEditor(actionData)
-
-    if (!IsObject(newActionData) || !newActionData.HasOwnProp("type"))
-        return
-
-    items[itemNum].action := newActionData
-    actionDisplay := GetActionSummary(newActionData)
-    menuItemLV.Modify(itemNum, "Col4", actionDisplay)
 }
 
 MenuEditItemAction(*) {
@@ -928,18 +617,11 @@ MenuEditItemAction(*) {
         return
 
     currentItem := items[row]
-    actionData := currentItem.action
+    oldAction := IsObject(currentItem.action) ? "" : currentItem.action
 
-    if IsString(actionData) {
-        actionData := ConvertOldActionString(actionData)
+    result := InputBox("输入动作字符串", "编辑动作", , oldAction)
+    if (result.Result = "OK") {
+        items[row].action := result.Value
+        menuItemLV.Modify(row, "Col4", result.Value)
     }
-
-    newActionData := ShowActionEditor(actionData)
-
-    if (!IsObject(newActionData) || !newActionData.HasOwnProp("type"))
-        return
-
-    items[row].action := newActionData
-    actionDisplay := GetActionSummary(newActionData)
-    menuItemLV.Modify(row, "Col4", actionDisplay)
 }

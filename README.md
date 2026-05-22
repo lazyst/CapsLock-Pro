@@ -252,25 +252,18 @@
   - 点击菜单外区域自动关闭菜单
   - 对于进程管理的两项,可以Alt+左键单击进入对话框精细操作
 
-### 7.3 菜单项动作类型
+### 7.3 菜单项动作
 
-菜单项支持以下动作类型:
+菜单项动作现在使用**纯字符串格式**，支持以下语法:
 
-- **预设功能:**
-  - 进程管理: `ManageProcessWithCtrlCheck("启用")` / `ManageProcessWithCtrlCheck("终止")`
-    - 直接点击: 批量操作所有配置的进程
-    - 按住Alt点击: 弹出选择界面, 可勾选要操作的进程
-  - 模拟按键: `SendInput("#d")`
-- **自定义命令:** `RunCommand("命令", "工作目录")`
-  - 执行指定的系统命令
-  - `"命令"`: 要执行的命令字符串
-  - `"工作目录"`: 可选，为空时默认桌面
-- **启动程序:** `ActivateOrRun("窗口标识", "运行命令")`
-  - `"窗口标识"` 可以是进程名 (`Typora.exe`), 类名等
-  - `"运行命令"` 可以是程序完整路径, 或特殊路径变量:
-    - `A_MyDocuments` (我的文档)
-    - `A_UserProfile` (用户文件夹)
-    - 例如: `ActivateOrRun("explorer.exe", A_UserProfile "\Downloads")`
+- **直接命令:** 直接输入系统命令，例如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig`
+- **模拟按键:** `SendInput("#d")` — 发送键盘快捷键
+- **启动/激活程序:** `ActivateOrRun("Typora.exe", "D:\Typora\Typora.exe")`
+- **进程管理:** `ManageProcessWithCtrlCheck("启用")` / `ManageProcessWithCtrlCheck("终止")`
+- **旧格式命令:** `RunCommand("命令", "工作目录")` — 仍可兼容
+
+> 无需再使用 `RunCommand()` 包装，直接用原始命令字符串即可。
+> 旧配置中的 `RunCommand("...")`/`SendInput("...")`/`ActivateOrRun("...")` 格式仍然兼容。
 
 ## 8. 自定义指南
 
@@ -312,10 +305,9 @@
     - 相对路径: 基于脚本目录, 如 `Icon\Typora.ico`
     - 绝对路径: 如 `C:\Windows\System32\shell32.dll,3`
   - 执行动作 (`actionY`):
+    - 原始命令: 直接写入系统命令，例如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig /all`
     - 进程管理: `ManageProcessWithCtrlCheck("启用")` / `ManageProcessWithCtrlCheck("终止")`
-    - 自定义命令: `RunCommand("命令", "工作目录")`
-    - 激活或运行程序: `ActivateOrRun("窗口标识", "运行命令")`
-    - 模拟按键: `SendInput("按键代码")` (如 `SendInput("#d")`)
+    - 旧格式兼容: `RunCommand("命令", "工作目录")`、`ActivateOrRun(...)`、`SendInput("...")`
 
 ### 8.3 进程管理配置
 
@@ -345,13 +337,7 @@
     - 管理 10 个快捷菜单组和其中的菜单项
     - 左侧面板: 编辑组名称, 启用/禁用组, 上下移动组顺序
     - 右侧面板: 添加, 编辑, 删除菜单项, 上下移动项顺序
-    - 添加/编辑菜单项时支持三种动作类型:
-      - `预设功能:` 从下拉列表选择常用功能模板
-      - `自定义命令:` 直接输入命令字符串和工作目录，自动生成 `RunCommand` 动作
-      - `启动程序:` 填写程序名和路径, 自动生成 `ActivateOrRun` 动作
-  - `动作管理:`
-    - 管理可复用的动作模板，支持新建、编辑、删除和测试
-    - 支持 RunApp、SendKeys、SendText、ProcessKill 等动作类型
+    - 添加/编辑菜单项时直接填写动作字符串（支持原始命令、旧格式兼容）
   - `进程管理:`
     - 管理菜单动作 `ManageProcessWithCtrlCheck()` 的相关配置
     - 包含四个子选项卡: "直接启用", "直接终止", "Alt+启用", "Alt+终止"
