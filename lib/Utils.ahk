@@ -177,20 +177,25 @@ WriteIniValueUTF8(filePath, section, key, value) {
         }
 
         fileContent := FileRead(filePath, "UTF-8")
+        sectionRegex := "\[" section "]\K[^[]*"  ; content after [Section] until next [ or EOF
 
-        ; Only check if section exists via simple substring
-        if InStr(fileContent, "[" section "]") {
-            ; Try to replace existing key line
-            ; Use [^\r\n]* instead of .* to avoid eating \r (CRLF → LF corruption)
-            keyLinePattern := "(?m)^(" key "\s*=\s*)[^\r\n]*$(\r?\n?)"
-            if RegExMatch(fileContent, keyLinePattern, &m) {
-                replacement := m[1] . value . (m.HasOwnProp(2) ? m[2] : "`n")
-                fileContent := RegExReplace(fileContent, keyLinePattern, replacement, , 1)
+        if RegExMatch(fileContent, sectionRegex, &sectionMatch) {
+            sectionContent := sectionMatch[0]
+            sectionPos := sectionMatch.Pos
+            sectionLen := sectionMatch.Len
+            beforeSection := SubStr(fileContent, 1, sectionPos - 1)
+            afterSection := SubStr(fileContent, sectionPos + sectionLen)
+
+            keyPattern := "m)^(" key "\s*=\s*)[^\r\n]*(\r?\n?)"
+            if RegExMatch(sectionContent, keyPattern, &m) {
+                ; Key exists — replace its value within section
+                newSection := RegExReplace(sectionContent, keyPattern, m[1] . value . (m.HasOwnProp(2) ? m[2] : "`n"), , 1)
             } else {
-                ; Key doesn't exist — insert after section header line
-                sectionHeaderPattern := "(\[" section "]\r?\n?)"
-                fileContent := RegExReplace(fileContent, sectionHeaderPattern, "${1}" key "=" value "`n", , 1)
+                ; Key doesn't exist — add after section header (the header is kept in beforeSection)
+                newSection := key "=" value "`n" . sectionContent
             }
+
+            fileContent := beforeSection . newSection . afterSection
         } else {
             ; Section doesn't exist — add it at the end
             if (SubStr(fileContent, -1) != "`n")
