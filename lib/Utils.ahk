@@ -177,21 +177,19 @@ WriteIniValueUTF8(filePath, section, key, value) {
         }
 
         fileContent := FileRead(filePath, "UTF-8")
-        sectionPattern := "\[" section "\]"
 
-        if RegExMatch(fileContent, sectionPattern) {
-            ; Section exists — find and replace/add the key
-            keyLinePattern := "(?m)^(" key "\s*=\s*).*$(\r?\n)?"
+        ; Only check if section exists via simple substring
+        if InStr(fileContent, "[" section "]") {
+            ; Try to replace existing key line
+            ; Use [^\r\n]* instead of .* to avoid eating \r (CRLF → LF corruption)
+            keyLinePattern := "(?m)^(" key "\s*=\s*)[^\r\n]*$(\r?\n?)"
             if RegExMatch(fileContent, keyLinePattern, &m) {
-                ; Key exists — replace its value
-                replacement := m[1] . value
-                if m.HasOwnProp(2)
-                    replacement .= m[2]
+                replacement := m[1] . value . (m.HasOwnProp(2) ? m[2] : "`n")
                 fileContent := RegExReplace(fileContent, keyLinePattern, replacement, , 1)
             } else {
-                ; Key doesn't exist — add it after section header
-                sectionHeaderPattern := "(\[" section "\]\s*\r?\n?)"
-                fileContent := RegExReplace(fileContent, sectionHeaderPattern, "$1" key "=" value "`n", , 1)
+                ; Key doesn't exist — insert after section header line
+                sectionHeaderPattern := "(\[" section "]\r?\n?)"
+                fileContent := RegExReplace(fileContent, sectionHeaderPattern, "${1}" key "=" value "`n", , 1)
             }
         } else {
             ; Section doesn't exist — add it at the end
@@ -214,10 +212,11 @@ DeleteIniSectionUTF8(filePath, section) {
             return true
 
         fileContent := FileRead(filePath, "UTF-8")
-        sectionPattern := "(?m)^\[" section "\].*\r?\n(?:[^[\r\n][^\r\n]*\r?\n)*"
+        ; Match [Section]\r\n followed by any number of non-section-header lines
+        sectionPattern := "m)^\[" section "]\r?\n(?:[^[\r\n][^\r\n]*\r?\n)*"
 
         if RegExMatch(fileContent, sectionPattern) {
-            fileContent := RegExReplace(fileContent, sectionPattern, "", , 1)
+            fileContent := RegExReplace(fileContent, sectionPattern, "")
             FileOpen(filePath, "w", "UTF-8").Write(RTrim(fileContent, "`r`n") . "`n")
         }
         return true
