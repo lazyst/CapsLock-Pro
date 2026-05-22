@@ -1,11 +1,59 @@
 ; =====================================================================
 ; CapsLock++ 菜单UI
+; 包含：圆角窗口、阴影、淡入淡出动画、悬停效果、点击外部自动关闭
 ; =====================================================================
+
+EnableRoundedCorners(hwnd, radius := 12) {
+    DWMWA_WINDOW_CORNER_PREFERENCE := 33
+    DWMWCP_ROUND := 2
+    prefBuf := Buffer(4)
+    NumPut("UInt", DWMWCP_ROUND, prefBuf)
+    DllCall("dwmapi\DwmSetWindowAttribute",
+        "Ptr", hwnd,
+        "UInt", DWMWA_WINDOW_CORNER_PREFERENCE,
+        "Ptr", prefBuf.Ptr,
+        "UInt", 4)
+}
+
+EnableWindowShadow(hwnd) {
+    CS_DROPSHADOW := 0x20000
+    GCL_STYLE := -26
+    style := DllCall("GetClassLongPtr", "Ptr", hwnd, "Int", GCL_STYLE, "Ptr")
+    style |= CS_DROPSHADOW
+    DllCall("SetClassLongPtr", "Ptr", hwnd, "Int", GCL_STYLE, "Ptr", style)
+}
+
+FadeInWindow(hwnd, duration := 150) {
+    try {
+        WinSetTransparent(0, "ahk_id " hwnd)
+        steps := 15
+        stepDuration := duration / steps
+        loop steps {
+            alpha := Round(255 * (A_Index / steps))
+            WinSetTransparent(alpha, "ahk_id " hwnd)
+            Sleep(stepDuration)
+        }
+        WinSetTransparent("Off", "ahk_id " hwnd)
+    }
+}
+
+FadeOutWindow(hwnd, duration := 100) {
+    try {
+        steps := 10
+        stepDuration := duration / steps
+        loop steps {
+            alpha := Round(255 * (1 - A_Index / steps))
+            WinSetTransparent(alpha, "ahk_id " hwnd)
+            Sleep(stepDuration)
+        }
+    }
+}
 
 CreateMenuGUI(groupObj, groupIndex) {
     global currentMenuGui
 
     if currentMenuGui != 0 && WinExist("ahk_id " currentMenuGui) {
+        FadeOutWindow(currentMenuGui)
         WinClose("ahk_id " currentMenuGui)
     }
 
@@ -45,12 +93,40 @@ CreateMenuGUI(groupObj, groupIndex) {
         colorOpt := isDark ? " c" textColor : ""
         btn := menuGui.Add("Text", "x0 y" ((i - 1) * 36) " w280 h36 Center 0x200" colorOpt, "  " itemName)
         btn.SetFont("s10", "Segoe UI")
-        btn.OnEvent("Click", MakeMenuItemHandler(groupIndex, i))
-        btn.OnEvent("DoubleClick", MakeMenuItemHandler(groupIndex, i))
+
+        btn_handler := MakeMenuItemHandler(groupIndex, i)
+
+        ; Hover effects — change background on mouse enter/leave
+        btn.OnEvent("MouseEnter", (*) => (btn.Opt("Background" hoverBg)))
+        btn.OnEvent("MouseLeave", (*) => (btn.Opt("Background" bgColor)))
+        btn.OnEvent("Click", btn_handler)
+        btn.OnEvent("DoubleClick", btn_handler)
     }
 
     menuGui.Show("x" (A_ScreenWidth / 2 - 140) " y" (A_ScreenHeight / 2 - items.Length * 18) " w280 h" (items.Length * 36))
     currentMenuGui := menuGui.Hwnd
+
+    EnableRoundedCorners(currentMenuGui)
+    EnableWindowShadow(currentMenuGui)
+    FadeInWindow(currentMenuGui)
+
+    ; Auto-close when clicking outside the menu
+    SetTimer(CheckMenuActive, 50)
+}
+
+CheckMenuActive() {
+    global currentMenuGui
+    if !currentMenuGui || !WinExist("ahk_id " currentMenuGui) {
+        SetTimer(CheckMenuActive, 0)
+        return
+    }
+    try {
+        activeWin := WinGetID("A")
+        if activeWin != currentMenuGui {
+            CloseMenu()
+            SetTimer(CheckMenuActive, 0)
+        }
+    }
 }
 
 MakeMenuItemHandler(groupIndex, itemIndex) {
@@ -59,8 +135,10 @@ MakeMenuItemHandler(groupIndex, itemIndex) {
 
 CloseMenu() {
     global currentMenuGui
+    SetTimer(CheckMenuActive, 0)
     try {
         if currentMenuGui != 0 && WinExist("ahk_id " currentMenuGui) {
+            FadeOutWindow(currentMenuGui)
             WinClose("ahk_id " currentMenuGui)
         }
     } catch {
@@ -77,4 +155,5 @@ ClearCapsLockAhkWindows() {
     } catch {
     }
     currentMenuGui := 0
+    SetTimer(CheckMenuActive, 0)
 }
