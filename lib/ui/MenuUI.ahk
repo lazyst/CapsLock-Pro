@@ -42,7 +42,8 @@ CreateMenuGUI(groupObj, groupIndex) {
         if itemName = ""
             continue
 
-        btn := menuGui.Add("Text", "x0 y" ((i - 1) * 36) " w280 h36 Center 0x200 c" textColor, "  " itemName)
+        colorOpt := isDark ? " c" textColor : ""
+        btn := menuGui.Add("Text", "x0 y" ((i - 1) * 36) " w280 h36 Center 0x200" colorOpt, "  " itemName)
         btn.SetFont("s10", "Segoe UI")
         btn.OnEvent("Click", MakeMenuItemHandler(groupIndex, i))
         btn.OnEvent("DoubleClick", MakeMenuItemHandler(groupIndex, i))
