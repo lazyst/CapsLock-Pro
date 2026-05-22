@@ -41,7 +41,6 @@ if (!A_IsAdmin) {
 #Include lib\SymbolJump.ahk
 #Include lib\QuickNote.ahk
 #Include lib\MenuSystem.ahk
-#Include lib\ProcessManage.ahk
 
 #Include lib\ConfigHelper.ahk
 

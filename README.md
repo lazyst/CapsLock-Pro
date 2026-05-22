@@ -250,7 +250,6 @@
   - 按数字键(1-9,0) 执行对应序号的操作
   - 按Esc键或点击"关闭"按钮关闭菜单
   - 点击菜单外区域自动关闭菜单
-  - 对于进程管理的两项,可以Alt+左键单击进入对话框精细操作
 
 ### 7.3 菜单项动作
 
@@ -259,7 +258,6 @@
 - **直接命令:** 直接输入系统命令，例如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig`
 - **模拟按键:** `SendInput("#d")` — 发送键盘快捷键
 - **启动/激活程序:** `ActivateOrRun("Typora.exe", "D:\Typora\Typora.exe")`
-- **进程管理:** `ManageProcessWithCtrlCheck("启用")` / `ManageProcessWithCtrlCheck("终止")`
 - **旧格式命令:** `RunCommand("命令", "工作目录")` — 仍可兼容
 
 > 无需再使用 `RunCommand()` 包装，直接用原始命令字符串即可。
@@ -306,22 +304,9 @@
     - 绝对路径: 如 `C:\Windows\System32\shell32.dll,3`
   - 执行动作 (`actionY`):
     - 原始命令: 直接写入系统命令，例如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig /all`
-    - 进程管理: `ManageProcessWithCtrlCheck("启用")` / `ManageProcessWithCtrlCheck("终止")`
     - 旧格式兼容: `RunCommand("命令", "工作目录")`、`ActivateOrRun(...)`、`SendInput("...")`
 
-### 8.3 进程管理配置
-
-- **\[ProcessesToStart\] 和 \[ProcessesToTerminate\]**
-  - 定义菜单中"启用/终止进程"直接点击时操作的进程列表
-  - 格式: `itemX = "进程名或启动路径"` (X为数字)
-- **\[GUIProcessesToStart\] 和 \[GUIProcessesToTerminate\]**
-  - 定义菜单中"启用/终止进程"按住`Alt`点击时, 弹出的选择窗口中的进程列表
-  - 格式 (每个进程3行):
-    - `ItemX_Name=进程友好名称`
-    - `ItemX_Path=要启动/终止的进程名或路径`
-    - `ItemX_Checked=true/false` (默认是否勾选)
-
-### 8.4 配置助手使用说明
+### 8.3 配置助手使用说明
 
 为了简化 CapsLock++.ini 文件的编辑过程, 提供了图形化的配置助手工具 (`配置助手.ahk`), 通过 `CapsLock+\` 快捷键启动.
 
@@ -338,8 +323,4 @@
     - 左侧面板: 编辑组名称, 启用/禁用组, 上下移动组顺序
     - 右侧面板: 添加, 编辑, 删除菜单项, 上下移动项顺序
     - 添加/编辑菜单项时直接填写动作字符串（支持原始命令、旧格式兼容）
-  - `进程管理:`
-    - 管理菜单动作 `ManageProcessWithCtrlCheck()` 的相关配置
-    - 包含四个子选项卡: "直接启用", "直接终止", "Alt+启用", "Alt+终止"
-    - 可添加, 删除, 移动进程条目
-    - 在 "Alt+" 模式下可设置默认是否勾选
+
