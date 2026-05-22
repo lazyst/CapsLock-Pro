@@ -50,7 +50,7 @@ FadeOutWindow(hwnd, duration := 100) {
 }
 
 CreateMenuGUI(groupObj, groupIndex) {
-    global currentMenuGui
+    global currentMenuGui, MenuSettings
 
     if currentMenuGui != 0 && WinExist("ahk_id " currentMenuGui) {
         FadeOutWindow(currentMenuGui)
@@ -63,51 +63,81 @@ CreateMenuGUI(groupObj, groupIndex) {
         return
     }
 
-    menuGui := Gui("+AlwaysOnTop +ToolWindow +Border", groupObj.HasOwnProp("name") ? groupObj.name : "菜单")
-    menuGui.SetFont("s10", "Segoe UI")
-    menuGui.MarginX := 0
-    menuGui.MarginY := 0
+    ; 应用主题
+    settings := GetConfigManager().GetSettings()
+    isDark := settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") ? settings.ui.darkMode : false
+    ApplyMenuTheme(isDark)
+
+    ; 创建窗口（无标题栏，始终置顶）
+    menuGui := Gui("-Caption +AlwaysOnTop +ToolWindow +Owner +E0x02000000")
+    menuGui.BackColor := MenuSettings.Background
+    menuGui.SetFont("s" MenuSettings.FontSize, MenuSettings.FontName)
     menuGui.OnEvent("Escape", (*) => CloseMenu())
     menuGui.OnEvent("Close", (*) => CloseMenu())
 
-    settings := GetConfigManager().GetSettings()
-    isDark := settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") ? settings.ui.darkMode : false
+    ; 窗口尺寸
+    menuWidth := 300
+    leftMargin := 15
+    rightMargin := 15
 
-    if isDark {
-        bgColor := "1e1e2e"
-        textColor := "cdd6f4"
-        hoverBg := "313244"
-    } else {
-        bgColor := "ffffff"
-        textColor := "1e1e2e"
-        hoverBg := "f5f5f5"
-    }
+    ; === 标题 ===
+    titleBg := menuGui.Add("Text", "x0 y0 w" menuWidth " h45 Center +0x200")
+    titleBg.SetFont("s13 bold c" SubStr(MenuSettings.TitleText, 3), MenuSettings.FontName)
+    titleBg.Value := groupObj.HasOwnProp("name") ? groupObj.name : ""
 
-    menuGui.BackColor := bgColor
+    ; === 菜单项 ===
+    y := 55
+    btnHeight := 42
+    btnGap := 6
+    numberWidth := 30
+    btnWidth := menuWidth - leftMargin - numberWidth - rightMargin
 
     for i, item in items {
         itemName := item.HasOwnProp("name") ? item.name : ""
         if itemName = ""
             continue
 
-        colorOpt := isDark ? " c" textColor : ""
-        btn := menuGui.Add("Text", "x0 y" ((i - 1) * 36) " w280 h36 Center 0x200" colorOpt, "  " itemName)
-        btn.SetFont("s10", "Segoe UI")
+        numText := (i <= 9) ? String(i) : "0"
+
+        ; 序号
+        numLabel := menuGui.Add("Text",
+            "x" (leftMargin + 5) " y" (y + 10) " w24 h24 BackgroundTrans Center",
+            numText)
+        numLabel.SetFont("s12 bold c" SubStr(MenuSettings.Accent, 3), MenuSettings.FontName)
+
+        ; 按钮（Win11 原生圆角 + 悬停效果）
+        btn := menuGui.Add("Button",
+            "x" (leftMargin + 30) " y" y " w" btnWidth " h" btnHeight " -TabStop",
+            "  " itemName)
+        btn.SetFont("s10 c" SubStr(MenuSettings.Text, 3), MenuSettings.FontName)
 
         btn_handler := MakeMenuItemHandler(groupIndex, i)
-
         btn.OnEvent("Click", btn_handler)
-        btn.OnEvent("DoubleClick", btn_handler)
+
+        y += btnHeight + btnGap
     }
 
-    menuGui.Show("x" (A_ScreenWidth / 2 - 140) " y" (A_ScreenHeight / 2 - items.Length * 18) " w280 h" (items.Length * 36))
+    ; === 关闭按钮 ===
+    y += 8
+    closeBtn := menuGui.Add("Button",
+        "x" leftMargin " y" y " w" (menuWidth - leftMargin - rightMargin) " h36 -TabStop", "关闭")
+    closeBtn.SetFont("s10 c" SubStr(MenuSettings.Text, 3), MenuSettings.FontName)
+    closeBtn.OnEvent("Click", (*) => CloseMenu())
+
+    y += 44
+    guiHeight := y
+
+    ; === 居中显示 ===
+    menuGui.Show("x" (A_ScreenWidth / 2 - menuWidth / 2)
+        " y" (A_ScreenHeight / 2 - guiHeight / 2)
+        " w" menuWidth " h" guiHeight)
     currentMenuGui := menuGui.Hwnd
 
     EnableRoundedCorners(currentMenuGui)
     EnableWindowShadow(currentMenuGui)
     FadeInWindow(currentMenuGui)
 
-    ; Auto-close when clicking outside the menu
+    ; 自动关闭（点击外部）
     SetTimer(CheckMenuActive, 50)
 }
 
