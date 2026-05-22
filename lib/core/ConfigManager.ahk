@@ -55,15 +55,15 @@ class ConfigManager {
         mouseSpeed := ReadIniValueUTF8(iniPath, "MouseMode", "Speed", "7")
 
         noteTargets := []
-        raw := ReadIniValueUTF8(iniPath, "noteTargets", "")
-        if raw != "" {
-            loop parse, raw, "`n", "`r" {
-                if A_LoopField = ""
-                    continue
-                if RegExMatch(A_LoopField, '^==(.+)==(.+)$', &m) {
-                    noteTargets.Push({ keyword: m[1], path: m[2] })
-                }
-            }
+        i := 1
+        loop {
+            keyword := ReadIniValueUTF8(iniPath, "noteTargets", "note" i "1", "")
+            if (keyword = "")
+                break
+            path := ReadIniValueUTF8(iniPath, "noteTargets", "note" i "2", "")
+            if (keyword != "" && path != "")
+                noteTargets.Push({ keyword: keyword, path: path })
+            i++
         }
 
         return {
@@ -85,27 +85,27 @@ class ConfigManager {
             for group in menus.groups {
                 idx := group.HasOwnProp("id") ? group.id : A_Index
                 if group.HasOwnProp("name")
-                    IniWrite(group.name, iniPath, "MenuGroupName", "name" idx)
+                    WriteIniValueUTF8(iniPath, "MenuGroupName", "name" idx, group.name)
                 if group.HasOwnProp("enabled")
-                    IniWrite(group.enabled ? "true" : "false", iniPath, "MenuGroupsEnable", "enableGroup" idx)
+                    WriteIniValueUTF8(iniPath, "MenuGroupsEnable", "enableGroup" idx, group.enabled ? "true" : "false")
                 if group.HasOwnProp("items") {
                     itemCount := 0
                     for item in group.items {
                         itemCount++
                         section := "MenuGroups" idx "Items"
                         if item.HasOwnProp("name")
-                            IniWrite(item.name, iniPath, section, "name" itemCount)
+                            WriteIniValueUTF8(iniPath, section, "name" itemCount, item.name)
                         if item.HasOwnProp("icon")
-                            IniWrite(item.icon, iniPath, section, "icon" itemCount)
+                            WriteIniValueUTF8(iniPath, section, "icon" itemCount, item.icon)
                         if item.HasOwnProp("iconType")
-                            IniWrite(item.iconType, iniPath, section, "icontype" itemCount)
+                            WriteIniValueUTF8(iniPath, section, "icontype" itemCount, item.iconType)
                         actionStr := ""
                         if item.HasOwnProp("action") && !IsObject(item.action) {
                             actionStr := item.action
                         }
-                        IniWrite(actionStr, iniPath, section, "action" itemCount)
+                        WriteIniValueUTF8(iniPath, section, "action" itemCount, actionStr)
                     }
-                    IniWrite(itemCount, iniPath, "MenuGroupCount", "count" idx)
+                    WriteIniValueUTF8(iniPath, "MenuGroupCount", "count" idx, itemCount)
                 }
             }
             return true
@@ -120,18 +120,22 @@ class ConfigManager {
         try {
             iniPath := this.iniPath
             if settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode")
-                IniWrite(settings.ui.darkMode ? "true" : "false", iniPath, "MenuGroupsColourMode", "DarkMode")
+                WriteIniValueUTF8(iniPath, "MenuGroupsColourMode", "DarkMode", settings.ui.darkMode ? "true" : "false")
             if settings.HasOwnProp("mouse") && settings.mouse.HasOwnProp("speed")
-                IniWrite(settings.mouse.speed, iniPath, "MouseMode", "Speed")
+                WriteIniValueUTF8(iniPath, "MouseMode", "Speed", settings.mouse.speed)
             if settings.HasOwnProp("noteTargets") {
-                noteText := ""
+                ; Write in noteX1=keyword / noteX2=path format (compatible with QuickNote's LoadNoteTargetsFromINI)
+                DeleteIniSectionUTF8(iniPath, "noteTargets")
+                i := 1
                 for item in settings.noteTargets {
                     keyword := item.HasOwnProp("keyword") ? item.keyword : ""
                     path := item.HasOwnProp("path") ? item.path : ""
-                    if keyword != "" && path != ""
-                        noteText .= "==" keyword "==" path "`n"
+                    if keyword != "" && path != "" {
+                        WriteIniValueUTF8(iniPath, "noteTargets", "note" i "1", keyword)
+                        WriteIniValueUTF8(iniPath, "noteTargets", "note" i "2", path)
+                        i++
+                    }
                 }
-                IniWrite(Trim(noteText, "`n"), iniPath, "noteTargets")
             }
             return true
         } catch {

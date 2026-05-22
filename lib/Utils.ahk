@@ -168,6 +168,105 @@ ReadIniValueUTF8(filePath, section, key, defaultValue := "") {
     }
 }
 
+; 写入INI文件的值，使用UTF-8编码（与ReadIniValueUTF8配套，避免IniWrite的ANSI编码问题）
+WriteIniValueUTF8(filePath, section, key, value) {
+    try {
+        if !FileExist(filePath) {
+            FileOpen(filePath, "w", "UTF-8").Write("[" section "]`n" key "=" value "`n")
+            return true
+        }
+
+        fileContent := FileRead(filePath, "UTF-8")
+        sectionPattern := "\[" section "\]"
+
+        if RegExMatch(fileContent, sectionPattern) {
+            ; Section exists — find and replace/add the key
+            keyLinePattern := "(?m)^(" key "\s*=\s*).*$(\r?\n)?"
+            if RegExMatch(fileContent, keyLinePattern, &m) {
+                ; Key exists — replace its value
+                replacement := m[1] . value
+                if m.HasOwnProp(2)
+                    replacement .= m[2]
+                fileContent := RegExReplace(fileContent, keyLinePattern, replacement, , 1)
+            } else {
+                ; Key doesn't exist — add it after section header
+                sectionHeaderPattern := "(\[" section "\]\s*\r?\n?)"
+                fileContent := RegExReplace(fileContent, sectionHeaderPattern, "$1" key "=" value "`n", , 1)
+            }
+        } else {
+            ; Section doesn't exist — add it at the end
+            if (SubStr(fileContent, -1) != "`n")
+                fileContent .= "`n"
+            fileContent .= "[" section "]`n" key "=" value "`n"
+        }
+
+        FileOpen(filePath, "w", "UTF-8").Write(fileContent)
+        return true
+    } catch {
+        return false
+    }
+}
+
+; 从INI文件删除整个节（UTF-8安全）
+DeleteIniSectionUTF8(filePath, section) {
+    try {
+        if !FileExist(filePath)
+            return true
+
+        fileContent := FileRead(filePath, "UTF-8")
+        sectionPattern := "(?m)^\[" section "\].*\r?\n(?:[^[\r\n][^\r\n]*\r?\n)*"
+
+        if RegExMatch(fileContent, sectionPattern) {
+            fileContent := RegExReplace(fileContent, sectionPattern, "", , 1)
+            FileOpen(filePath, "w", "UTF-8").Write(RTrim(fileContent, "`r`n") . "`n")
+        }
+        return true
+    } catch {
+        return false
+    }
+}
+
+; 从INI文件删除一个键（UTF-8安全）
+DeleteIniKeyUTF8(filePath, section, key) {
+    try {
+        if !FileExist(filePath)
+            return true
+
+        fileContent := FileRead(filePath, "UTF-8")
+        lines := StrSplit(fileContent, "`n", "`r")
+        newLines := []
+        inTargetSection := false
+
+        for line in lines {
+            if RegExMatch(line, "^\[" section "\]$") {
+                inTargetSection := true
+                newLines.Push(line)
+                continue
+            }
+            if inTargetSection {
+                if RegExMatch(line, "^\[.*\]$") {
+                    inTargetSection := false
+                    newLines.Push(line)
+                    continue
+                }
+                if RegExMatch(line, "^" key "\s*=") {
+                    continue  ; Skip this line (delete the key)
+                }
+            }
+            newLines.Push(line)
+        }
+
+        result := ""
+        for newLine in newLines {
+            result .= newLine . "`n"
+        }
+        FileOpen(filePath, "w", "UTF-8").Write(RTrim(result, "`n") . "`n")
+        return true
+    } catch {
+        return false
+    }
+}
+
 ; URL编码函数
 UrlEncode(str) {
     enc := ""
