@@ -91,14 +91,14 @@ CreateMenuGUI(groupObj, groupIndex) {
             continue
 
         colorOpt := isDark ? " c" textColor : ""
-        btn := menuGui.Add("Text", "x0 y" ((i - 1) * 36) " w280 h36 Center 0x200" colorOpt, "  " itemName)
+        btn := menuGui.Add("Text", "x0 y" ((i - 1) * 36) " w280 h36 Center 0x200 0x100" colorOpt, "  " itemName)
         btn.SetFont("s10", "Segoe UI")
 
         btn_handler := MakeMenuItemHandler(groupIndex, i)
 
         ; Hover effects — change background on mouse enter/leave
-        btn.OnEvent("MouseEnter", (*) => (btn.Opt("Background" hoverBg)))
-        btn.OnEvent("MouseLeave", (*) => (btn.Opt("Background" bgColor)))
+        btn.OnEvent("MouseEnter", (*) => (btn.Opt("Background " hoverBg)))
+        btn.OnEvent("MouseLeave", (*) => (btn.Opt("Background " bgColor)))
         btn.OnEvent("Click", btn_handler)
         btn.OnEvent("DoubleClick", btn_handler)
     }
