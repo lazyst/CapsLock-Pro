@@ -72,12 +72,15 @@ global statusBar := ""
 global searchEdit := ""
 global searchLabel := ""
 global deleteBtn := ""
+global newNoteBtn := ""
+global viewToggleBtn := ""
 
 ; 快捷菜单全局变量
 global currentMenuGui := 0
 global currentMenuGroup := 0
 global checkActiveTimerId := 0
 global forceKeepMenu := false
+global configHelperGui := ""
 global MenuSettings := {
     FontName: "Segoe UI",
     FontSize: 10,
@@ -138,9 +141,6 @@ global ClipboardSaved_Independent := ""
 global iniFile := A_ScriptDir "\CapsLock++.ini"
 
 ; 配置文件路径
-global settingsConfigPath := A_ScriptDir "\config\settings.json"
-global configMenusPath := A_ScriptDir "\config\menus.json"
-global settings := ""
 
 ; 初始化黑名单进程名称缓存
 for path in blacklist {

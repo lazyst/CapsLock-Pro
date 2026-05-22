@@ -2,6 +2,24 @@
 
 所有项目的重要更改都将记录在此文件中。
 
+## \[v1.4.0\] - 2026-05-22
+
+### 🔧 代码质量改进
+
+- **拆分光标定位模块**: 将 `Utils.ahk` 中约 340 行的 `GetCaretPosition()` / `GetCaretPosEx()` 函数族提取为独立的 `lib/CaretPos.ahk`
+  - `Utils.ahk` 从 556 行缩减至 204 行（-63%），职责更清晰
+  - 新增 `lib/CaretPos.ahk` 专管光标位置获取（GUI Thread Info / MSAA / UIA / Hook 四种策略）
+
+- **符号跳转模块重构 (`SymbolJump.ahk`)**:
+  - 消除向前/向后搜索之间约 150 行重复代码，统一为 `_SearchInDirection(dir)` 函数
+  - `Sleep(10)` 手动剪贴板轮询全部替换为 `ClipWait()`，减少 CPU 占用
+  - 提取 `_ScanLine`、`_ReadLineContent`、`_CheckBoundary`、`_ClipWait` 等 6 个独立函数
+  - 文件从 423 行缩减至 355 行（-17%）
+
+- **清除死代码**: 删除 `Globals.ahk` 中 3 行无引用的全局变量（`settingsConfigPath`、`configMenusPath`、`settings`）
+
+- **集中全局变量声明**: 将 `newNoteBtn`、`viewToggleBtn`、`configHelperGui` 3 个缺失的变量声明统一至 `Globals.ahk`
+
 ## \[v1.3.0\] - 2026-05-23
 
 ### ✨ 移除功能

@@ -8,7 +8,7 @@
 
 主要自用于win11 24H2, 其他系统未测试, 应该也不会测试(除非作者换电脑).
 
-项目本身用AutoHotkey v2编写, 配置助手同样使用AutoHotkey v2编写. 其中获取光标位置使用了[Tebayaki](https://github.com/Tebayaki)的[GetCratePosEx](https://github.com/Tebayaki/AutoHotkeyScripts/blob/main/lib/GetCaretPosEx), 宏录制相关功能使用了开源项目tinytask, 屏幕刷新率相关功能(电源管理中)使用了Qres.
+项目本身用AutoHotkey v2编写, 配置助手同样使用AutoHotkey v2编写. 其中获取光标位置使用了[Tebayaki](https://github.com/Tebayaki)的[GetCratePosEx](https://github.com/Tebayaki/AutoHotkeyScripts/blob/main/lib/GetCaretPosEx) (位于 `lib/CaretPos.ahk`), 宏录制相关功能使用了开源项目tinytask, 屏幕刷新率相关功能(电源管理中)使用了Qres.
 
 需要注意的是ahk的右键钩子与WGesture2(WGesture1未测试)冲突, 作者的做法是禁用WGesture2的右键相关功能, 只使用其移到屏幕上下边缘时的音量与亮度调整功能.
 

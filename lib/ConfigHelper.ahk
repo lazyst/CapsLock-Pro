@@ -9,8 +9,6 @@ EnsureDataSync() {
     SyncMenuItemLVToArray()
 }
 
-global configHelperGui := ""
-
 ShowConfigHelper() {
     global configHelperGui
 
