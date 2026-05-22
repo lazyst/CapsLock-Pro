@@ -2,6 +2,11 @@
 ; CapsLock++ 全局变量声明
 ; =====================================================================
 
+; 检查值是否为字符串类型（AHK v2 兼容）
+IsString(value) {
+    return Type(value) = "String"
+}
+
 ; CapsLock 状态监控相关变量
 global capsLockManuallyEnabled := false
 global capsLockKeyPressed := false
@@ -19,8 +24,13 @@ global tipDuration := 2000
 global debugTipDuration := 3000
 global longTipDuration := 5000
 
-; 调试开关
+; 调试开关（已废弃，使用 Logger 模块）
 global showDebugTooltips := false
+
+; 动作系统相关变量
+global actionDebugMode := false  ; 动作调试模式开关（已废弃，使用 Logger 模块）
+global actionHandlers := Map()   ; 动作处理器映射
+global actionMetadata := Map()   ; 动作元数据映射
 
 ; 窗口切换配置
 global useTaskbarOrder := false
@@ -37,7 +47,7 @@ global blacklistProcessNames := []
 ; 鼠标控制全局变量
 global mouseModeEnabled := false
 global mouseMoveTimer := 0
-global mouseSpeed := Integer(IniRead(A_ScriptDir "\CapsLock++.ini", "MouseMode", "Speed", "5"))
+global mouseSpeed := 5
 global mouseWheelTimer := 0
 global mouseWheelDirection := ""
 
@@ -88,6 +98,32 @@ global MenuSettings := {
     ButtonHover: "0xF0F0F0",
     Accent: "0x0078D4"
 }
+
+ApplyMenuTheme(darkMode) {
+    global MenuSettings
+    if darkMode {
+        MenuSettings.Background := "0x2D2D2D"
+        MenuSettings.Text := "0xE0E0E0"
+        MenuSettings.Border := "0x404040"
+        MenuSettings.TitleBg := "0x1E1E1E"
+        MenuSettings.TitleText := "0xE0E0E0"
+        MenuSettings.HoverBg := "0x3D3D3D"
+        MenuSettings.ButtonBg := "0x383838"
+        MenuSettings.ButtonHover := "0x4D4D4D"
+        MenuSettings.Accent := "0x4FC3F7"
+    } else {
+        MenuSettings.Background := "0xFFFFFF"
+        MenuSettings.Text := "0x1A1A1A"
+        MenuSettings.Border := "0xE0E0E0"
+        MenuSettings.TitleBg := "0xF5F5F5"
+        MenuSettings.TitleText := "0x1A1A1A"
+        MenuSettings.HoverBg := "0xE8E8E8"
+        MenuSettings.ButtonBg := "0xFFFFFF"
+        MenuSettings.ButtonHover := "0xF0F0F0"
+        MenuSettings.Accent := "0x0078D4"
+    }
+}
+
 global menuGroupNum := 0
 global enableGroup := []
 global groupName := []
@@ -103,8 +139,13 @@ global hasExecutedSingleClick := false
 ; 剪贴板保存变量
 global ClipboardSaved_Independent := ""
 
-; 配置文件路径
+; INI 配置文件路径
 global iniFile := A_ScriptDir "\CapsLock++.ini"
+
+; 配置文件路径
+global settingsConfigPath := A_ScriptDir "\config\settings.json"
+global configMenusPath := A_ScriptDir "\config\menus.json"
+global settings := ""
 
 ; 初始化黑名单进程名称缓存
 for path in blacklist {

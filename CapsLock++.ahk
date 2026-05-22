@@ -37,7 +37,7 @@ if (!A_IsAdmin) {
 #Include lib\QuickNote.ahk
 #Include lib\MenuSystem.ahk
 #Include lib\ProcessManage.ahk
-#Include lib\WebsiteManage.ahk
+
 #Include lib\ConfigHelper.ahk
 
 ; =====================================================================

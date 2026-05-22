@@ -260,11 +260,6 @@
   - 进程管理: `ManageProcessWithCtrlCheck("启用")` / `ManageProcessWithCtrlCheck("终止")`
     - 直接点击: 批量操作所有配置的进程
     - 按住Alt点击: 弹出选择界面, 可勾选要操作的进程
-  - 网站登录: `WebsiteLogin()`
-    - 直接点击: 打开默认网站
-    - 按住Alt点击: 弹出网站选择界面
-  - 网站直开: `WebsiteLogin("www.bilibili.com")`
-    - 直接打开指定网站, 使用配置的浏览器
   - 模拟按键: `SendInput("#d")`
 - **自定义命令:** `RunCommand("命令", "工作目录")`
   - 执行指定的系统命令
@@ -318,7 +313,6 @@
     - 绝对路径: 如 `C:\Windows\System32\shell32.dll,3`
   - 执行动作 (`actionY`):
     - 进程管理: `ManageProcessWithCtrlCheck("启用")` / `ManageProcessWithCtrlCheck("终止")`
-    - 网站登录: `WebsiteLogin()` 或 `WebsiteLogin("URL")`
     - 自定义命令: `RunCommand("命令", "工作目录")`
     - 激活或运行程序: `ActivateOrRun("窗口标识", "运行命令")`
     - 模拟按键: `SendInput("按键代码")` (如 `SendInput("#d")`)
@@ -334,18 +328,6 @@
     - `ItemX_Name=进程友好名称`
     - `ItemX_Path=要启动/终止的进程名或路径`
     - `ItemX_Checked=true/false` (默认是否勾选)
-
-### 8.5 网站速启配置
-
-- **\[CommonWebsites\]**
-  - 配合菜单动作 `WebsiteLogin()` 使用
-  - 格式:
-    - `default_site = 默认网站URL`
-    - `browser = 浏览器选项` (edge, chrome, firefox, default)
-    - `site1 = 网站名称1`
-    - `url1 = 网站URL1`
-  - 可配置多个网站, 通过 site2/url2, site3/url3 等继续添加
-  - 按Alt+左键点击菜单项时可进入选择对话框
 
 ### 8.5 配置助手使用说明
 
@@ -372,7 +354,3 @@
     - 包含四个子选项卡: "直接启用", "直接终止", "Alt+启用", "Alt+终止"
     - 可添加, 删除, 移动进程条目
     - 在 "Alt+" 模式下可设置默认是否勾选
-  - `网站配置:`
-    - 配置菜单动作 `WebsiteLogin()` 的相关设置
-    - 设置默认网站URL和偏好的浏览器
-    - 管理网站列表 (添加, 删除, 移动)
