@@ -15,12 +15,12 @@ CreateMenuGUI(groupObj, groupIndex) {
         return
     }
 
-    gui := Gui("+AlwaysOnTop +ToolWindow +Border", groupObj.HasOwnProp("name") ? groupObj.name : "菜单")
-    gui.SetFont("s10", "Segoe UI")
-    gui.MarginX := 0
-    gui.MarginY := 0
-    gui.OnEvent("Escape", (*) => CloseMenu())
-    gui.OnEvent("Close", (*) => CloseMenu())
+    menuGui := Gui("+AlwaysOnTop +ToolWindow +Border", groupObj.HasOwnProp("name") ? groupObj.name : "菜单")
+    menuGui.SetFont("s10", "Segoe UI")
+    menuGui.MarginX := 0
+    menuGui.MarginY := 0
+    menuGui.OnEvent("Escape", (*) => CloseMenu())
+    menuGui.OnEvent("Close", (*) => CloseMenu())
 
     settings := GetConfigManager().GetSettings()
     isDark := settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") ? settings.ui.darkMode : false
@@ -35,21 +35,21 @@ CreateMenuGUI(groupObj, groupIndex) {
         hoverBg := "f5f5f5"
     }
 
-    gui.BackColor := bgColor
+    menuGui.BackColor := bgColor
 
     for i, item in items {
         itemName := item.HasOwnProp("name") ? item.name : ""
         if itemName = ""
             continue
 
-        btn := gui.Add("Text", "x0 y" ((i - 1) * 36) " w280 h36 Center 0x200", "  " itemName)
+        btn := menuGui.Add("Text", "x0 y" ((i - 1) * 36) " w280 h36 Center 0x200", "  " itemName)
         btn.SetFont("s10", "Segoe UI")
         btn.OnEvent("Click", MakeMenuItemHandler(groupIndex, i))
         btn.OnEvent("DoubleClick", MakeMenuItemHandler(groupIndex, i))
     }
 
-    gui.Show("x" (A_ScreenWidth / 2 - 140) " y" (A_ScreenHeight / 2 - items.Length * 18) " w280 h" (items.Length * 36))
-    currentMenuGui := gui.Hwnd
+    menuGui.Show("x" (A_ScreenWidth / 2 - 140) " y" (A_ScreenHeight / 2 - items.Length * 18) " w280 h" (items.Length * 36))
+    currentMenuGui := menuGui.Hwnd
 }
 
 MakeMenuItemHandler(groupIndex, itemIndex) {
