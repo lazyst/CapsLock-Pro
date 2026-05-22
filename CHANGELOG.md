@@ -2,6 +2,27 @@
 
 所有项目的重要更改都将记录在此文件中。
 
+## \[v1.2.1\] - 2026-05-23
+
+### ✨ 移除功能
+
+- **网站管理模块移除**: 移除了 `WebsiteLogin()` 及相关网站配置功能
+  - 删除 `lib/WebsiteManage.ahk` 整个模块
+  - 清理 `CapsLock++.ini` 中的 `[CommonWebsites]` 配置节
+  - 清理菜单组3（原"网站"组）的菜单项
+
+### 🐛 修复
+
+- **修复缺失的源码文件**: 创建了 5 个之前缺失的存根模块，使源代码可正常运行：
+  - `lib/core/Logger.ahk` — 日志系统
+  - `lib/core/ConfigManager.ahk` — 配置管理器（从 INI 读写）
+  - `lib/core/ActionEngine.ahk` — 动作执行引擎
+  - `lib/ui/MenuUI.ahk` — 菜单 UI
+  - `lib/ui/ActionEditor.ahk` — 动作编辑器
+- **修复括号不匹配**: 删除代码后 `ConfigHelper.ahk` 中 `GetActionSummary` 和 `ConvertToOldActionString` 函数遗留的括号问题
+- **修复缺失变量**: 添加 `iniFile` 全局变量定义
+- **修复参数错误**: `MenuUI.ahk` 中 `MakeMenuItemHandler` 传递给 `ExecuteMenuItem` 的参数数量错误
+
 ## \[v1.2.0\] - 2025-10-28
 
 ### ✨ 移除功能
