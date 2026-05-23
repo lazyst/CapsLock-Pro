@@ -251,17 +251,11 @@
   - 按Esc键或点击"关闭"按钮关闭菜单
   - 点击菜单外区域自动关闭菜单
 
-### 7.3 菜单项动作
+### 7.3 菜单项命令
 
-菜单项动作现在使用**纯字符串格式**，支持以下语法:
+菜单项命令使用**纯字符串格式**，直接输入系统命令即可:
 
-- **直接命令:** 直接输入系统命令，例如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig`
-- **模拟按键:** `SendInput("#d")` — 发送键盘快捷键
-- **启动/激活程序:** `ActivateOrRun("Typora.exe", "D:\Typora\Typora.exe")`
-- **旧格式命令:** `RunCommand("命令", "工作目录")` — 仍可兼容
-
-> 无需再使用 `RunCommand()` 包装，直接用原始命令字符串即可。
-> 旧配置中的 `RunCommand("...")`/`SendInput("...")`/`ActivateOrRun("...")` 格式仍然兼容。
+- 例如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig`
 
 ## 8. 自定义指南
 
@@ -294,17 +288,10 @@
   - 定义每个菜单组的标题名称
   - 格式: `nameX = "组名称"` (X为1-10)
 - **\[MenuGroupsXItems\] (X为1-10, 代表对应菜单组)**
-  - 定义每个菜单组内的具体项目 每个项目包含 4 行:
+  - 定义每个菜单组内的具体项目 每个项目包含 2 行:
     - `nameY = "项目显示名称"`
-    - `iconY = "图标"` (Emoji字符 或 文件路径)
-    - `icontypeY = "icon类型"` (`emoji` 或 `file`)
-    - `actionY = "执行动作"`
-  - 图标路径:
-    - 相对路径: 基于脚本目录, 如 `Icon\Typora.ico`
-    - 绝对路径: 如 `C:\Windows\System32\shell32.dll,3`
-  - 执行动作 (`actionY`):
-    - 原始命令: 直接写入系统命令，例如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig /all`
-    - 旧格式兼容: `RunCommand("命令", "工作目录")`、`ActivateOrRun(...)`、`SendInput("...")`
+    - `actionY = "执行命令"`
+  - 执行命令 (`actionY`): 直接写入系统命令，例如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig /all`
 
 ### 8.3 配置助手使用说明
 
@@ -321,6 +308,7 @@
   - `菜单配置:`
     - 管理 10 个快捷菜单组和其中的菜单项
     - 左侧面板: 编辑组名称, 启用/禁用组, 上下移动组顺序
-    - 右侧面板: 添加, 编辑, 删除菜单项, 上下移动项顺序
-    - 添加/编辑菜单项时直接填写动作字符串（支持原始命令、旧格式兼容）
+    - 右侧面板: 添加, 删除菜单项, 上下移动项顺序
+    - **双击菜单项**可编辑名称和命令
+    - 菜单项仅包含名称和命令两个字段
 

@@ -18,9 +18,9 @@ EnableRoundedCorners(hwnd, radius := 12) {
 EnableWindowShadow(hwnd) {
     CS_DROPSHADOW := 0x20000
     GCL_STYLE := -26
-    style := DllCall("GetClassLongPtr", "Ptr", hwnd, "Int", GCL_STYLE, "Ptr")
+    style := DllCall("GetClassLong", "Ptr", hwnd, "Int", GCL_STYLE)
     style |= CS_DROPSHADOW
-    DllCall("SetClassLongPtr", "Ptr", hwnd, "Int", GCL_STYLE, "Ptr", style)
+    DllCall("SetClassLong", "Ptr", hwnd, "Int", GCL_STYLE, "Ptr", style)
 }
 
 FadeInWindow(hwnd, duration := 150) {

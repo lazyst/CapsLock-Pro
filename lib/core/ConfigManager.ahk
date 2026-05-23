@@ -29,8 +29,6 @@ class ConfigManager {
                     continue
                 items.Push({
                     name: itemName,
-                    icon: ReadIniValueUTF8(iniPath, itemSection, "icon" itemIdx, ""),
-                    iconType: ReadIniValueUTF8(iniPath, itemSection, "icontype" itemIdx, "emoji"),
                     action: ReadIniValueUTF8(iniPath, itemSection, "action" itemIdx, "")
                 })
             }
@@ -89,21 +87,26 @@ class ConfigManager {
                 if group.HasOwnProp("enabled")
                     WriteIniValueUTF8(iniPath, "MenuGroupsEnable", "enableGroup" idx, group.enabled ? "true" : "false")
                 if group.HasOwnProp("items") {
+                    section := "MenuGroups" idx "Items"
                     itemCount := 0
                     for item in group.items {
                         itemCount++
-                        section := "MenuGroups" idx "Items"
                         if item.HasOwnProp("name")
                             WriteIniValueUTF8(iniPath, section, "name" itemCount, item.name)
-                        if item.HasOwnProp("icon")
-                            WriteIniValueUTF8(iniPath, section, "icon" itemCount, item.icon)
-                        if item.HasOwnProp("iconType")
-                            WriteIniValueUTF8(iniPath, section, "icontype" itemCount, item.iconType)
                         actionStr := ""
                         if item.HasOwnProp("action") && !IsObject(item.action) {
                             actionStr := item.action
                         }
                         WriteIniValueUTF8(iniPath, section, "action" itemCount, actionStr)
+                    }
+                    ; Clean up stale keys from deleted items
+                    staleIdx := itemCount + 1
+                    loop 100 {
+                        if (ReadIniValueUTF8(iniPath, section, "name" staleIdx, "") = "")
+                            break
+                        DeleteIniKeyUTF8(iniPath, section, "name" staleIdx)
+                        DeleteIniKeyUTF8(iniPath, section, "action" staleIdx)
+                        staleIdx++
                     }
                     WriteIniValueUTF8(iniPath, "MenuGroupCount", "count" idx, itemCount)
                 }

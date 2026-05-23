@@ -66,14 +66,10 @@ InitMenuGroups() {
                     continue
                 }
 
-                itemIcon := itemData.HasOwnProp("icon") ? itemData.icon : ""
-                itemIconType := itemData.HasOwnProp("iconType") ? itemData.iconType : "emoji"
                 itemAction := itemData.HasOwnProp("action") ? itemData.action : ""
 
                 items.Push({
                     name: itemName,
-                    icon: itemIcon,
-                    iconType: itemIconType,
                     actionConfig: itemAction
                 })
             }
@@ -161,76 +157,9 @@ ExecuteActionFromConfig(actionConfig) {
 ; @param code 动作代码字符串
 ; ---------------------------------------------------------------------
 ExecuteCustomAction(code) {
-
-    SendInputPattern := 'i)^SendInput\(\s*"((?:[^"\\]|\\.)*)"\s*\)$'
-    if RegExMatch(code, SendInputPattern, &m) {
-        SendInput(StrReplace(m[1], '\"', '"'))
-        return
-    }
-
-    RunCommandPattern := 'i)^RunCommand\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)$'
-    if RegExMatch(code, RunCommandPattern, &m) {
-        cmdStr := StrReplace(m[1], '\"', '"')
-        workdir := StrReplace(m[2], '\"', '"')
-        RunCommand(cmdStr, workdir)
-        return
-    }
-
-    ActivateOrRunPattern := 'i)^ActivateOrRun\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*(.*?)\s*\)$'
-    if RegExMatch(code, ActivateOrRunPattern, &m) {
-        param1 := StrReplace(m[1], '\"', '"')
-        param2Raw := Trim(m[2])
-
-        param2 := ResolvePathVariable(param2Raw)
-        ActivateOrRun(param1, param2)
-        return
-    }
-
     if code != "" {
         RunCommand(code)
     }
-}
-
-; ---------------------------------------------------------------------
-; ResolvePathVariable - 解析路径变量
-; @param pathRaw 原始路径字符串
-; @return 解析后的路径
-; ---------------------------------------------------------------------
-ResolvePathVariable(pathRaw) {
-    dq := Chr(34)
-
-    if (pathRaw = "A_MyDocuments") {
-        return A_MyDocuments
-    }
-
-    if (pathRaw = "A_UserProfile") {
-        return EnvGet("USERPROFILE")
-    }
-
-    if (SubStr(pathRaw, 1, StrLen("A_UserProfile")) = "A_UserProfile") {
-        pathPart := Trim(SubStr(pathRaw, StrLen("A_UserProfile") + 1))
-        if (SubStr(pathPart, 1, 1) = dq)
-            pathPart := SubStr(pathPart, 2)
-        if (SubStr(pathPart, -1) = dq)
-            pathPart := SubStr(pathPart, 1, -1)
-        return EnvGet("USERPROFILE") . pathPart
-    }
-
-    if (SubStr(pathRaw, 1, StrLen("A_MyDocuments")) = "A_MyDocuments") {
-        pathPart := Trim(SubStr(pathRaw, StrLen("A_MyDocuments") + 1))
-        if (SubStr(pathPart, 1, 1) = dq)
-            pathPart := SubStr(pathPart, 2)
-        if (SubStr(pathPart, -1) = dq)
-            pathPart := SubStr(pathPart, 1, -1)
-        return A_MyDocuments . pathPart
-    }
-
-    pathPart := pathRaw
-    if (SubStr(pathPart, 1, 1) = dq)
-        pathPart := SubStr(pathPart, 2)
-    if (SubStr(pathPart, -1) = dq)
-        pathPart := SubStr(pathPart, 1, -1)
-    return pathPart
 }
 
 ; ---------------------------------------------------------------------
@@ -305,14 +234,10 @@ ReloadMenuGroups() {
                     continue
                 }
 
-                itemIcon := itemData.HasOwnProp("icon") ? itemData.icon : ""
-                itemIconType := itemData.HasOwnProp("iconType") ? itemData.iconType : "emoji"
                 itemAction := itemData.HasOwnProp("action") ? itemData.action : ""
 
                 items.Push({
                     name: itemName,
-                    icon: itemIcon,
-                    iconType: itemIconType,
                     actionConfig: itemAction
                 })
             }
@@ -656,120 +581,6 @@ ExecuteMenuItem(groupIndex, itemIndex) {
 
 Escape:: CloseMenu()
 #HotIf
-
-; =====================================================================
-; 辅助函数 - 程序启动和窗口激活
-; =====================================================================
-
-ActivateOrRun(processName, runCommand) {
-    CloseMenu()
-
-    windowFound := false
-
-    if (InStr(processName, "http://") || InStr(processName, "https://")) {
-        url := processName
-
-        domainStart := InStr(url, "://") + 3
-        domainEnd := InStr(url, "/", false, domainStart)
-        if (domainEnd = 0) {
-            domainEnd := StrLen(url) + 1
-        }
-        domain := SubStr(url, domainStart, domainEnd - domainStart)
-
-        try {
-            browserWindows := WinGetList("ahk_exe msedge.exe")
-
-            for hwnd in browserWindows {
-                try {
-                    winTitle := WinGetTitle("ahk_id " hwnd)
-
-                    if (InStr(winTitle, domain)) {
-                        WinActivate("ahk_id " hwnd)
-                        windowFound := true
-                        break
-                    }
-                } catch Error as e {
-                }
-            }
-
-            if (!windowFound) {
-                browserWindows := WinGetList("ahk_exe chrome.exe")
-                for hwnd in browserWindows {
-                    try {
-                        winTitle := WinGetTitle("ahk_id " hwnd)
-                        if (InStr(winTitle, domain)) {
-                            WinActivate("ahk_id " hwnd)
-                            windowFound := true
-                            break
-                        }
-                    } catch Error as e {
-                    }
-                }
-            }
-
-            if (!windowFound) {
-                browserWindows := WinGetList("ahk_exe firefox.exe")
-                for hwnd in browserWindows {
-                    try {
-                        winTitle := WinGetTitle("ahk_id " hwnd)
-                        if (InStr(winTitle, domain)) {
-                            WinActivate("ahk_id " hwnd)
-                            windowFound := true
-                            break
-                        }
-                    } catch Error as e {
-                    }
-                }
-            }
-        } catch Error as e {
-        }
-    } else if (processName = "explorer.exe") {
-        try {
-            explorerWindows := WinGetList("ahk_class CabinetWClass")
-
-            for hwnd in explorerWindows {
-                try {
-                    winTitle := WinGetTitle("ahk_id " hwnd)
-
-                    targetPath := StrReplace(runCommand, "explorer.exe ")
-
-                    SplitPath(targetPath, &targetFolderName)
-                    if (targetFolderName = "") {
-                        targetFolderName := targetPath
-                    }
-
-                    if (InStr(winTitle, targetFolderName)) {
-                        WinActivate("ahk_id " hwnd)
-                        windowFound := true
-                        break
-                    }
-                } catch Error as e {
-                }
-            }
-        } catch Error as e {
-        }
-    } else {
-        try {
-            if (WinExist("ahk_exe " processName)) {
-                WinActivate("ahk_exe " processName)
-                windowFound := true
-            }
-        } catch Error as e {
-        }
-    }
-
-    if (!windowFound) {
-        if (runCommand = "wt`"") {
-            Run("wt -d" EnvGet("USERPROFILE"))
-            return
-        }
-        try {
-            Run('"' runCommand '"')
-        } catch Error as e {
-            ShowTooltipNearMouse("无法启动程序: `nAction: <" runCommand ">`nError: " e.Message)
-        }
-    }
-}
 
 AdjustVolume(amount) {
     Send("{Volume_Up " amount "}")

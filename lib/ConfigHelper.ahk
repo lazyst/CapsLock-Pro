@@ -110,18 +110,14 @@ BuildMenuPage(gui) {
     gui.Add("Button", "x215 y440 w35 h24", "▼").OnEvent("Click", MenuGroupMoveDown)
     global darkModeCB := gui.Add("CheckBox", "x290 y35 w120 h20", "暗色模式")
     gui.Add("GroupBox", "x280 y55 w510 h435", "菜单项")
-    global menuItemLV := gui.Add("ListView", "x290 y75 w490 h340 -Multi", ["名称", "图标", "图标类型", "动作"])
-    menuItemLV.ModifyCol(1, 80)
-    menuItemLV.ModifyCol(2, 80)
-    menuItemLV.ModifyCol(3, 60)
-    menuItemLV.ModifyCol(4, 240)
-    menuItemLV.OnEvent("DoubleClick", MenuItemDoubleClick)
+    global menuItemLV := gui.Add("ListView", "x290 y75 w490 h340 -Multi", ["名称", "命令"])
+    menuItemLV.ModifyCol(1, 120)
+    menuItemLV.ModifyCol(2, 350)
+    menuItemLV.OnEvent("DoubleClick", MenuEditItem)
     gui.Add("Button", "x290 y425 w60 h24", "添加").OnEvent("Click", MenuAddItem)
-    gui.Add("Button", "x360 y425 w60 h24", "编辑").OnEvent("Click", MenuEditItem)
-    gui.Add("Button", "x430 y425 w60 h24", "删除").OnEvent("Click", MenuDelItem)
-    gui.Add("Button", "x500 y425 w40 h24", "▲").OnEvent("Click", MenuMoveItemUp)
-    gui.Add("Button", "x545 y425 w40 h24", "▼").OnEvent("Click", MenuMoveItemDown)
-    gui.Add("Button", "x600 y425 w80 h24", "编辑动作").OnEvent("Click", MenuEditItemAction)
+    gui.Add("Button", "x360 y425 w60 h24", "删除").OnEvent("Click", MenuDelItem)
+    gui.Add("Button", "x430 y425 w40 h24", "▲").OnEvent("Click", MenuMoveItemUp)
+    gui.Add("Button", "x475 y425 w40 h24", "▼").OnEvent("Click", MenuMoveItemDown)
     global menuGroupEnabled := []
     global menuGroupItems := []
     global currentMenuGroup := 0
@@ -145,7 +141,7 @@ MenuGroupFocus(ctrl, itemNum) {
     items := menuGroupItems[itemNum]
     for item in items {
         actionDisplay := IsObject(item.action) ? "" : item.action
-        menuItemLV.Add("", item.name, item.icon, item.icontype, actionDisplay)
+        menuItemLV.Add("", item.name, actionDisplay)
     }
 }
 
@@ -240,31 +236,27 @@ MenuAddItem(*) {
     editGui.SetFont("s10", "Segoe UI")
     editGui.Add("Text", "x10 y15 w80 h23", "名称:")
     nameEdit := editGui.Add("Edit", "x100 y12 w250 h23", "")
-    editGui.Add("Text", "x10 y45 w80 h23", "图标:")
-    iconEdit := editGui.Add("Edit", "x100 y42 w250 h23", "")
-    editGui.Add("Text", "x10 y75 w80 h23", "图标类型:")
-    typeDDL := editGui.Add("DropDownList", "x100 y72 w120", ["emoji", "file"])
-    editGui.Add("Text", "x10 y105 w80 h23", "动作:")
-    actionEdit := editGui.Add("Edit", "x100 y102 w250 h23", "")
+    editGui.Add("Text", "x10 y50 w80 h23", "命令:")
+    actionEdit := editGui.Add("Edit", "x100 y47 w250 h23", "")
 
     resultObj := {}
-    editGui.Add("Button", "x180 y140 w80 h30 Default", "确定").OnEvent("Click", (*) => (
-        resultObj.__data := { name: nameEdit.Value, icon: iconEdit.Value, icontype: typeDDL.Text, action: actionEdit.Value },
+    editGui.Add("Button", "x180 y85 w80 h30 Default", "确定").OnEvent("Click", (*) => (
+        resultObj.__data := { name: nameEdit.Value, action: actionEdit.Value },
         editGui.Destroy()
     ))
-    editGui.Add("Button", "x270 y140 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
-    editGui.Show("w380 h190")
+    editGui.Add("Button", "x270 y85 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
+    editGui.Show("w380 h135")
     WinWaitClose(editGui.Hwnd)
 
     if !resultObj.HasOwnProp("__data") || resultObj.__data.name = ""
         return
 
     result := resultObj.__data
-    menuItemLV.Add("", result.name, result.icon, result.icontype, result.action)
+    menuItemLV.Add("", result.name, result.action)
 
     if (currentMenuGroup >= 1 && currentMenuGroup <= menuGroupItems.Length) {
         items := menuGroupItems[currentMenuGroup]
-        items.Push({ name: result.name, icon: result.icon, icontype: result.icontype, action: result.action })
+        items.Push({ name: result.name, action: result.action })
     }
 }
 
@@ -283,37 +275,31 @@ MenuEditItem(*) {
 
     currentItem := items[row]
     oldName := currentItem.name
-    oldIcon := currentItem.icon
-    oldIconType := currentItem.icontype
     oldAction := IsObject(currentItem.action) ? "" : currentItem.action
 
     editGui := Gui("+AlwaysOnTop +ToolWindow", "编辑菜单项")
     editGui.SetFont("s10", "Segoe UI")
     editGui.Add("Text", "x10 y15 w80 h23", "名称:")
     nameEdit := editGui.Add("Edit", "x100 y12 w250 h23", oldName)
-    editGui.Add("Text", "x10 y45 w80 h23", "图标:")
-    iconEdit := editGui.Add("Edit", "x100 y42 w250 h23", oldIcon)
-    editGui.Add("Text", "x10 y75 w80 h23", "图标类型:")
-    typeDDL := editGui.Add("DropDownList", "x100 y72 w120", ["emoji", "file"])
-    typeDDL.Choose(oldIconType = "file" ? 2 : 1)
-    editGui.Add("Text", "x10 y105 w80 h23", "动作:")
-    actionEdit := editGui.Add("Edit", "x100 y102 w250 h23", oldAction)
+    editGui.Add("Text", "x10 y50 w80 h23", "命令:")
+    actionEdit := editGui.Add("Edit", "x100 y47 w250 h23", oldAction)
 
     resultObj := {}
-    editGui.Add("Button", "x180 y140 w80 h30 Default", "确定").OnEvent("Click", (*) => (
-        resultObj.__data := { name: nameEdit.Value, icon: iconEdit.Value, icontype: typeDDL.Text, action: actionEdit.Value },
+    editGui.Add("Button", "x180 y85 w80 h30 Default", "确定").OnEvent("Click", (*) => (
+        resultObj.__data := { name: nameEdit.Value, action: actionEdit.Value },
         editGui.Destroy()
     ))
-    editGui.Add("Button", "x270 y140 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
-    editGui.Show("w380 h190")
+    editGui.Add("Button", "x270 y85 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
+    actionEdit.Focus()
+    editGui.Show("w380 h135")
     WinWaitClose(editGui.Hwnd)
 
     if !resultObj.HasOwnProp("__data") || resultObj.__data.name = ""
         return
 
     result := resultObj.__data
-    menuItemLV.Modify(row, "", result.name, result.icon, result.icontype, result.action)
-    items[row] := { name: result.name, icon: result.icon, icontype: result.icontype, action: result.action }
+    menuItemLV.Modify(row, "", result.name, result.action)
+    items[row] := { name: result.name, action: result.action }
 }
 
 MenuDelItem(*) {
@@ -429,12 +415,10 @@ ConfigReload() {
             if group.HasOwnProp("items") {
                 for item in group.items {
                     itemName := item.HasOwnProp("name") ? item.name : ""
-                    itemIcon := item.HasOwnProp("icon") ? item.icon : ""
-                    itemIconType := item.HasOwnProp("iconType") ? item.iconType : "emoji"
                     itemAction := item.HasOwnProp("action") ? item.action : ""
 
                     if itemName != ""
-                        items.Push({ name: itemName, icon: itemIcon, icontype: itemIconType, action: itemAction })
+                        items.Push({ name: itemName, action: itemAction })
                 }
             }
             menuGroupItems.Push(items)
@@ -490,8 +474,6 @@ SyncMenuItemLVToArray() {
     loop menuItemLV.GetCount() {
         i := A_Index
         name := menuItemLV.GetText(i, 1)
-        icon := menuItemLV.GetText(i, 2)
-        icontype := menuItemLV.GetText(i, 3)
 
         action := ""
         if (i <= oldItems.Length) {
@@ -500,8 +482,6 @@ SyncMenuItemLVToArray() {
 
         items.Push({
             name: name,
-            icon: icon,
-            icontype: icontype,
             action: action
         })
     }
@@ -555,8 +535,6 @@ BuildMenusConfig() {
             for item in groupItems {
                 items.Push({
                     name: item.name,
-                    icon: item.icon,
-                    iconType: item.icontype,
                     action: IsObject(item.action) ? "" : item.action
                 })
             }
@@ -573,53 +551,3 @@ BuildMenusConfig() {
     return menus
 }
 
-; =====================================================================
-; 菜单项动作编辑
-; =====================================================================
-
-MenuItemDoubleClick(ctrl, itemNum) {
-    global menuGroupItems, currentMenuGroup
-    if (!itemNum)
-        return
-
-    if (currentMenuGroup < 1 || currentMenuGroup > menuGroupItems.Length)
-        return
-
-    items := menuGroupItems[currentMenuGroup]
-    if (itemNum > items.Length)
-        return
-
-    currentItem := items[itemNum]
-    oldAction := IsObject(currentItem.action) ? "" : currentItem.action
-
-    result := InputBox("输入动作字符串", "编辑动作", , oldAction)
-    if (result.Result = "OK") {
-        items[itemNum].action := result.Value
-        menuItemLV.Modify(itemNum, "Col4", result.Value)
-    }
-}
-
-MenuEditItemAction(*) {
-    global menuGroupItems, currentMenuGroup
-    row := menuItemLV.GetNext()
-    if (!row) {
-        ShowTooltipNearMouse("请先选择一个菜单项")
-        return
-    }
-
-    if (currentMenuGroup < 1 || currentMenuGroup > menuGroupItems.Length)
-        return
-
-    items := menuGroupItems[currentMenuGroup]
-    if (row > items.Length)
-        return
-
-    currentItem := items[row]
-    oldAction := IsObject(currentItem.action) ? "" : currentItem.action
-
-    result := InputBox("输入动作字符串", "编辑动作", , oldAction)
-    if (result.Result = "OK") {
-        items[row].action := result.Value
-        menuItemLV.Modify(row, "Col4", result.Value)
-    }
-}

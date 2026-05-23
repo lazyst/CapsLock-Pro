@@ -191,8 +191,8 @@ WriteIniValueUTF8(filePath, section, key, value) {
                 ; Key exists — replace its value within section
                 newSection := RegExReplace(sectionContent, keyPattern, m[1] . value . (m.HasOwnProp(2) ? m[2] : "`n"), , 1)
             } else {
-                ; Key doesn't exist — add after section header (the header is kept in beforeSection)
-                newSection := key "=" value "`n" . sectionContent
+                ; Key doesn't exist — append to section content
+                newSection := sectionContent . key "=" value "`n"
             }
 
             fileContent := beforeSection . newSection . afterSection
