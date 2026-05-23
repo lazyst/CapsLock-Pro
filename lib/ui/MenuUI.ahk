@@ -46,6 +46,8 @@ FadeOutWindow(hwnd, duration := 100) {
             WinSetTransparent(alpha, "ahk_id " hwnd)
             Sleep(stepDuration)
         }
+        ; 先隐藏窗口再关闭，防止 DWM 在销毁分层窗口时闪烁
+        WinHide("ahk_id " hwnd)
     }
 }
 
@@ -171,7 +173,8 @@ CloseMenu() {
 ClearCapsLockAhkWindows() {
     global currentMenuGui
     try {
-        if currentMenuGui != 0 {
+        if currentMenuGui != 0 && WinExist("ahk_id " currentMenuGui) {
+            FadeOutWindow(currentMenuGui, 60)  ; 快速淡出，避免突兀消失
             WinClose("ahk_id " currentMenuGui)
         }
     } catch {
