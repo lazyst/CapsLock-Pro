@@ -34,7 +34,6 @@ if (!A_IsAdmin) {
 ; =====================================================================
 #Include lib\CapsLockHandler.ahk
 #Include lib\VolumeControl.ahk
-#Include lib\WindowSwitch.ahk
 #Include lib\Workspace.ahk
 #Include lib\WindowPin.ahk
 #Include lib\TextEdit.ahk

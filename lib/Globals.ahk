@@ -27,9 +27,6 @@ global longTipDuration := 5000
 ; 调试开关（已废弃，使用 Logger 模块）
 global showDebugTooltips := false
 
-; 窗口切换配置
-global useTaskbarOrder := false
-global includeMultipleInstances := true
 
 ; 首次运行标志
 global isFirstRun := true

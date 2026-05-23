@@ -31,7 +31,7 @@ InitializeApp() {
 
     CustomizeTrayMenu()
 
-    ToolTip("任务栏应用切换工具已启动`n使用Alt+鼠标滚轮切换窗口")
+    ToolTip("CapsLock++ 已启动")
     SetTimer () => ToolTip(), -3000
 }
 

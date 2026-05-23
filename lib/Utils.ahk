@@ -50,34 +50,33 @@ HasVal(arr, val) {
     return false
 }
 
-; 字符串哈希算法，用于区分同一程序的不同窗口
-StrHash(str) {
-    hash := 0
-    if (StrLen(str) == 0)
-        return hash
-        
-    for i, char in StrSplit(str) {
-        hash := ((hash << 5) - hash) + Ord(char)
-        hash := hash & hash
-    }
-    
-    return hash
-}
-
-; 添加CapsLock+兼容性处理，用于调试可能的按键冲突问题
-ShowKeyPressDebug(keyName, source := "AHK") {
+; 获取光标下的窗口句柄
+GetWindowUnderCursor() {
     global showDebugTooltips
-    
-    if !showDebugTooltips
-        return
-        
-    ToolTip("按键检测：" keyName " (来源: " source ")")
-    SetTimer () => ToolTip(), -1000
-}
 
-; 定义常用程序的优先级映射
-GetProcessPriority(processName) {
-    return 900 + Mod(StrHash(processName), 100)
+    try {
+        MouseGetPos(, , &hwnd)
+
+        if (!hwnd || !WinExist("ahk_id " hwnd)) {
+            return WinGetID("A")
+        }
+
+        class := WinGetClass("ahk_id " hwnd)
+
+        if (class = "Shell_TrayWnd" || class = "Shell_SecondaryTrayWnd")
+            return -1
+
+        if (class = "Progman" || class = "WorkerW")
+            return 0
+
+        return hwnd
+    } catch {
+        try {
+            return WinGetID("A")
+        } catch {
+            return 0
+        }
+    }
 }
 
 ; 判断窗口是否为任务栏窗口

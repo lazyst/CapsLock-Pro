@@ -85,13 +85,9 @@ BuildHelpText() {
         {
             name: "窗口管理",
             items: [
-                {key: "CapsLock + 滚轮上", desc: "逆序切换任务栏窗口"},
-                {key: "CapsLock + 滚轮下", desc: "正序切换任务栏窗口"},
                 {key: "CapsLock + 右键", desc: "置顶 / 取消置顶窗口"},
                 {key: "CapsLock + 左键", desc: "文件重命名 (资源管理器)"},
-                {key: "XButton1 / Alt + Esc", desc: "正序切换窗口"},
-                {key: "XButton2 / Alt+Shift+Esc", desc: "逆序切换窗口"},
-                {key: "屏幕底部滚轮 (裸)", desc: "鼠标在底部5px → 调音量 ±2"}
+                {key: "屏幕底部滚轮", desc: "鼠标在底部5px → 调音量"}
             ]
         },
         {
