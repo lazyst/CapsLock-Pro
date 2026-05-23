@@ -43,6 +43,7 @@ if (!A_IsAdmin) {
 #Include lib\MenuSystem.ahk
 
 #Include lib\ConfigHelper.ahk
+#Include lib\ui\HelpPanel.ahk
 
 ; =====================================================================
 ; 初始化应用

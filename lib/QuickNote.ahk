@@ -70,6 +70,20 @@ MinimizeMagnifierWindow() {
 
     SendText("}")
 }
+
+q::
+{
+    global otherKeyPressed := true
+
+    QuickSearch()
+}
+
+SC029::
+{
+    global otherKeyPressed := true
+
+    ShowHelpPanel()
+}
 #HotIf
 
 ;=====================================================================
@@ -718,4 +732,75 @@ SaveToSpecificFile(filePath, lines, title, displayName) {
         MsgBox("保存失败: " . e.Message, "速记", "Icon!")
         return ""
     }
+}
+
+; =====================================================================
+; QuickSearch — CapsLock+Q 智能搜索
+; 选中文本 → URL编码后Bing搜索 / 打开URL / 打开路径
+; =====================================================================
+QuickSearch() {
+    ; 保存剪贴板
+    savedClipboard := ClipboardAll()
+    A_Clipboard := ""
+
+    ; 复制选中内容
+    Send("^c")
+    if (!ClipWait(0.3, 0)) {
+        A_Clipboard := savedClipboard
+        return
+    }
+
+    selectedText := Trim(A_Clipboard)
+    A_Clipboard := savedClipboard
+
+    if (selectedText = "")
+        return
+
+    ; 是 URL → 浏览器打开
+    if (RegExMatch(selectedText, "i)^https?://")) {
+        Run(selectedText)
+        ShowTooltipNearMouse("打开链接: " selectedText)
+        return
+    }
+
+    ; 是绝对路径 → 资源管理器打开
+    if (RegExMatch(selectedText, "i)^[A-Za-z]:\\")) {
+        if (FileExist(selectedText) || DirExist(selectedText)) {
+            Run("explorer.exe `"" selectedText "`"")
+            ShowTooltipNearMouse("打开路径: " selectedText)
+            return
+        }
+    }
+
+    ; 其余 → Bing 搜索
+    encoded := _UriEncode(selectedText)
+    Run("https://www.bing.com/search?q=" . encoded)
+    ShowTooltipNearMouse("Bing 搜索: " selectedText)
+}
+
+; =====================================================================
+; _UriEncode — 简单 URL 编码 (保留 A-Z a-z 0-9 - _ . ~)
+; =====================================================================
+_UriEncode(str) {
+    encoded := ""
+    loop parse, str {
+        char := A_LoopField
+        code := Ord(char)
+        if ((code >= 0x30 && code <= 0x39)
+            || (code >= 0x41 && code <= 0x5A)
+            || (code >= 0x61 && code <= 0x7A)
+            || code = 0x2D || code = 0x2E || code = 0x5F || code = 0x7E) {
+            encoded .= char
+        } else if (code <= 0x7F) {
+            encoded .= "%" . Format("{:02X}", code)
+        } else if (code <= 0x7FF) {
+            encoded .= "%" . Format("{:02X}", 0xC0 | (code >> 6))
+            encoded .= "%" . Format("{:02X}", 0x80 | (code & 0x3F))
+        } else {
+            encoded .= "%" . Format("{:02X}", 0xE0 | (code >> 12))
+            encoded .= "%" . Format("{:02X}", 0x80 | ((code >> 6) & 0x3F))
+            encoded .= "%" . Format("{:02X}", 0x80 | (code & 0x3F))
+        }
+    }
+    return encoded
 }
