@@ -33,6 +33,7 @@ if (!A_IsAdmin) {
 ; 加载功能模块
 ; =====================================================================
 #Include lib\CapsLockHandler.ahk
+#Include lib\VolumeControl.ahk
 #Include lib\WindowSwitch.ahk
 #Include lib\Workspace.ahk
 #Include lib\WindowPin.ahk

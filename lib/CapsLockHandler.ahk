@@ -19,7 +19,6 @@ SetCustomTrayIcon() {
 CustomizeTrayMenu() {
     trayMenu := A_TrayMenu
     trayMenu.Delete()
-    trayMenu.Add()
     trayMenu.Add("退出", (*) => ExitApp())
 }
 
