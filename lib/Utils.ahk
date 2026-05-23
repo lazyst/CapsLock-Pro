@@ -303,5 +303,78 @@ ClearAllToolTips() {
 }
 
 ; =====================================================================
+; 终端命令构造与解析
+; =====================================================================
+
+BuildCommandString(cmd, terminal, keepWindow) {
+    if (cmd = "")
+        return ""
+    if (terminal = "direct" || terminal = "")
+        return cmd
+
+    switch terminal {
+        case "pwsh7":
+            return keepWindow
+                ? 'wt pwsh -NoExit -c "' cmd '"'
+                : 'pwsh -c "' cmd '"'
+        case "pwsh5":
+            return keepWindow
+                ? 'wt powershell -NoExit -Command "' cmd '"'
+                : 'powershell -Command "' cmd '"'
+        case "cmd":
+            return keepWindow
+                ? 'wt cmd /k "' cmd '"'
+                : 'cmd /c "' cmd '"'
+        case "gitbash":
+            return keepWindow
+                ? 'wt "C:\Program Files\Git\bin\bash.exe" -c "' cmd '"'
+                : '"C:\Program Files\Git\bin\bash.exe" -c "' cmd '"'
+        case "wslbash":
+            return keepWindow
+                ? 'wt wsl bash -c "' cmd '"'
+                : 'wsl bash -c "' cmd '"'
+        default:
+            return cmd
+    }
+}
+
+ParseCommandString(actionStr) {
+    if (actionStr = "")
+        return { cmd: "", terminal: "direct", keepWindow: false }
+
+    patterns := [
+        ; Quoted format (new UI produces these)
+        { regex: '^wt pwsh -NoExit -c "(.*)"$', terminal: "pwsh7", keepWindow: true },
+        { regex: '^wt powershell -NoExit -Command "(.*)"$', terminal: "pwsh5", keepWindow: true },
+        { regex: '^wt cmd /k "(.*)"$', terminal: "cmd", keepWindow: true },
+        { regex: '^wt "C:\\Program Files\\Git\\bin\\bash\.exe" -c "(.*)"$', terminal: "gitbash", keepWindow: true },
+        { regex: '^wt wsl bash -c "(.*)"$', terminal: "wslbash", keepWindow: true },
+        { regex: '^pwsh -c "(.*)"$', terminal: "pwsh7", keepWindow: false },
+        { regex: '^powershell -Command "(.*)"$', terminal: "pwsh5", keepWindow: false },
+        { regex: '^cmd /c "(.*)"$', terminal: "cmd", keepWindow: false },
+        { regex: '^"C:\\Program Files\\Git\\bin\\bash\.exe" -c "(.*)"$', terminal: "gitbash", keepWindow: false },
+        { regex: '^wsl bash -c "(.*)"$', terminal: "wslbash", keepWindow: false },
+        ; Unquoted format (legacy commands, backward compat)
+        { regex: '^wt pwsh -NoExit -c (.+)$', terminal: "pwsh7", keepWindow: true },
+        { regex: '^wt powershell -NoExit -Command (.+)$', terminal: "pwsh5", keepWindow: true },
+        { regex: '^wt cmd /k (.+)$', terminal: "cmd", keepWindow: true },
+        { regex: '^wt "C:\\Program Files\\Git\\bin\\bash\.exe" -c (.+)$', terminal: "gitbash", keepWindow: true },
+        { regex: '^wt wsl bash -c (.+)$', terminal: "wslbash", keepWindow: true },
+        { regex: '^pwsh -c (.+)$', terminal: "pwsh7", keepWindow: false },
+        { regex: '^powershell -Command (.+)$', terminal: "pwsh5", keepWindow: false },
+        { regex: '^cmd /c (.+)$', terminal: "cmd", keepWindow: false },
+        { regex: '^"C:\\Program Files\\Git\\bin\\bash\.exe" -c (.+)$', terminal: "gitbash", keepWindow: false },
+        { regex: '^wsl bash -c (.+)$', terminal: "wslbash", keepWindow: false }
+    ]
+
+    for pattern in patterns {
+        if RegExMatch(actionStr, pattern.regex, &m)
+            return { cmd: m[1], terminal: pattern.terminal, keepWindow: pattern.keepWindow }
+    }
+
+    return { cmd: actionStr, terminal: "direct", keepWindow: false }
+}
+
+; =====================================================================
 ; GetCaretPosition / GetCaretPosEx 已移至 lib/CaretPos.ahk
 ; =====================================================================

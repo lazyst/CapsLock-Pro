@@ -49,7 +49,6 @@ class ConfigManager {
 
     GetSettings() {
         iniPath := this.iniPath
-        darkMode := ReadIniValueUTF8(iniPath, "MenuGroupsColourMode", "DarkMode", "true")
         mouseSpeed := ReadIniValueUTF8(iniPath, "MouseMode", "Speed", "7")
 
         noteTargets := []
@@ -64,10 +63,14 @@ class ConfigManager {
             i++
         }
 
+        lastTerminalIdx := Integer(ReadIniValueUTF8(iniPath, "MenuSettings", "LastTerminalIdx", "2"))
+        lastKeepWindow := ReadIniValueUTF8(iniPath, "MenuSettings", "LastKeepWindow", "false")
+
         return {
-            ui: { darkMode: darkMode = "true" ? true : false },
             mouse: { speed: Integer(mouseSpeed) },
-            noteTargets: noteTargets
+            noteTargets: noteTargets,
+            lastTerminalIndex: lastTerminalIdx,
+            lastKeepWindow: lastKeepWindow = "true" ? true : false
         }
     }
 
@@ -122,10 +125,12 @@ class ConfigManager {
             return false
         try {
             iniPath := this.iniPath
-            if settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode")
-                WriteIniValueUTF8(iniPath, "MenuGroupsColourMode", "DarkMode", settings.ui.darkMode ? "true" : "false")
             if settings.HasOwnProp("mouse") && settings.mouse.HasOwnProp("speed")
                 WriteIniValueUTF8(iniPath, "MouseMode", "Speed", settings.mouse.speed)
+            if settings.HasOwnProp("lastTerminalIndex")
+                WriteIniValueUTF8(iniPath, "MenuSettings", "LastTerminalIdx", settings.lastTerminalIndex)
+            if settings.HasOwnProp("lastKeepWindow")
+                WriteIniValueUTF8(iniPath, "MenuSettings", "LastKeepWindow", settings.lastKeepWindow ? "true" : "false")
             if settings.HasOwnProp("noteTargets") {
                 ; Write in noteX1=keyword / noteX2=path format (compatible with QuickNote's LoadNoteTargetsFromINI)
                 DeleteIniSectionUTF8(iniPath, "noteTargets")

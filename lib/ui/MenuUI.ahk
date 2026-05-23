@@ -63,11 +63,6 @@ CreateMenuGUI(groupObj, groupIndex) {
         return
     }
 
-    ; 应用主题
-    settings := GetConfigManager().GetSettings()
-    isDark := settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") ? settings.ui.darkMode : false
-    ApplyMenuTheme(isDark)
-
     ; 创建窗口（无标题栏，始终置顶）
     menuGui := Gui("-Caption +AlwaysOnTop +ToolWindow +Owner +E0x02000000")
     menuGui.BackColor := MenuSettings.Background

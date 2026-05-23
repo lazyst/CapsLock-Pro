@@ -97,31 +97,6 @@ global MenuSettings := {
     Accent: "0x0078D4"
 }
 
-ApplyMenuTheme(darkMode) {
-    global MenuSettings
-    if darkMode {
-        MenuSettings.Background := "0x2D2D2D"
-        MenuSettings.Text := "0xE0E0E0"
-        MenuSettings.Border := "0x404040"
-        MenuSettings.TitleBg := "0x1E1E1E"
-        MenuSettings.TitleText := "0xE0E0E0"
-        MenuSettings.HoverBg := "0x3D3D3D"
-        MenuSettings.ButtonBg := "0x383838"
-        MenuSettings.ButtonHover := "0x4D4D4D"
-        MenuSettings.Accent := "0x4FC3F7"
-    } else {
-        MenuSettings.Background := "0xFFFFFF"
-        MenuSettings.Text := "0x1A1A1A"
-        MenuSettings.Border := "0xE0E0E0"
-        MenuSettings.TitleBg := "0xF5F5F5"
-        MenuSettings.TitleText := "0x1A1A1A"
-        MenuSettings.HoverBg := "0xE8E8E8"
-        MenuSettings.ButtonBg := "0xFFFFFF"
-        MenuSettings.ButtonHover := "0xF0F0F0"
-        MenuSettings.Accent := "0x0078D4"
-    }
-}
-
 global menuGroupNum := 0
 global enableGroup := []
 global groupName := []

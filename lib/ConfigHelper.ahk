@@ -5,6 +5,9 @@
 ; 工具函数（ShowTooltip）在 lib/Utils.ahk 中声明
 ; =====================================================================
 
+global lastTerminalIndex := 2
+global lastKeepWindow := false
+
 EnsureDataSync() {
     SyncMenuItemLVToArray()
 }
@@ -76,8 +79,9 @@ ConfigNoteEdit(*) {
 
 NoteDel(*) {
     row := noteLV.GetNext()
-    if (row)
+    if (row) {
         noteLV.Delete(row)
+        }
 }
 
 LVMove(lv, direction) {
@@ -108,7 +112,6 @@ BuildMenuPage(gui) {
     gui.Add("Button", "x100 y440 w70 h24", "启用/禁用").OnEvent("Click", MenuToggleGroup)
     gui.Add("Button", "x175 y440 w35 h24", "▲").OnEvent("Click", MenuGroupMoveUp)
     gui.Add("Button", "x215 y440 w35 h24", "▼").OnEvent("Click", MenuGroupMoveDown)
-    global darkModeCB := gui.Add("CheckBox", "x290 y35 w120 h20", "暗色模式")
     gui.Add("GroupBox", "x280 y55 w510 h435", "菜单项")
     global menuItemLV := gui.Add("ListView", "x290 y75 w490 h340 -Multi", ["名称", "命令"])
     menuItemLV.ModifyCol(1, 120)
@@ -140,8 +143,9 @@ MenuGroupFocus(ctrl, itemNum) {
         return
     items := menuGroupItems[itemNum]
     for item in items {
-        actionDisplay := IsObject(item.action) ? "" : item.action
-        menuItemLV.Add("", item.name, actionDisplay)
+        actionStr := IsObject(item.action) ? "" : item.action
+        parsed := ParseCommandString(actionStr)
+        menuItemLV.Add("", item.name, parsed.cmd)
     }
 }
 
@@ -161,7 +165,7 @@ MenuEditGroup(*) {
     if (result.Result = "OK" && result.Value != "") {
         state := menuGroupEnabled[row] ? "✓ " : "✗ "
         menuGroupLV.Modify(row, "", state result.Value)
-    }
+        }
 }
 
 MenuToggleGroup(*) {
@@ -224,8 +228,30 @@ MenuGroupMoveDown(*) {
     MenuGroupFocus(menuGroupLV, target)
 }
 
+TerminalToKey(displayName) {
+    switch displayName {
+        case "PowerShell 7": return "pwsh7"
+        case "PowerShell 5": return "pwsh5"
+        case "CMD": return "cmd"
+        case "Git Bash": return "gitbash"
+        case "WSL Bash": return "wslbash"
+        default: return "direct"
+    }
+}
+
+TerminalToIndex(key) {
+    switch key {
+        case "pwsh7": return 2
+        case "pwsh5": return 3
+        case "cmd": return 4
+        case "gitbash": return 5
+        case "wslbash": return 6
+        default: return 1
+    }
+}
+
 MenuAddItem(*) {
-    global currentMenuGroup, menuGroupItems
+    global currentMenuGroup, menuGroupItems, lastTerminalIndex, lastKeepWindow
     row := menuGroupLV.GetNext()
     if (!row) {
         ShowTooltipNearMouse("请先选择一个菜单组")
@@ -236,27 +262,55 @@ MenuAddItem(*) {
     editGui.SetFont("s10", "Segoe UI")
     editGui.Add("Text", "x10 y15 w80 h23", "名称:")
     nameEdit := editGui.Add("Edit", "x100 y12 w250 h23", "")
-    editGui.Add("Text", "x10 y50 w80 h23", "命令:")
-    actionEdit := editGui.Add("Edit", "x100 y47 w250 h23", "")
+    editGui.Add("Text", "x10 y48 w80 h23", "命令:")
+    cmdEdit := editGui.Add("Edit", "x100 y45 w250 h23", "")
+    editGui.Add("Text", "x10 y80 w80 h23", "终端:")
+    terminalDDL := editGui.Add("DropDownList", "x100 y77 w150", ["直接运行", "PowerShell 7", "PowerShell 5", "CMD", "Git Bash", "WSL Bash"])
+    terminalDDL.Choose(lastTerminalIndex)
+    keepWindowCB := editGui.Add("CheckBox", "x260 y80 w100 h20", "保持窗口")
+    keepWindowCB.Value := lastKeepWindow
+    editGui.Add("Text", "x10 y112 w80 h23", "完整命令:")
+    previewEdit := editGui.Add("Edit", "x100 y109 w250 h23 +ReadOnly",
+        BuildCommandString(cmdEdit.Value, TerminalToKey(terminalDDL.Text), keepWindowCB.Value))
+
+    UpdatePreview(*) {
+        previewEdit.Value := BuildCommandString(
+            cmdEdit.Value,
+            TerminalToKey(terminalDDL.Text),
+            keepWindowCB.Value
+        )
+    }
+    cmdEdit.OnEvent("Change", UpdatePreview)
+    terminalDDL.OnEvent("Change", UpdatePreview)
+    keepWindowCB.OnEvent("Click", UpdatePreview)
 
     resultObj := {}
-    editGui.Add("Button", "x180 y85 w80 h30 Default", "确定").OnEvent("Click", (*) => (
-        resultObj.__data := { name: nameEdit.Value, action: actionEdit.Value },
+    editGui.Add("Button", "x180 y148 w80 h30 Default", "确定").OnEvent("Click", (*) => (
+        resultObj.__data := {
+            name: nameEdit.Value,
+            cmd: cmdEdit.Value,
+            terminal: terminalDDL.Text,
+            terminalIndex: terminalDDL.Value,
+            keepWindow: keepWindowCB.Value
+        },
         editGui.Destroy()
     ))
-    editGui.Add("Button", "x270 y85 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
-    editGui.Show("w380 h135")
+    editGui.Add("Button", "x270 y148 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
+    editGui.Show("w380 h198")
     WinWaitClose(editGui.Hwnd)
 
     if !resultObj.HasOwnProp("__data") || resultObj.__data.name = ""
         return
 
-    result := resultObj.__data
-    menuItemLV.Add("", result.name, result.action)
+    d := resultObj.__data
+    lastTerminalIndex := d.terminalIndex
+    lastKeepWindow := d.keepWindow
+    fullCmd := BuildCommandString(d.cmd, TerminalToKey(d.terminal), d.keepWindow)
+    menuItemLV.Add("", d.name, d.cmd)
 
     if (currentMenuGroup >= 1 && currentMenuGroup <= menuGroupItems.Length) {
         items := menuGroupItems[currentMenuGroup]
-        items.Push({ name: result.name, action: result.action })
+        items.Push({ name: d.name, action: fullCmd })
     }
 }
 
@@ -276,30 +330,56 @@ MenuEditItem(*) {
     currentItem := items[row]
     oldName := currentItem.name
     oldAction := IsObject(currentItem.action) ? "" : currentItem.action
+    parsed := ParseCommandString(oldAction)
 
     editGui := Gui("+AlwaysOnTop +ToolWindow", "编辑菜单项")
     editGui.SetFont("s10", "Segoe UI")
     editGui.Add("Text", "x10 y15 w80 h23", "名称:")
     nameEdit := editGui.Add("Edit", "x100 y12 w250 h23", oldName)
-    editGui.Add("Text", "x10 y50 w80 h23", "命令:")
-    actionEdit := editGui.Add("Edit", "x100 y47 w250 h23", oldAction)
+    editGui.Add("Text", "x10 y48 w80 h23", "命令:")
+    cmdEdit := editGui.Add("Edit", "x100 y45 w250 h23", parsed.cmd)
+    editGui.Add("Text", "x10 y80 w80 h23", "终端:")
+    terminalDDL := editGui.Add("DropDownList", "x100 y77 w150", ["直接运行", "PowerShell 7", "PowerShell 5", "CMD", "Git Bash", "WSL Bash"])
+    terminalDDL.Choose(TerminalToIndex(parsed.terminal))
+    keepWindowCB := editGui.Add("CheckBox", "x260 y80 w100 h20", "保持窗口")
+    keepWindowCB.Value := parsed.keepWindow
+    editGui.Add("Text", "x10 y112 w80 h23", "完整命令:")
+    previewEdit := editGui.Add("Edit", "x100 y109 w250 h23 +ReadOnly",
+        BuildCommandString(parsed.cmd, parsed.terminal, parsed.keepWindow))
+
+    UpdatePreview(*) {
+        previewEdit.Value := BuildCommandString(
+            cmdEdit.Value,
+            TerminalToKey(terminalDDL.Text),
+            keepWindowCB.Value
+        )
+    }
+    cmdEdit.OnEvent("Change", UpdatePreview)
+    terminalDDL.OnEvent("Change", UpdatePreview)
+    keepWindowCB.OnEvent("Click", UpdatePreview)
 
     resultObj := {}
-    editGui.Add("Button", "x180 y85 w80 h30 Default", "确定").OnEvent("Click", (*) => (
-        resultObj.__data := { name: nameEdit.Value, action: actionEdit.Value },
+    editGui.Add("Button", "x180 y148 w80 h30 Default", "确定").OnEvent("Click", (*) => (
+        resultObj.__data := {
+            name: nameEdit.Value,
+            cmd: cmdEdit.Value,
+            terminal: terminalDDL.Text,
+            keepWindow: keepWindowCB.Value
+        },
         editGui.Destroy()
     ))
-    editGui.Add("Button", "x270 y85 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
-    actionEdit.Focus()
-    editGui.Show("w380 h135")
+    editGui.Add("Button", "x270 y148 w80 h30", "取消").OnEvent("Click", (*) => (editGui.Destroy()))
+    cmdEdit.Focus()
+    editGui.Show("w380 h198")
     WinWaitClose(editGui.Hwnd)
 
     if !resultObj.HasOwnProp("__data") || resultObj.__data.name = ""
         return
 
-    result := resultObj.__data
-    menuItemLV.Modify(row, "", result.name, result.action)
-    items[row] := { name: result.name, action: result.action }
+    d := resultObj.__data
+    fullCmd := BuildCommandString(d.cmd, TerminalToKey(d.terminal), d.keepWindow)
+    menuItemLV.Modify(row, "", d.name, d.cmd)
+    items[row] := { name: d.name, action: fullCmd }
 }
 
 MenuDelItem(*) {
@@ -377,7 +457,7 @@ ConfigReloadWithConfirm() {
 }
 
 ConfigReload() {
-    global menuGroupItems, menuGroupEnabled, currentMenuGroup
+    global menuGroupItems, menuGroupEnabled, currentMenuGroup, lastTerminalIndex, lastKeepWindow
 
     SyncMenuItemLVToArray()
 
@@ -430,11 +510,10 @@ ConfigReload() {
         MenuGroupFocus(menuGroupLV, 1)
     }
 
-    darkMode := true
-    if settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") {
-        darkMode := settings.ui.darkMode
-    }
-    darkModeCB.Value := darkMode
+    if settings.HasOwnProp("lastTerminalIndex")
+        lastTerminalIndex := settings.lastTerminalIndex
+    if settings.HasOwnProp("lastKeepWindow")
+        lastKeepWindow := settings.lastKeepWindow
 
     ShowTooltipNearMouse("配置已加载")
 }
@@ -489,11 +568,9 @@ SyncMenuItemLVToArray() {
 }
 
 BuildSettingsConfig() {
+    global lastTerminalIndex, lastKeepWindow
     settings := {
         version: "1.0",
-        ui: {
-            darkMode: darkModeCB.Value
-        },
         mouse: {
             speed: 5
         },
@@ -511,6 +588,9 @@ BuildSettingsConfig() {
     if currentSettings.HasOwnProp("mouse") && currentSettings.mouse.HasOwnProp("speed") {
         settings.mouse.speed := currentSettings.mouse.speed
     }
+
+    settings.lastTerminalIndex := lastTerminalIndex
+    settings.lastKeepWindow := lastKeepWindow
 
     return settings
 }

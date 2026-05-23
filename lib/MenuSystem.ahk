@@ -21,10 +21,6 @@ InitMenuGroups() {
     menus := configManager.LoadMenus()
     settings := configManager.GetSettings()
 
-    if settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") {
-        ApplyMenuTheme.Call(settings.ui.darkMode)
-    }
-
     MenuGroups := Map()
     enableGroup := []
     groupName := []
@@ -188,10 +184,6 @@ ReloadMenuGroups() {
     configManager := GetConfigManager()
     menus := configManager.ReloadMenus()
     settings := configManager.GetSettings()
-
-    if settings.HasOwnProp("ui") && settings.ui.HasOwnProp("darkMode") {
-        ApplyMenuTheme.Call(settings.ui.darkMode)
-    }
 
     MenuGroups := Map()
     enableGroup := []
