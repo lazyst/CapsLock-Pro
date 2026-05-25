@@ -78,6 +78,13 @@ q::
     QuickSearch()
 }
 
+t::
+{
+    global otherKeyPressed := true
+
+    ShowTranslateWindow()
+}
+
 SC029::
 {
     global otherKeyPressed := true

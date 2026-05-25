@@ -115,6 +115,7 @@ BuildHelpText() {
             name: "实用工具",
             items: [
                 {key: "CapsLock + Q", desc: "搜索选中文本 / 打开URL / 打开路径"},
+                {key: "CapsLock + T", desc: "翻译助手 (百度AI，自动翻译)"},
                 {key: "CapsLock + Tab", desc: "放大镜 开/关"},
                 {key: "CapsLock + N", desc: "打开速记窗口"},
                 {key: "CapsLock + P", desc: "符号跳转 (配对括号等)"},

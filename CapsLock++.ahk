@@ -44,6 +44,7 @@ if (!A_IsAdmin) {
 
 #Include lib\ConfigHelper.ahk
 #Include lib\ui\HelpPanel.ahk
+#Include lib\Translate.ahk
 
 ; =====================================================================
 ; 初始化应用
