@@ -1,0 +1,92 @@
+using System.Runtime.InteropServices;
+using CapsLockPro.Core;
+using CapsLockPro.Features;
+using CapsLockPro.Native;
+
+namespace CapsLockPro.Hooks;
+
+/// <summary>
+/// 低级键盘钩子（WH_KEYBOARD_LL）。在主线程安装，由 <see cref="Application.Run"/> 消息循环泵送。
+/// </summary>
+/// <remarks>
+/// 回调返回非零值即吞掉该按键（阻止传递）。设计要点（与原 AHK 一致）：
+/// - 忽略 <see cref="Win32.LlkhfInjected"/> 事件（防止自己 SendInput 的键触发递归）；
+/// - CapsLock keydown/keyup 进入 <see cref="Core.CapsLockStateMachine"/>；
+/// - 其他键在 CapsLock 按住期间分发到各功能模块（vim/剪贴板/符号跳转等）。
+/// </remarks>
+internal static class KeyboardHook
+{
+    private static IntPtr _handle = IntPtr.Zero;
+    private static Win32.LowLevelKeyboardProc? _proc;
+    // 防止委托被 GC 回收（SetWindowsHookEx 只存弱引用）
+    private static GCHandle _procHandle;
+
+    /// <summary>安装钩子。必须在主线程调用。</summary>
+    public static void Install()
+    {
+        if (_handle != IntPtr.Zero) return;
+        _proc = HookCallback;
+        _procHandle = GCHandle.Alloc(_proc);
+        var hMod = Win32.GetModuleHandle(null);
+        _handle = Win32.SetWindowsHookEx(Win32.WhKeyboardLl, _proc!, hMod, 0);
+        if (_handle == IntPtr.Zero)
+        {
+            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "SetWindowsHookEx(WH_KEYBOARD_LL) 失败");
+        }
+    }
+
+    /// <summary>卸载钩子。</summary>
+    public static void Uninstall()
+    {
+        if (_handle != IntPtr.Zero)
+        {
+            Win32.UnhookWindowsHookEx(_handle);
+            _handle = IntPtr.Zero;
+        }
+        if (_procHandle.IsAllocated) _procHandle.Free();
+        _proc = null;
+    }
+
+    private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode == Win32.HcAction)
+        {
+            var kb = Marshal.PtrToStructure<Win32.Kbdllhookstruct>(lParam);
+            var msg = (int)wParam;
+            bool isDown = msg == Win32.WmKeydown || msg == Win32.WmSyskeydown;
+            bool isUp = msg == Win32.WmKeyup || msg == Win32.WmSyskeyup;
+
+            // 忽略注入事件（防递归）
+            if ((kb.Flags & Win32.LlkhfInjected) != 0)
+            {
+                return Win32.CallNextHookEx(_handle, nCode, wParam, lParam);
+            }
+
+            // 分发到状态机/功能模块（阶段1+ 实现）
+            if (CapsLockStateMachine.TryHandle(kb.Vk, isDown, isUp, out bool swallow))
+            {
+                return swallow ? (IntPtr)1 : Win32.CallNextHookEx(_handle, nCode, wParam, lParam);
+            }
+
+            // 已吞键的 keyup：一并吞掉，保持事件平衡（防止被吞的 keydown 配对走漏）
+            if (isUp && AppState.SwallowedVks.Contains((int)kb.Vk))
+            {
+                AppState.SwallowedVks.Remove((int)kb.Vk);
+                return (IntPtr)1;
+            }
+
+            // CapsLock 按住 + 工具启用期间：分发到功能模块
+            if (isDown && AppState.IsCapsLockDown && AppState.IsToolEnabled)
+            {
+                AppState.OtherKeyPressed = true;
+                if (TextEditor.TryHandle(kb.Vk))
+                {
+                    if (!AppState.SwallowedVks.Contains((int)kb.Vk))
+                        AppState.SwallowedVks.Add((int)kb.Vk);
+                    return (IntPtr)1;
+                }
+            }
+        }
+        return Win32.CallNextHookEx(_handle, nCode, wParam, lParam);
+    }
+}

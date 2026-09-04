@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
+using CapsLockPro.Core;
+using CapsLockPro.Hooks;
 
 namespace CapsLockPro;
 
@@ -12,6 +14,7 @@ namespace CapsLockPro;
 internal sealed class TrayAppContext : ApplicationContext
 {
     private readonly NotifyIcon _notifyIcon;
+    private readonly System.Windows.Forms.Timer _watchdog;
 
     public TrayAppContext()
     {
@@ -24,6 +27,20 @@ internal sealed class TrayAppContext : ApplicationContext
         };
         // 阶段0 占位：双击托盘图标退出（后续阶段改为打开帮助面板等）
         _notifyIcon.DoubleClick += (_, _) => ExitApplication();
+
+        // 暴露托盘图标给状态机/功能模块（显示气球提示）
+        AppState.TrayIcon = _notifyIcon;
+
+        // 启动时确保 CapsLock 灯灭
+        CapsLockStateMachine.EnsureLightOff();
+        // 看门狗定时器（2s，对应 AHK CheckCapsLockState）
+        _watchdog = new System.Windows.Forms.Timer { Interval = 2000 };
+        _watchdog.Tick += (_, _) => CapsLockStateMachine.WatchdogTick();
+        _watchdog.Start();
+
+        // 阶段1：安装低级键盘钩子（主线程消息循环泵送）
+        try { KeyboardHook.Install(); }
+        catch (Win32Exception ex) { /* 钩子注册失败不阻断启动，后续可重试 */ System.Diagnostics.Debug.WriteLine($"键盘钩子失败: {ex.Message}"); }
     }
 
     /// <summary>构建托盘右键菜单。后续阶段会扩展（启用/禁用、帮助、速记等）。</summary>
@@ -75,6 +92,9 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         if (disposing)
         {
+            _watchdog?.Stop();
+            _watchdog?.Dispose();
+            KeyboardHook.Uninstall();
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
         }
