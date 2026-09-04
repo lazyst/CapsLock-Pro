@@ -40,7 +40,10 @@ internal sealed class TrayAppContext : ApplicationContext
 
         // 阶段1：安装低级键盘钩子（主线程消息循环泵送）
         try { KeyboardHook.Install(); }
-        catch (Win32Exception ex) { /* 钩子注册失败不阻断启动，后续可重试 */ System.Diagnostics.Debug.WriteLine($"键盘钩子失败: {ex.Message}"); }
+        catch (Win32Exception ex) { System.Diagnostics.Debug.WriteLine($"键盘钩子失败: {ex.Message}"); }
+        // 阶段2：安装低级鼠标钩子（音量/置顶/重命名）
+        try { MouseHook.Install(); }
+        catch (Win32Exception ex) { System.Diagnostics.Debug.WriteLine($"鼠标钩子失败: {ex.Message}"); }
     }
 
     /// <summary>构建托盘右键菜单。后续阶段会扩展（启用/禁用、帮助、速记等）。</summary>
@@ -95,6 +98,7 @@ internal sealed class TrayAppContext : ApplicationContext
             _watchdog?.Stop();
             _watchdog?.Dispose();
             KeyboardHook.Uninstall();
+            MouseHook.Uninstall();
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
         }

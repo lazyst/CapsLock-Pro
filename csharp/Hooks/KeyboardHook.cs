@@ -75,10 +75,18 @@ internal static class KeyboardHook
                 return (IntPtr)1;
             }
 
-            // CapsLock 按住 + 工具启用期间：分发到功能模块
+            // 鼠标模式激活：路由鼠标键（e/d/s/f/q/a/w/r/j/k/h/l/Esc/Space）到 MouseMode
+            if (AppState.MouseModeActive && MouseMode.IsMouseKey(kb.Vk))
+            {
+                MouseMode.OnKey(kb.Vk, isDown);
+                return (IntPtr)1; // 鼠标模式键一律吞掉
+            }
+
+            // CapsLock 按住 + 工具启用期间：CapsLock+Space 进入鼠标模式 + vim 分发
             if (isDown && AppState.IsCapsLockDown && AppState.IsToolEnabled)
             {
                 AppState.OtherKeyPressed = true;
+                if (kb.Vk == Win32.VkSpace) { MouseMode.Enter(); return (IntPtr)1; }
                 if (TextEditor.TryHandle(kb.Vk))
                 {
                     if (!AppState.SwallowedVks.Contains((int)kb.Vk))

@@ -25,6 +25,9 @@ internal static class Win32
     public static extern bool SetCursorPos(int x, int y);
 
     [DllImport("user32.dll")]
+    public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, IntPtr dwExtraInfo);
+
+    [DllImport("user32.dll")]
     public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
     [DllImport("user32.dll")]
@@ -73,6 +76,9 @@ internal static class Win32
     public const int VkTab = 0x09;
     public const int VkBack = 0x08;
     public const int VkDelete = 0x2E;
+    public const int VkVolumeMute = 0xAD;
+    public const int VkVolumeUp = 0xAF;
+    public const int VkVolumeDown = 0xAE;
 
     // —— 方向/导航键 ——
     public const int VkLeft = 0x25;
@@ -141,4 +147,16 @@ internal static class Win32
     public const int WmRbuttonup = 0x0205;
     public const int WmMousewheel = 0x020A;
     public const int WmMousehwheel = 0x020E;
+
+    // mouse_event 标志
+    public const uint MouseeventfMove = 0x0001;
+    public const uint MouseeventfLeftdown = 0x0002;
+    public const uint MouseeventfLeftup = 0x0004;
+    public const uint MouseeventfRightdown = 0x0008;
+    public const uint MouseeventfRightup = 0x0010;
+    public const uint MouseeventfMiddledown = 0x0020;
+    public const uint MouseeventfMiddleup = 0x0040;
+    public const uint MouseeventfWheel = 0x0800;
+    public const uint MouseeventfHwheel = 0x01000;
+    public const uint WheelDelta = 120;
 }
