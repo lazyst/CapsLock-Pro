@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
 using CapsLockPro.Core;
+using CapsLockPro.Features;
 using CapsLockPro.Hooks;
 
 namespace CapsLockPro;
@@ -25,8 +26,8 @@ internal sealed class TrayAppContext : ApplicationContext
             Visible = true,
             ContextMenuStrip = BuildMenu(),
         };
-        // 阶段0 占位：双击托盘图标退出（后续阶段改为打开帮助面板等）
-        _notifyIcon.DoubleClick += (_, _) => ExitApplication();
+        // 阶段0 占位：双击托盘图标 打开帮助面板（原占位为退出，退出见右键菜单）
+        _notifyIcon.DoubleClick += (_, _) => HelpPanel.Toggle();
 
         // 暴露托盘图标给状态机/功能模块（显示气球提示）
         AppState.TrayIcon = _notifyIcon;
@@ -44,6 +45,9 @@ internal sealed class TrayAppContext : ApplicationContext
         // 阶段2：安装低级鼠标钩子（音量/置顶/重命名）
         try { MouseHook.Install(); }
         catch (Win32Exception ex) { System.Diagnostics.Debug.WriteLine($"鼠标钩子失败: {ex.Message}"); }
+
+        // 阶段4：从 CapsLock++.ini 加载菜单组配置
+        MenuSystem.Load(FindIniPath());
     }
 
     /// <summary>构建托盘右键菜单。后续阶段会扩展（启用/禁用、帮助、速记等）。</summary>
@@ -82,13 +86,28 @@ internal sealed class TrayAppContext : ApplicationContext
             try
             {
                 if (File.Exists(p))
-                {
                     return new Icon(p, 32, 32);
-                }
             }
             catch { /* 忽略单个候选失败，尝试下一个 */ }
         }
         return SystemIcons.Application;
+    }
+
+    /// <summary>
+    /// 定位 CapsLock++.ini：先 exe 同目录（发布），再向上若干级查找（开发期 exe 在 bin/Debug 下）。
+    /// </summary>
+    private static string? FindIniPath()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "CapsLock++.ini"),
+            // 开发：bin/Debug/net8.0-windows → 上溯 4 级到仓库根
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "CapsLock++.ini"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "CapsLock++.ini"),
+        };
+        foreach (var p in candidates)
+            if (File.Exists(p)) return p;
+        return null;
     }
 
     protected override void Dispose(bool disposing)

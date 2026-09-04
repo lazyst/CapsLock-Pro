@@ -48,6 +48,9 @@ internal static class Win32
     [DllImport("user32.dll")]
     public static extern bool GetGUIThreadInfo(uint idThread, ref Guithreadinfo lpgui);
 
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    public static extern int DwmSetWindowAttribute(IntPtr hwnd, uint dwAttribute, ref int pvAttribute, int cbAttribute);
+
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetModuleHandle(string? moduleName);
 
@@ -195,4 +198,8 @@ internal static class Win32
     public const uint MouseeventfWheel = 0x0800;
     public const uint MouseeventfHwheel = 0x01000;
     public const uint WheelDelta = 120;
+
+    // DwmSetWindowAttribute
+    public const uint DwmwaWindowCornerPreference = 33;
+    public const int DwmwcpRound = 2;
 }

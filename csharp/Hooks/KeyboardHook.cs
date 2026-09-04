@@ -87,14 +87,31 @@ internal static class KeyboardHook
             {
                 AppState.OtherKeyPressed = true;
                 if (kb.Vk == Win32.VkSpace) { MouseMode.Enter(); return (IntPtr)1; }
+
+                // 阶段4：帮助面板（SC029 扫描码，布局无关）+ 菜单系统（CapsLock+1~0）
+                if (kb.Scan == 0x29) { HelpPanel.Toggle(); MarkSwallowed(kb.Vk); return (IntPtr)1; }
+                if (kb.Vk >= '0' && kb.Vk <= '9')
+                {
+                    MenuSystem.Dispatch(kb.Vk);
+                    MarkSwallowed(kb.Vk);
+                    return (IntPtr)1;
+                }
+
                 if (TextEditor.TryHandle(kb.Vk))
                 {
-                    if (!AppState.SwallowedVks.Contains((int)kb.Vk))
-                        AppState.SwallowedVks.Add((int)kb.Vk);
+                    MarkSwallowed(kb.Vk);
                     return (IntPtr)1;
                 }
             }
         }
         return Win32.CallNextHookEx(_handle, nCode, wParam, lParam);
+    }
+
+    /// <summary>记录已吞键，使其 keyup 也被吞（保持事件平衡）。</summary>
+    private static void MarkSwallowed(ushort vk)
+    {
+        int key = vk;
+        if (!AppState.SwallowedVks.Contains(key))
+            AppState.SwallowedVks.Add(key);
     }
 }
