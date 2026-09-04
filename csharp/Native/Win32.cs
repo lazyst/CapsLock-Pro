@@ -36,6 +36,18 @@ internal static class Win32
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
 
+    [DllImport("user32.dll")]
+    public static extern IntPtr WindowFromPoint(Point pt);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetGUIThreadInfo(uint idThread, ref Guithreadinfo lpgui);
+
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetModuleHandle(string? moduleName);
 
@@ -90,6 +102,7 @@ internal static class Win32
     public const int VkPrior = 0x21;  // PageUp
     public const int VkNext = 0x22;  // PageDown
     public const int VkInsert = 0x2D;
+    public const int VkF2 = 0x71;   // 重命名键（资源管理器选中文件 F2）
 
     // —— OEM 符号键（CapsLock+ 符号动作用）——
     public const int VkOem1 = 0xBA;     // ;:
@@ -110,6 +123,25 @@ internal static class Win32
 
     [StructLayout(LayoutKind.Sequential)]
     public struct Rect { public int Left; public int Top; public int Right; public int Bottom; }
+
+    /// <summary>
+    /// GUITHREADINFO（x64 布局，共 72 字节）。
+    /// 字段偏移与原 AHK GetCaretPosEx 的 NumGet 偏移一致：
+    /// hwndFocus=16, hwndCaret=48, rcCaret=56。
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Guithreadinfo
+    {
+        public int cbSize;          // 0
+        public uint flags;          // 4
+        public IntPtr hwndActive;   // 8
+        public IntPtr hwndFocus;    // 16
+        public IntPtr hwndCapture;  // 24
+        public IntPtr hwndMenuOwner;// 32
+        public IntPtr hwndMoveSize; // 40
+        public IntPtr hwndCaret;    // 48
+        public Rect rcCaret;        // 56
+    }
 
     /// <summary>低级键盘钩子事件数据（WH_KEYBOARD_LL）。</summary>
     [StructLayout(LayoutKind.Sequential)]
@@ -138,6 +170,10 @@ internal static class Win32
     public const uint LlkhfLowerIlInjected = 0x02;
     public const uint LlkhfInjected = 0x10;
     public const uint LlkhfUp = 0x80;
+
+    // MSLLHOOKSTRUCT.Flags 位（注意与键盘不同：LLMHF_INJECTED=0x01，非 0x10）
+    public const uint LlmhfInjected = 0x01;
+    public const uint LlmhfLowerIlInjected = 0x02;
 
     // 鼠标消息
     public const int WmMousemove = 0x0200;

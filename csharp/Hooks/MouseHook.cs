@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 using CapsLockPro.Core;
 using CapsLockPro.Features;
 using CapsLockPro.Native;
@@ -10,8 +11,12 @@ namespace CapsLockPro.Hooks;
 /// 职责（跟随全局启用开关与 CapsLock 按下态）：
 /// - 屏幕底部 5px 滚轮 → 系统音量调节（<see cref="Volume"/>）
 /// - CapsLock 按住 + 右键按下 → 切换光标下窗口置顶（<see cref="WindowPin"/>）
-/// - CapsLock 按住 + 左键按下 → 资源管理器选中文件重命名（阶段3 补齐）
+/// - CapsLock 按住 + 左键按下 → 资源管理器选中文件重命名（F2，对应 lib/Workspace.ahk）
 /// </summary>
+/// <remarks>
+/// 与 <see cref="KeyboardHook"/> 一样，忽略 <see cref="Win32.LlmhfInjected"/> 事件防止递归
+/// （自己注入的点击/按键不触发本钩子逻辑）。
+/// </remarks>
 internal static class MouseHook
 {
     private static IntPtr _handle = IntPtr.Zero;
@@ -45,6 +50,11 @@ internal static class MouseHook
         if (nCode == Win32.HcAction)
         {
             var ms = Marshal.PtrToStructure<Win32.Msllhookstruct>(lParam);
+
+            // 忽略注入事件（防递归：本类注入的左键点击不重新触发重命名）
+            if ((ms.Flags & Win32.LlmhfInjected) != 0)
+                return Win32.CallNextHookEx(_handle, nCode, wParam, lParam);
+
             switch ((int)wParam)
             {
                 case Win32.WmMousewheel:
@@ -64,12 +74,85 @@ internal static class MouseHook
                 case Win32.WmLbuttondown:
                     if (AppState.IsToolEnabled && AppState.IsCapsLockDown)
                     {
-                        // TODO(阶段3): 资源管理器中 CapsLock+左键 触发选中文件重命名（F2）
+                        // 吞掉左键，异步执行点击+重命名（对应 lib/Workspace.ahk LButton 热键）
+                        AppState.OtherKeyPressed = true;
+                        StartRenameSequence(ms.Pt);
                         return (IntPtr)1;
                     }
                     break;
             }
         }
         return Win32.CallNextHookEx(_handle, nCode, wParam, lParam);
+    }
+
+    // —— 资源管理器重命名（对应 lib/Workspace.ahk：LButton / PerformClick / LButtonRenamer）——
+
+    private static void StartRenameSequence(Win32.Point cursorAtTrigger)
+    {
+        // 触发瞬间捕获前台窗口与光标下窗口的类名（决定是否需要先激活）
+        string activeClass = GetWindowClass(Win32.GetForegroundWindow());
+        IntPtr mouseWin = Win32.WindowFromPoint(cursorAtTrigger);
+        string mouseClass = GetWindowClass(mouseWin);
+        bool needActivate = IsExplorerBrowserOwnerCase(activeClass, mouseClass);
+
+        var t = new Thread(() =>
+        {
+            try
+            {
+                if (needActivate)
+                {
+                    // 先激活光标下窗口，再点击，再重命名
+                    Win32.SetForegroundWindow(mouseWin);
+                    Thread.Sleep(40);
+                    DoLeftClick();
+                    Thread.Sleep(20);
+                    TryRenameUnderCursor();
+                }
+                else
+                {
+                    DoLeftClick();
+                    Thread.Sleep(20);
+                    TryRenameUnderCursor();
+                }
+            }
+            catch { /* 重命名失败静默降级 */ }
+        }) { IsBackground = true };
+        t.Start();
+    }
+
+    /// <summary>注入一次左键点击（mouse_event；注入事件被本钩子忽略，不递归）。</summary>
+    private static void DoLeftClick()
+    {
+        Win32.mouse_event(Win32.MouseeventfLeftdown, 0, 0, 0, IntPtr.Zero);
+        Win32.mouse_event(Win32.MouseeventfLeftup, 0, 0, 0, IntPtr.Zero);
+    }
+
+    /// <summary>取当前光标下窗口的类名；若为资源管理器/桌面类 → 注入 F2 进入重命名。</summary>
+    private static void TryRenameUnderCursor()
+    {
+        Win32.GetCursorPos(out var pt);
+        IntPtr hwnd = Win32.WindowFromPoint(pt);
+        if (hwnd == IntPtr.Zero) return;
+        string cls = GetWindowClass(hwnd);
+        if (cls == "CabinetWClass" || cls == "ExploreWClass" ||
+            cls == "Progman" || cls == "WorkerW" || cls == "ExplorerBrowserOwner")
+        {
+            InputHelper.Tap((ushort)Win32.VkF2);
+        }
+    }
+
+    private static bool IsExplorerBrowserOwnerCase(string activeClass, string mouseClass)
+    {
+        bool a = activeClass == "ExplorerBrowserOwner";
+        bool m = mouseClass == "ExplorerBrowserOwner";
+        return a ^ m; // 恰好一方是 ExplorerBrowserOwner
+    }
+
+    private static string GetWindowClass(IntPtr hWnd)
+    {
+        if (hWnd == IntPtr.Zero) return "";
+        var sb = new StringBuilder(256);
+        Win32.GetClassName(hWnd, sb, sb.Capacity);
+        return sb.ToString();
     }
 }

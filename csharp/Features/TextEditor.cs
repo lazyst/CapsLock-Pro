@@ -19,7 +19,6 @@ internal static class TextEditor
     {
         // Alt 状态（a/g/h/;/m// 的 Alt 分支判定）
         bool alt = (Win32.GetAsyncKeyState(Win32.VkMenu) & 0x8000) != 0;
-        ushort K(ushort vk) => vk; // 别名简化
 
         switch (vk)
         {
@@ -61,6 +60,9 @@ internal static class TextEditor
             case 'X': ClipboardIndependent.Cut(); return true;
             case 'C': ClipboardIndependent.Copy(); return true;
             case 'V': ClipboardIndependent.Paste(); return true;
+
+            // —— 符号跳转（交工作线程，不阻塞钩子）——
+            case 'P': SymbolJump.Start(); return true;
 
             default: return false;
         }

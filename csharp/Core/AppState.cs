@@ -54,6 +54,10 @@ internal static class AppState
     public static bool MouseModeActive;
     public static int MouseModeSpeed = 5;
 
+    // —— 符号跳转状态（阶段3）——
+    /// <summary>是否正在执行符号跳转搜索（对应原版 isSeekingSymbol）。</summary>
+    public static volatile bool IsSeekingSymbol;
+
     // —— 托盘图标引用（供状态机/功能模块显示气球提示，对应原版 ShowTooltipNearMouse）——
     public static System.Windows.Forms.NotifyIcon? TrayIcon;
 
