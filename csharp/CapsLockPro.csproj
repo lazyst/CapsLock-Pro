@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- 管理员清单（requireAdministrator），双击即提权 -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 生成到 bin 而非散落，版本号 -->
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <RootNamespace>CapsLockPro</RootNamespace>
+  </PropertyGroup>
+
+  <!-- 阶段6 UIA / MSAA 用的 COM 互操作程序集（按需启用：-p:EnableUia=true）。
+       阶段0-5 不依赖，避免无 tlb 环境编译失败。 -->
+  <ItemGroup Condition="'$(EnableUia)' == 'true'">
+    <COMReference Include="UIAutomationClient">
+      <Guid>944de083-8fb8-4cf2-8e6e-8b22f0670e69</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>false</Isolated>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+
+</Project>
