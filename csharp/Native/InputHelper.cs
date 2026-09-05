@@ -14,21 +14,16 @@ internal static class InputHelper
     private const uint KeyEventExtended = 0x0001; // 扩展键标志（方向键/Delete/Home 等）
 
     /// <summary>低级键盘输入结构（与 WH_KEYBOARD_LL 回调里的 KBDLLHOOKSTRUCT 一致）。</summary>
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Kbdllinputstruct
-    {
-        public ushort Vk;
-        public ushort Scan;
-        public uint Flags;
-        public uint Time;
-        public IntPtr ExtraInfo;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
+    /// <summary>x64 INPUT 布局（共 40 字节）：type@0，键盘 union@8（vk@8,scan@10,flags@12,time@16,extra@24）。</summary>
+    [StructLayout(LayoutKind.Explicit, Size = 40)]
     private struct Input
     {
-        public int Type;
-        public Kbdllinputstruct Ki;
+        [FieldOffset(0)] public int Type;
+        [FieldOffset(8)] public ushort Vk;     // KEYBDINPUT.wVk（union 起始偏移 8）
+        [FieldOffset(10)] public ushort Scan;  // wScan
+        [FieldOffset(12)] public uint Flags;   // dwFlags
+        [FieldOffset(16)] public uint Time;    // time
+        [FieldOffset(24)] public IntPtr ExtraInfo; // dwExtraInfo
     }
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -92,7 +87,11 @@ internal static class InputHelper
         var input = new Input
         {
             Type = (int)InputKeyboard,
-            Ki = new Kbdllinputstruct { Vk = vk, Scan = 0, Flags = flags, Time = 0, ExtraInfo = IntPtr.Zero }
+            Vk = vk,
+            Scan = 0,
+            Flags = flags,
+            Time = 0,
+            ExtraInfo = IntPtr.Zero,
         };
         var buf = new[] { input };
         SendInput(1, buf, Marshal.SizeOf<Input>());
