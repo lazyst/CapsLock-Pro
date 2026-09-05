@@ -14,6 +14,15 @@ namespace CapsLockPro.Features;
 /// 在钩子回调同步执行会被系统摘钩子。Start() 只设标志并 spawn 线程后立即返回。
 /// 剪贴板访问需 STA，故搜索在工作线程且 <see cref="Thread.SetApartmentState"/> 为 STA。
 /// </remarks>
+/// <remarks>
+/// <b>剪贴板时序两要点</b>（C# 端口相对 AHK 的补丁，见 NativeClipboard）：
+/// <list type="bullet">
+/// <item>选区建立与复制之间必须 <see cref="Thread.Sleep"/>(50)：C# SendInput 突发式无节拍，
+/// 背靠背发出会让目标应用来不及处理选区就收到复制→复制空内容→超时（AHK 的 Send 自带 yield 无需显式 Sleep）。</item>
+/// <item>剪贴板读写走 <see cref="NativeClipboard"/>（原始 Win32）：WinForms Clipboard 的 OLE 读取
+/// 在裸 STA 线程上跨进程复制会阻塞数秒，致 ClipWait 500ms 超时形同虚设。</item>
+/// </list>
+/// </remarks>
 internal static class SymbolJump
 {
     // —— 成对符号映射（对应 AHK SymbolPairs / ReverseSymbolPairs）——
@@ -90,17 +99,18 @@ internal static class SymbolJump
         int searchStartTime = Environment.TickCount;
         var savedClipboard = BackupClipboard();
 
-        Clipboard.Clear();
+        NativeClipboard.Clear();
         // 读取光标右侧字符：+{Right}^c
         InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkRight);
+        Thread.Sleep(50); // 选区建立与复制之间的时序间隔（见类注释）
         InputHelper.Combo((ushort)Win32.VkControl, (ushort)'C');
         if (!ClipWait(500))
         {
             Cleanup(savedClipboard, "获取字符超时");
             return;
         }
-        string current = Clipboard.GetText();
-        Clipboard.Clear();
+        NativeClipboard.TryGetText(out string current);
+        NativeClipboard.Clear();
 
         // 检查是否为配对符号
         if (current.Length != 1 ||
@@ -219,7 +229,7 @@ internal static class SymbolJump
     /// <summary>读取当前行内容（对应 _ReadLineContent）。forward: 光标→行尾+1；backward: 行首-1→光标。</summary>
     private static string? ReadLineContent(string dir)
     {
-        Clipboard.Clear();
+        NativeClipboard.Clear();
         if (dir == "forward")
         {
             InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkEnd);   // +{End}
@@ -230,11 +240,13 @@ internal static class SymbolJump
             InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkHome);  // +{Home}
             InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkLeft);  // +{Left}
         }
+        Thread.Sleep(50); // 选区建立与复制之间的时序间隔（见类注释）
         InputHelper.Combo((ushort)Win32.VkControl, (ushort)'C');             // ^c
 
         if (!ClipWait(500))
             return null;
-        return Clipboard.GetText();
+        NativeClipboard.TryGetText(out var line);
+        return line;
     }
 
     /// <summary>在行内容中扫描配对符号（对应 _ScanLine）。返回 (found, position)。</summary>
@@ -300,7 +312,7 @@ internal static class SymbolJump
             && caretPos[0]!.Value.Y == caretPos[2]!.Value.Y;
     }
 
-    /// <summary>带中断检查的剪贴板等待（对应 _ClipWait）。</summary>
+    /// <summary>带中断检查的剪贴板等待（对应 _ClipWait）。原始 Win32 读取，不阻塞（见 NativeClipboard）。</summary>
     private static bool ClipWait(int timeoutMs)
     {
         int slept = 0;
@@ -310,7 +322,7 @@ internal static class SymbolJump
                 return false; // 已中断
             try
             {
-                if (Clipboard.ContainsText() && !string.IsNullOrEmpty(Clipboard.GetText()))
+                if (NativeClipboard.TryGetText(out var t) && !string.IsNullOrEmpty(t))
                     return true;
             }
             catch { /* 剪贴板被占用，继续等 */ }
@@ -341,7 +353,7 @@ internal static class SymbolJump
             ShowTooltip(tipText);
     }
 
-    // —— 剪贴板备份/恢复（与 ClipboardIndependent 同模式）——
+    // —— 剪贴板备份/恢复（完整格式，走 WinForms OLE；每操作前后各一次，非热循环，剪贴板空闲时不阻塞）——
     private static IDataObject? BackupClipboard()
     {
         try { return Clipboard.GetDataObject(); }

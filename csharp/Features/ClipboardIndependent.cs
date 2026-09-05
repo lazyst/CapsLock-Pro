@@ -27,12 +27,14 @@ internal static class ClipboardIndependent
     private static void DoCopy(bool cut)
     {
         var orig = BackupClipboard();
-        Clipboard.Clear();
+        NativeClipboard.Clear();
         // 发送 Ctrl+C / Ctrl+X（注入事件，钩子忽略放行，系统转发给前台）
         InputHelper.Combo((ushort)Win32.VkControl, cut ? (ushort)'X' : (ushort)'C');
+        // 注入复制键后留 50ms 让目标应用产出选区/内容再读取（同 SymbolJump 的时序补丁）
+        Thread.Sleep(50);
         if (ClipWait(500))
         {
-            var text = Clipboard.GetText();
+            NativeClipboard.TryGetText(out var text);
             if (!string.IsNullOrEmpty(text)) AppState.SetIndependentClipboard(text);
         }
         // 100ms 后恢复原剪贴板
@@ -51,8 +53,8 @@ internal static class ClipboardIndependent
         }
 
         var orig = BackupClipboard();
-        Clipboard.Clear();
-        Clipboard.SetDataObject(saved, copy: false, retryTimes: 3, retryDelay: 50);
+        NativeClipboard.Clear();
+        NativeClipboard.SetText(saved);
         // 等 0.3s 让应用确认剪贴板就绪
         if (!ClipWaitReady(300))
         {
@@ -64,13 +66,13 @@ internal static class ClipboardIndependent
         RestoreClipboard(orig);
     }
 
-    /// <summary>轮询直到剪贴板有文本或超时。对应 AHK ClipWait(s, 0)。</summary>
+    /// <summary>轮询直到剪贴板有文本或超时。对应 AHK ClipWait(s, 0)。原始 Win32 读取（不阻塞，见 NativeClipboard）。</summary>
     private static bool ClipWait(int timeoutMs)
     {
         int slept = 0;
         while (slept < timeoutMs)
         {
-            try { if (Clipboard.ContainsText() && !string.IsNullOrEmpty(Clipboard.GetText())) return true; }
+            try { if (NativeClipboard.TryGetText(out var t) && !string.IsNullOrEmpty(t)) return true; }
             catch { /* 剪贴板被占用，继续等 */ }
             Thread.Sleep(20);
             slept += 20;
@@ -86,7 +88,7 @@ internal static class ClipboardIndependent
         {
             try
             {
-                if (Clipboard.ContainsText() && Clipboard.GetText() == AppState.GetIndependentClipboard())
+                if (NativeClipboard.TryGetText(out var t) && t == AppState.GetIndependentClipboard())
                     return true;
             }
             catch { }
