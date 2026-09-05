@@ -52,6 +52,7 @@ internal static class KeyboardHook
         if (nCode == Win32.HcAction)
         {
             var kb = Marshal.PtrToStructure<Win32.Kbdllhookstruct>(lParam);
+            ushort vk = (ushort)kb.Vk;
             var msg = (int)wParam;
             bool isDown = msg == Win32.WmKeydown || msg == Win32.WmSyskeydown;
             bool isUp = msg == Win32.WmKeyup || msg == Win32.WmSyskeyup;
@@ -63,22 +64,22 @@ internal static class KeyboardHook
             }
 
             // 分发到状态机/功能模块（阶段1+ 实现）
-            if (CapsLockStateMachine.TryHandle(kb.Vk, isDown, isUp, out bool swallow))
+            if (CapsLockStateMachine.TryHandle(vk, isDown, isUp, out bool swallow))
             {
                 return swallow ? (IntPtr)1 : Win32.CallNextHookEx(_handle, nCode, wParam, lParam);
             }
 
             // 已吞键的 keyup：一并吞掉，保持事件平衡（防止被吞的 keydown 配对走漏）
-            if (isUp && AppState.SwallowedVks.Contains((int)kb.Vk))
+            if (isUp && AppState.SwallowedVks.Contains((int)vk))
             {
-                AppState.SwallowedVks.Remove((int)kb.Vk);
+                AppState.SwallowedVks.Remove((int)vk);
                 return (IntPtr)1;
             }
 
             // 鼠标模式激活：路由鼠标键（e/d/s/f/q/a/w/r/j/k/h/l/Esc/Space）到 MouseMode
-            if (AppState.MouseModeActive && MouseMode.IsMouseKey(kb.Vk))
+            if (AppState.MouseModeActive && MouseMode.IsMouseKey(vk))
             {
-                MouseMode.OnKey(kb.Vk, isDown);
+                MouseMode.OnKey(vk, isDown);
                 return (IntPtr)1; // 鼠标模式键一律吞掉
             }
 
@@ -89,17 +90,17 @@ internal static class KeyboardHook
                 if (kb.Vk == Win32.VkSpace) { MouseMode.Enter(); return (IntPtr)1; }
 
                 // 阶段4：帮助面板（SC029 扫描码，布局无关）+ 菜单系统（CapsLock+1~0）
-                if (kb.Scan == 0x29) { HelpPanel.Toggle(); MarkSwallowed(kb.Vk); return (IntPtr)1; }
-                if (kb.Vk >= '0' && kb.Vk <= '9')
+                if (kb.Scan == 0x29) { HelpPanel.Toggle(); MarkSwallowed(vk); return (IntPtr)1; }
+                if (vk >= '0' && vk <= '9')
                 {
-                    MenuSystem.Dispatch(kb.Vk);
-                    MarkSwallowed(kb.Vk);
+                    MenuSystem.Dispatch(vk);
+                    MarkSwallowed(vk);
                     return (IntPtr)1;
                 }
 
-                if (TextEditor.TryHandle(kb.Vk))
+                if (TextEditor.TryHandle(vk))
                 {
-                    MarkSwallowed(kb.Vk);
+                    MarkSwallowed(vk);
                     return (IntPtr)1;
                 }
             }

@@ -150,11 +150,11 @@ internal static class Win32
     [StructLayout(LayoutKind.Sequential)]
     public struct Kbdllhookstruct
     {
-        public ushort Vk;
-        public ushort Scan;
-        public uint Flags;
-        public uint Time;
-        public IntPtr ExtraInfo;
+        public uint Vk;        // vkCode，偏移 0（DWORD）
+        public uint Scan;      // scanCode，偏移 4（DWORD）
+        public uint Flags;     // flags，偏移 8（DWORD）
+        public uint Time;      // 偏移 12
+        public IntPtr ExtraInfo; // 偏移 16（x64）
     }
 
     /// <summary>低级鼠标钩子事件数据（WH_MOUSE_LL）。</summary>
