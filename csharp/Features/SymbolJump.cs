@@ -146,7 +146,7 @@ internal static class SymbolJump
         NativeClipboard.Clear();
 
         // 检查是否为配对符号
-        if (current.Length != 1 ||
+        if (string.IsNullOrEmpty(current) || current.Length != 1 ||
             (!SymbolPairs.ContainsKey(current[0]) && !ReverseSymbolPairs.ContainsKey(current[0])))
         {
             Cleanup(savedClipboard, "光标右侧非配对符号");

@@ -45,6 +45,15 @@ internal static class Win32
     [DllImport("user32.dll")]
     public static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
     [DllImport("user32.dll")]
     public static extern bool GetGUIThreadInfo(uint idThread, ref Guithreadinfo lpgui);
 
@@ -82,6 +91,8 @@ internal static class Win32
     public const int VkRcontrol = 0xA3;
     public const int VkLmenu = 0xA4;     // Alt
     public const int VkRmenu = 0xA5;
+    public const int VkLwin = 0x5B;
+    public const int VkRwin = 0x5C;
     public const int VkShift = 0x10;
     public const int VkControl = 0x11;
     public const int VkMenu = 0x12;
@@ -202,4 +213,8 @@ internal static class Win32
     // DwmSetWindowAttribute
     public const uint DwmwaWindowCornerPreference = 33;
     public const int DwmwcpRound = 2;
+
+    // ShowWindow 命令
+    public const int SwMinimize = 6;
+    public const uint WmClose = 0x0010;
 }
