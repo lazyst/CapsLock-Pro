@@ -217,6 +217,7 @@ internal sealed class QuickNoteForm : Form
         _saveBtn.Click += (_, _) => SaveNote();
         _newNoteBtn.Click += (_, _) => NewNote();
         _cancelBtn.Click += (_, _) => Close();
+        _deleteBtn.Click += (_, _) => DeleteSelected();
         _viewToggleBtn.Click += (_, _) => ToggleView();
         _searchEdit.TextChanged += (_, _) => LoadFilesToList(_searchEdit.Text);
         _listView.ItemActivate += (_, _) => OpenSelected();
@@ -423,6 +424,9 @@ internal sealed class QuickNoteForm : Form
         // 解析行
         var lines = new List<string>(content.Split('\n'));
         for (int i = 0; i < lines.Count; i++) lines[i] = lines[i].TrimEnd('\r');
+        // 去掉末尾空行（避免末行 ==目标== 因尾随空行解析失败）
+        while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
+            lines.RemoveAt(lines.Count - 1);
 
         // 标题（首行 ## xxx）
         string title = "";
@@ -470,14 +474,13 @@ internal sealed class QuickNoteForm : Form
 
         if (!string.IsNullOrEmpty(savedPath) && File.Exists(savedPath))
         {
-            _currentEditingFile = savedPath;
-            string fileContent;
-            try { fileContent = File.ReadAllText(savedPath, Encoding.UTF8); }
-            catch { try { fileContent = File.ReadAllText(savedPath); } catch { fileContent = content; } }
-            _edit.Text = fileContent;
-            _statusBar.Text = "提示: 正在编辑 | Ctrl+S保存 | 新建速记按钮可写新内容";
+            // 新建速记：不置位 currentEditingFile（与 AHK 一致，下次保存追加新条目而非覆盖整个文件）
+            _currentEditingFile = "";
+            _edit.Text = "## ";
+            _statusBar.Text = "提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存";
         }
         _edit.Focus();
+        _edit.SelectionStart = _edit.TextLength;
     }
 
     private string SaveToNewFile(List<string> lines, string title)
@@ -585,6 +588,28 @@ internal sealed class QuickNoteForm : Form
             MessageBox.Show(this, "保存失败: " + ex.Message, "速记", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         return filePath;
+    }
+
+    private void DeleteSelected()
+    {
+        if (_listView.SelectedItems.Count == 0)
+        {
+            MessageBox.Show(this, "请先选择一个速记文件", "删除速记", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        string? filePath = _listView.SelectedItems[0].SubItems[3].Text;
+        string fileName = _listView.SelectedItems[0].SubItems[0].Text;
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
+        try
+        {
+            File.Delete(filePath);
+            LoadFilesToList(_searchEdit.Text);
+            ShowTooltip("已删除「" + fileName + "」");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "删除失败: " + ex.Message, "删除速记", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private void ShowTooltip(string msg) =>
