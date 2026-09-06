@@ -48,6 +48,8 @@ internal sealed class TrayAppContext : ApplicationContext
 
         // 阶段4：从 CapsLock++.ini 加载菜单组配置
         MenuSystem.Load(FindIniPath());
+        // 阶段5：初始化速记（默认目录 + 目标加载 + 建目录）
+        QuickNote.Initialize(FindIniPath());
     }
 
     /// <summary>构建托盘右键菜单。后续阶段会扩展（启用/禁用、帮助、速记等）。</summary>
