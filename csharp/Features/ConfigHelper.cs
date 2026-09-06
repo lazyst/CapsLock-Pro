@@ -57,6 +57,8 @@ internal sealed class ConfigHelperForm : Form
         Text = "CapsLock++ 配置助手";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(800, 614);
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = false;
         UiTheme.Apply(this);
         ShowInTaskbar = true;
 
@@ -67,18 +69,15 @@ internal sealed class ConfigHelperForm : Form
         BuildMenuPage(pageMenu);
         BuildNotePage(pageNote);
 
-        var reloadBtn = new Button { Text = "重新加载", Bounds = new Rectangle(572, 570, 108, 34), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
-        var saveBtn = new Button { Text = "保存配置", Bounds = new Rectangle(688, 570, 108, 34), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
-        UiTheme.StyleButton(reloadBtn, UiTheme.ButtonRole.Secondary, false);
-        UiTheme.StyleButton(saveBtn, UiTheme.ButtonRole.Primary, false);
-        reloadBtn.Click += (_, _) =>
+        var reloadBtn = MakeBtn("重新加载", UiTheme.ButtonRole.Secondary, (_, _) =>
         {
             if (Confirm("重新加载将丢弃所有未保存的更改，是否继续？", "确认重新加载"))
                 LoadFromIni();
-        };
-        saveBtn.Click += (_, _) => Save();
+        });
+        var saveBtn = MakeBtn("保存配置", UiTheme.ButtonRole.Primary, (_, _) => Save());
+        var bottomRow = MakeButtonRow(ClientSize.Width - 232, ClientSize.Height - 46, reloadBtn, saveBtn);
 
-        Controls.AddRange(new Control[] { tabs, reloadBtn, saveBtn });
+        Controls.AddRange(new Control[] { tabs, bottomRow });
 
         LoadFromIni();
     }
@@ -89,66 +88,74 @@ internal sealed class ConfigHelperForm : Form
         UiTheme.EnableRounded(Handle);
     }
 
+    private static Button MakeBtn(string text, UiTheme.ButtonRole role, EventHandler onClick, int minWidth = 92)
+    {
+        var b = new Button { Text = text };
+        UiTheme.StyleButton(b, role, minWidth: minWidth);
+        b.Click += onClick;
+        return b;
+    }
+
+    /// <summary>创建自动排布的按钮行（AutoSize 按钮 + FlowLayoutPanel，永不裁剪文字、永不重叠）。</summary>
+    private static FlowLayoutPanel MakeButtonRow(int x, int y, params Button[] btns)
+        => MakeButtonRow(x, y, false, 0, btns);
+
+    /// <summary>wrap=true 时宽度不足自动换行；maxWidth>0 时限制面板最大宽度（超宽换行，避免被父容器裁剪）。</summary>
+    private static FlowLayoutPanel MakeButtonRow(int x, int y, bool wrap, int maxWidth = 0, params Button[] btns)
+    {
+        var panel = new FlowLayoutPanel
+        {
+            Location = new Point(x, y),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = wrap,
+            BackColor = UiTheme.Background,
+        };
+        if (maxWidth > 0) panel.MaximumSize = new Size(maxWidth, 0);
+        panel.Controls.AddRange(btns);
+        return panel;
+    }
+
     // —— 菜单配置页 ——
     private void BuildMenuPage(TabPage page)
     {
         // 菜单组
-        var grpBox = new GroupBox { Text = "菜单组", Bounds = new Rectangle(8, 8, 248, 470), ForeColor = UiTheme.Text };
+        var grpBox = new GroupBox { Text = "菜单组", Bounds = new Rectangle(8, 8, 360, 470), ForeColor = UiTheme.Text };
         _menuGroupLv = new ListView
         {
-            Bounds = new Rectangle(12, 24, 224, 406),
+            Bounds = new Rectangle(12, 24, 336, 320),
             View = View.Details,
             FullRowSelect = true,
             MultiSelect = false,
             HeaderStyle = ColumnHeaderStyle.None,
         };
         UiTheme.StyleListView(_menuGroupLv);
-        _menuGroupLv.Columns.Add("组名", 214);
+        _menuGroupLv.Columns.Add("组名", 326);
         _menuGroupLv.SelectedIndexChanged += (_, _) => OnGroupFocus();
         grpBox.Controls.Add(_menuGroupLv);
-
-        var editNameBtn = new Button { Text = "编辑名称", Bounds = new Rectangle(12, 436, 72, 30) };
-        var toggleBtn = new Button { Text = "启用/禁用", Bounds = new Rectangle(90, 436, 72, 30) };
-        var upBtn = new Button { Text = "▲", Bounds = new Rectangle(168, 436, 32, 30) };
-        var downBtn = new Button { Text = "▼", Bounds = new Rectangle(204, 436, 32, 30) };
-        UiTheme.StyleButton(editNameBtn, UiTheme.ButtonRole.Secondary, false);
-        UiTheme.StyleButton(toggleBtn, UiTheme.ButtonRole.Secondary, false);
-        UiTheme.StyleButton(upBtn, UiTheme.ButtonRole.Secondary, false);
-        UiTheme.StyleButton(downBtn, UiTheme.ButtonRole.Secondary, false);
-        editNameBtn.Click += (_, _) => EditGroupName();
-        toggleBtn.Click += (_, _) => ToggleGroup();
-        upBtn.Click += (_, _) => MoveGroup(-1);
-        downBtn.Click += (_, _) => MoveGroup(1);
-        grpBox.Controls.AddRange(new Control[] { editNameBtn, toggleBtn, upBtn, downBtn });
-
-        // 菜单项
-        var itemBox = new GroupBox { Text = "菜单项", Bounds = new Rectangle(264, 8, 520, 470), ForeColor = UiTheme.Text };
+        grpBox.Controls.Add(MakeButtonRow(12, 356, true, 336,
+            MakeBtn("编辑名称", UiTheme.ButtonRole.Secondary, (_, _) => EditGroupName(), minWidth: 80),
+            MakeBtn("启用/禁用", UiTheme.ButtonRole.Secondary, (_, _) => ToggleGroup(), minWidth: 88),
+            MakeBtn("▲", UiTheme.ButtonRole.Secondary, (_, _) => MoveGroup(-1), minWidth: 34),
+            MakeBtn("▼", UiTheme.ButtonRole.Secondary, (_, _) => MoveGroup(1), minWidth: 34)));
+        var itemBox = new GroupBox { Text = "菜单项", Bounds = new Rectangle(368, 8, 424, 470), ForeColor = UiTheme.Text };
         _menuItemLv = new ListView
         {
-            Bounds = new Rectangle(12, 24, 496, 406),
+            Bounds = new Rectangle(12, 24, 400, 398),
             View = View.Details,
             FullRowSelect = true,
             MultiSelect = false,
         };
         UiTheme.StyleListView(_menuItemLv);
         _menuItemLv.Columns.Add("名称", 120);
-        _menuItemLv.Columns.Add("命令", 360);
+        _menuItemLv.Columns.Add("命令", 280);
         _menuItemLv.DoubleClick += (_, _) => EditMenuItem();
         itemBox.Controls.Add(_menuItemLv);
-
-        var addBtn = new Button { Text = "添加", Bounds = new Rectangle(12, 436, 72, 30) };
-        var delBtn = new Button { Text = "删除", Bounds = new Rectangle(92, 436, 72, 30) };
-        var itemUpBtn = new Button { Text = "▲", Bounds = new Rectangle(172, 436, 38, 30) };
-        var itemDownBtn = new Button { Text = "▼", Bounds = new Rectangle(216, 436, 38, 30) };
-        UiTheme.StyleButton(addBtn, UiTheme.ButtonRole.Primary, false);
-        UiTheme.StyleButton(delBtn, UiTheme.ButtonRole.Danger, false);
-        UiTheme.StyleButton(itemUpBtn, UiTheme.ButtonRole.Secondary, false);
-        UiTheme.StyleButton(itemDownBtn, UiTheme.ButtonRole.Secondary, false);
-        addBtn.Click += (_, _) => AddMenuItem();
-        delBtn.Click += (_, _) => DelMenuItem();
-        itemUpBtn.Click += (_, _) => MoveItem(-1);
-        itemDownBtn.Click += (_, _) => MoveItem(1);
-        itemBox.Controls.AddRange(new Control[] { addBtn, delBtn, itemUpBtn, itemDownBtn });
+        itemBox.Controls.Add(MakeButtonRow(12, 430,
+            MakeBtn("添加", UiTheme.ButtonRole.Primary, (_, _) => AddMenuItem()),
+            MakeBtn("删除", UiTheme.ButtonRole.Danger, (_, _) => DelMenuItem()),
+            MakeBtn("▲", UiTheme.ButtonRole.Secondary, (_, _) => MoveItem(-1), minWidth: 40),
+            MakeBtn("▼", UiTheme.ButtonRole.Secondary, (_, _) => MoveItem(1), minWidth: 40)));
 
         page.Controls.AddRange(new Control[] { grpBox, itemBox });
     }
@@ -156,7 +163,6 @@ internal sealed class ConfigHelperForm : Form
     // —— 速记路径页 ——
     private void BuildNotePage(TabPage page)
     {
-        var hint = new Label { Text = "速记目标配置 - 关键词与文件路径的映射", Bounds = new Rectangle(10, 10, 780, 20), ForeColor = UiTheme.HintText, Font = UiTheme.UiFont };
         _noteLv = new ListView
         {
             Bounds = new Rectangle(10, 36, 780, 440),
@@ -168,23 +174,13 @@ internal sealed class ConfigHelperForm : Form
         _noteLv.Columns.Add("关键词", 150);
         _noteLv.Columns.Add("文件路径", 600);
 
-        var addBtn = new Button { Text = "添加", Bounds = new Rectangle(10, 486, 90, 30) };
-        var editBtn = new Button { Text = "编辑", Bounds = new Rectangle(108, 486, 90, 30) };
-        var delBtn = new Button { Text = "删除", Bounds = new Rectangle(206, 486, 90, 30) };
-        var upBtn = new Button { Text = "上移", Bounds = new Rectangle(304, 486, 90, 30) };
-        var downBtn = new Button { Text = "下移", Bounds = new Rectangle(402, 486, 90, 30) };
-        UiTheme.StyleButton(addBtn, UiTheme.ButtonRole.Primary, false);
-        UiTheme.StyleButton(editBtn, UiTheme.ButtonRole.Secondary, false);
-        UiTheme.StyleButton(delBtn, UiTheme.ButtonRole.Danger, false);
-        UiTheme.StyleButton(upBtn, UiTheme.ButtonRole.Secondary, false);
-        UiTheme.StyleButton(downBtn, UiTheme.ButtonRole.Secondary, false);
-        addBtn.Click += (_, _) => NoteAdd();
-        editBtn.Click += (_, _) => NoteEdit();
-        delBtn.Click += (_, _) => NoteDel();
-        upBtn.Click += (_, _) => LvMove(_noteLv, -1);
-        downBtn.Click += (_, _) => LvMove(_noteLv, 1);
-
-        page.Controls.AddRange(new Control[] { hint, _noteLv, addBtn, editBtn, delBtn, upBtn, downBtn });
+        page.Controls.Add(_noteLv);
+        page.Controls.Add(MakeButtonRow(10, 484,
+            MakeBtn("添加", UiTheme.ButtonRole.Primary, (_, _) => NoteAdd()),
+            MakeBtn("编辑", UiTheme.ButtonRole.Secondary, (_, _) => NoteEdit()),
+            MakeBtn("删除", UiTheme.ButtonRole.Danger, (_, _) => NoteDel()),
+            MakeBtn("上移", UiTheme.ButtonRole.Secondary, (_, _) => LvMove(_noteLv, -1)),
+            MakeBtn("下移", UiTheme.ButtonRole.Secondary, (_, _) => LvMove(_noteLv, 1))));
     }
 
     // —— 加载（对应 ConfigReload）——

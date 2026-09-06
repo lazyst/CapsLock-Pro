@@ -176,10 +176,11 @@ internal sealed class QuickNoteForm : Form
 
         _buttonBar = new FlowLayoutPanel
         {
-            Bounds = new Rectangle(10, ClientSize.Height - 56, 500, 36),
+            Location = new Point(10, ClientSize.Height - 64),
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            AutoScroll = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = UiTheme.Background,
         };
 
@@ -258,10 +259,10 @@ internal sealed class QuickNoteForm : Form
         // 构造期 ClientSize 赋值早于控件创建：控件未就绪时跳过布局
         if (_edit == null || _listView == null || _buttonBar == null || _statusBar == null) return;
         int w = ClientSize.Width, h = ClientSize.Height;
-        _edit.Bounds = new Rectangle(10, 44, w - 20, h - 120);
-        _listView.Bounds = new Rectangle(10, 44, w - 20, h - 120);
-        _buttonBar.Bounds = new Rectangle(10, h - 56, w - 20, 36);
-        _statusBar.Bounds = new Rectangle(10, h - 18, w - 20, 16);
+        _edit.Bounds = new Rectangle(10, 44, w - 20, h - 124);
+        _listView.Bounds = new Rectangle(10, 44, w - 20, h - 124);
+        _buttonBar.Location = new Point(10, h - 64);
+        _statusBar.Bounds = new Rectangle(10, h - 20, w - 20, 16);
     }
 
     protected override void OnShown(EventArgs e)

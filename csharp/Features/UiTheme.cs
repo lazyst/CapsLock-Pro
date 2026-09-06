@@ -47,8 +47,8 @@ internal static class UiTheme
     }
 
     /// <summary>美化按钮：默认自适应尺寸（AutoSize，绝不裁剪文字）；autoSize=false 时保留调用方尺寸。
-    /// 扁平风格 + 角色配色 + 悬停反馈。</summary>
-    public static void StyleButton(Button b, ButtonRole role = ButtonRole.Secondary, bool autoSize = true)
+    /// 扁平风格 + 角色配色 + 悬停反馈。minWidth 控制自适应最小宽度（箭头等窄按钮传小值）。</summary>
+    public static void StyleButton(Button b, ButtonRole role = ButtonRole.Secondary, bool autoSize = true, int minWidth = 92)
     {
         b.FlatStyle = FlatStyle.Flat;
         b.Font = UiFont;
@@ -58,8 +58,7 @@ internal static class UiTheme
         {
             b.AutoSizeMode = AutoSizeMode.GrowOnly;
             b.Margin = new Padding(8, 0, 8, 0);
-            b.Padding = new Padding(20, 7, 20, 7);
-            b.MinimumSize = new Size(92, 30);
+            b.MinimumSize = new Size(minWidth, 30);
         }
         else
         {
@@ -91,7 +90,7 @@ internal static class UiTheme
                 b.FlatAppearance.MouseDownBackColor = Color.FromArgb(0xE8, 0xEA, 0xEF);
                 break;
         }
-        b.Padding = new Padding(14, 7, 14, 7);
+        b.Padding = new Padding(16, 7, 16, 7);
     }
 
     /// <summary>美化文本框：浅色边框、Surface 背景。</summary>
