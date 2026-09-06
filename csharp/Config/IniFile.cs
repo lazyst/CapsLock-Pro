@@ -103,6 +103,70 @@ internal static class IniFile
         return key.Length > 0;
     }
 
+    /// <summary>删除 [section] 下的 key（若存在）。块不存在或无该键静默。</summary>
+    public static void DeleteKey(string file, string section, string key)
+    {
+        if (!File.Exists(file)) return;
+        var content = ReadText(file);
+        var lines = new List<string>(content.Split('\n').Select(l => l.TrimEnd('\r')));
+        bool inSection = false;
+        int removedAt = -1;
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var t = lines[i].Trim();
+            if (t.StartsWith('[') && t.EndsWith(']'))
+            {
+                inSection = t[1..^1].Equals(section, StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+            if (inSection && TrySplitKv(t, out var k, out _) &&
+                k.Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                removedAt = i;
+                break;
+            }
+        }
+        if (removedAt >= 0)
+        {
+            lines.RemoveAt(removedAt);
+            WriteAllLines(file, lines);
+        }
+    }
+
+    /// <summary>删除整个 [section] 块（含块内所有行）。块不存在静默。</summary>
+    public static void DeleteSection(string file, string section)
+    {
+        if (!File.Exists(file)) return;
+        var content = ReadText(file);
+        var lines = new List<string>(content.Split('\n').Select(l => l.TrimEnd('\r')));
+        var result = new List<string>();
+        bool inTarget = false;
+        foreach (var raw in lines)
+        {
+            var t = raw.Trim();
+            if (t.StartsWith('[') && t.EndsWith(']'))
+            {
+                inTarget = t[1..^1].Equals(section, StringComparison.OrdinalIgnoreCase);
+                result.Add(raw);
+                continue;
+            }
+            if (!inTarget) result.Add(raw);
+        }
+        // 去掉因删除块而残留的前后空行（块后紧跟的空行）
+        WriteAllLines(file, result);
+    }
+
+    private static void WriteAllLines(string file, List<string> lines)
+    {
+        var sb = new StringBuilder();
+        for (int i = 0; i < lines.Count; i++)
+        {
+            sb.Append(lines[i]);
+            if (i < lines.Count - 1) sb.Append("\r\n");
+        }
+        File.WriteAllText(file, sb.ToString(), new UTF8Encoding(false));
+    }
+
     private static string ReadText(string file)
     {
         using var sr = new StreamReader(file, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);

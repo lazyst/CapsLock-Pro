@@ -50,6 +50,8 @@ internal sealed class TrayAppContext : ApplicationContext
         MenuSystem.Load(FindIniPath());
         // 阶段5：初始化速记（默认目录 + 目标加载 + 建目录）
         QuickNote.Initialize(FindIniPath());
+        // 阶段5：初始化配置助手（INI 路径）
+        ConfigHelper.Initialize(FindIniPath());
     }
 
     /// <summary>构建托盘右键菜单。后续阶段会扩展（启用/禁用、帮助、速记等）。</summary>
@@ -57,6 +59,10 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         var menu = new ContextMenuStrip();
         // 退出项：先隐藏托盘再退出，避免图标残留
+        menu.Items.Add("帮助面板 (CapsLock+`)", image: null, (_, _) => HelpPanel.Toggle());
+        menu.Items.Add("速记 (CapsLock+N)", image: null, (_, _) => QuickNote.Toggle());
+        menu.Items.Add("配置助手 (CapsLock+\\)", image: null, (_, _) => ConfigHelper.Toggle());
+        menu.Items.Add("-", image: null, null);
         menu.Items.Add("退出 CapsLock++", image: null, (_, _) => ExitApplication());
         return menu;
     }

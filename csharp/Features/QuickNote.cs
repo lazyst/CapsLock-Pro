@@ -246,6 +246,8 @@ internal sealed class QuickNoteForm : Form
     {
         base.OnResize(e);
         if (WindowState == FormWindowState.Minimized) return;
+        // 构造期 ClientSize 赋值早于控件创建：控件未就绪时跳过布局
+        if (_edit == null || _listView == null || _buttonBar == null) return;
         int w = ClientSize.Width, h = ClientSize.Height;
         _edit.Bounds = new Rectangle(10, 40, w - 20, h - 110);
         _listView.Bounds = new Rectangle(10, 40, w - 20, h - 110);

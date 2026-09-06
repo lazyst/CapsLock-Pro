@@ -29,6 +29,7 @@ internal static class MiscKeys
             case Win32.VkOem6: InputHelper.SendText("}"); return true;    // ] → }
             case 'Q': QuickSearch.Start(); return true;
             case 'N': QuickNote.Toggle(); return true;
+            case Win32.VkOem5: ConfigHelper.Toggle(); return true;        // \ → 配置助手
             default: return false;
         }
     }
