@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CapsLockPro.Core;
 using CapsLockPro.Native;
@@ -25,6 +26,34 @@ namespace CapsLockPro.Features;
 /// </remarks>
 internal static class SymbolJump
 {
+    // —— 诊断日志（存在 %TEMP%\capslock-symboljump-enable.txt 即开启，写入 %TEMP%\capslock-symboljump-diag.log）——
+    private static readonly string DiagEnablePath =
+        System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capslock-symboljump-enable.txt");
+    private static readonly string DiagPath =
+        System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capslock-symboljump-diag.log");
+    private static bool DiagEnabledNow() { try { return System.IO.File.Exists(DiagEnablePath); } catch { return false; } }
+    private static void Diag(string s)
+    {
+        if (!DiagEnabledNow()) return;
+        try { System.IO.File.AppendAllText(DiagPath, $"[{DateTime.Now:HH:mm:ss.fff}] {s}\n"); }
+        catch { }
+    }
+    // 取目标插入符的字符索引（GetGUIThreadInfo→hwndCaret→EM_GETSEL 的 active end）
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SendMessageW")]
+    private static extern IntPtr SendMessageEMGetSel(IntPtr hWnd, uint Msg, out int wParam, out int lParam);
+    private const uint EmGetSel = 0x00B0;
+    private static string TargetSelInfo()
+    {
+        try
+        {
+            var info = new Win32.Guithreadinfo { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<Win32.Guithreadinfo>() };
+            if (!Win32.GetGUIThreadInfo(0, ref info) || info.hwndCaret == IntPtr.Zero)
+                return "(no caret)";
+            SendMessageEMGetSel(info.hwndCaret, EmGetSel, out int s, out int e);
+            return $"sel=({s},{e}) active={e} hwndCaret={info.hwndCaret.ToInt64():X}";
+        }
+        catch (Exception ex) { return "(err " + ex.Message + ")"; }
+    }
     // —— 成对符号映射（对应 AHK SymbolPairs / ReverseSymbolPairs）——
     private static readonly Dictionary<char, char> SymbolPairs = new()
     {
@@ -98,18 +127,22 @@ internal static class SymbolJump
     {
         int searchStartTime = Environment.TickCount;
         var savedClipboard = BackupClipboard();
+        Diag($"==== Seek 开始 ==== {TargetSelInfo()}");
 
         NativeClipboard.Clear();
         // 读取光标右侧字符：+{Right}^c
         InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkRight);
         Thread.Sleep(50); // 选区建立与复制之间的时序间隔（见类注释）
         InputHelper.Combo((ushort)Win32.VkControl, (ushort)'C');
+        Diag($"[Seek] +Right^c 后 {TargetSelInfo()}");
         if (!ClipWait(500))
         {
+            Diag("[Seek] 获取字符超时");
             Cleanup(savedClipboard, "获取字符超时");
             return;
         }
         NativeClipboard.TryGetText(out string current);
+        Diag($"[Seek] current=\"{current}\" (len={current?.Length ?? -1})");
         NativeClipboard.Clear();
 
         // 检查是否为配对符号
@@ -127,12 +160,14 @@ internal static class SymbolJump
             // 向前搜索
             InputHelper.Tap((ushort)Win32.VkRight); // {Right}
             Thread.Sleep(30);
+            Diag($"[Seek] forward current='{currentChar}' target='{forwardTarget}', Tap(Right) 后 {TargetSelInfo()}");
             SearchInDirection("forward", forwardTarget, currentChar, searchStartTime, savedClipboard);
         }
         else
         {
             // 向后搜索
             char backwardTarget = ReverseSymbolPairs[currentChar];
+            Diag($"[Seek] backward current='{currentChar}' target='{backwardTarget}'");
             SearchInDirection("backward", backwardTarget, currentChar, searchStartTime, savedClipboard);
         }
     }
@@ -163,6 +198,7 @@ internal static class SymbolJump
 
             // 读取当前行内容（方向相关）
             string? lineContent = ReadLineContent(dir);
+            Diag($"[Search dir={dir}] ReadLineContent 后 line=\"{lineContent}\" (len={lineContent?.Length ?? -1}) {TargetSelInfo()}");
             if (!CheckInterrupt(savedClipboard))
                 return;
             if (lineContent == null)
@@ -177,6 +213,7 @@ internal static class SymbolJump
             else
                 InputHelper.Tap((ushort)Win32.VkRight);
             Thread.Sleep(30);
+            Diag($"[Search dir={dir}] 补偿 Tap 后 {TargetSelInfo()}");
 
             // 更新三帧历史
             tempLine[2] = tempLine[1];
@@ -196,17 +233,21 @@ internal static class SymbolJump
 
             // 在当前行扫描
             var (found, position) = ScanLine(dir, lineContent, targetChar, currentChar, ref counter);
+            Diag($"[Search dir={dir}] ScanLine found={found} position={position} counter={counter}");
             if (!AppState.IsSeekingSymbol)
                 return; // 扫描中被中断
 
             if (found)
             {
                 RestoreClipboard(savedClipboard);
+                Diag($"[Search dir={dir}] RestoreClipboard 后 {TargetSelInfo()}");
                 // 移动到目标位置（方向相关）
                 if (dir == "forward")
                     RepeatTap((ushort)Win32.VkRight, position);
                 else
                     RepeatTap((ushort)Win32.VkLeft, position);
+                if (DiagEnabledNow()) Thread.Sleep(150); // 仅诊断时等待键处理完，便于取稳定位置
+                Diag($"[Search dir={dir}] RepeatTap({position}) 后 {TargetSelInfo()}");
                 AppState.IsSeekingSymbol = false;
                 return;
             }
@@ -231,15 +272,9 @@ internal static class SymbolJump
     {
         NativeClipboard.Clear();
         if (dir == "forward")
-        {
-            InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkEnd);   // +{End}
-            InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkRight); // +{Right}
-        }
+            InputHelper.ModifiedSequence((ushort)Win32.VkShift, (ushort)Win32.VkEnd, (ushort)Win32.VkRight);   // +{End}+{Right} 单次注入、Shift 全程保持
         else
-        {
-            InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkHome);  // +{Home}
-            InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkLeft);  // +{Left}
-        }
+            InputHelper.ModifiedSequence((ushort)Win32.VkShift, (ushort)Win32.VkHome, (ushort)Win32.VkLeft);    // +{Home}+{Left}
         Thread.Sleep(50); // 选区建立与复制之间的时序间隔（见类注释）
         InputHelper.Combo((ushort)Win32.VkControl, (ushort)'C');             // ^c
 
@@ -369,8 +404,14 @@ internal static class SymbolJump
     // —— 小工具 ——
     private static void RepeatTap(ushort vk, int count)
     {
+        // 逐次注入并在每次之间节拍等待：管理员→非管理员跨进程 + LL 钩子环境下，
+        // 突发式批量注入多次同键会导致输入流溢出/丢弃（实测 13 次只生效 6 次）。
+        // 逐次 + 间隔让目标应用逐个处理，避免丢键。对应 AHK Send("{vk N}") 的隐含节拍。
         for (int i = 0; i < count; i++)
+        {
             InputHelper.Tap(vk);
+            Thread.Sleep(20);
+        }
     }
 
     private static void ShowTooltip(string msg)

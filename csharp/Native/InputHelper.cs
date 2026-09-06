@@ -37,11 +37,14 @@ internal static class InputHelper
 
     private const uint MapvkVkToScancode = 0;
 
-    /// <summary>用扫描码发送一次按键 down+up（绕过键盘布局，更可靠）。</summary>
+    /// <summary>用扫描码发送一次按键 down+up（绕过键盘布局，更可靠）。<b>单次</b> SendInput。</summary>
     public static void Tap(ushort vk)
     {
-        Down(vk);
-        Up(vk);
+        bool ext = IsExtendedKey(vk);
+        var buf = new Input[2];
+        buf[0] = NewInput(vk, KeyEventKeydown | (ext ? KeyEventExtended : 0));
+        buf[1] = NewInput(vk, KeyEventKeyup | (ext ? KeyEventExtended : 0));
+        SendInput(2, buf, Marshal.SizeOf<Input>());
     }
 
     /// <summary>按下虚拟键。</summary>
@@ -56,12 +59,42 @@ internal static class InputHelper
         SendOne(vk, down: false);
     }
 
-    /// <summary>发送组合键（如 Ctrl+C）：依次 down 各键，再逆序 up。</summary>
+    /// <summary>发送和弦组合键（如 Ctrl+C、Ctrl+Shift+End）：依次 down 各键，再逆序 up。
+    /// <b>单次</b> SendInput 发送全部事件，避免多次独立调用间修饰键状态交错（对应 AHK 的和弦 Send）。</summary>
     public static void Combo(params ushort[] vks)
     {
-        foreach (var vk in vks) Down(vk);
-        for (int i = vks.Length - 1; i >= 0; i--) Up(vks[i]);
+        if (vks.Length == 0) return;
+        var buf = new Input[vks.Length * 2];
+        for (int i = 0; i < vks.Length; i++)
+            buf[i] = NewInput(vks[i], DownFlags(vks[i]));
+        for (int i = 0; i < vks.Length; i++)
+            buf[vks.Length + i] = NewInput(vks[vks.Length - 1 - i], UpFlags(vks[vks.Length - 1 - i]));
+        SendInput((uint)buf.Length, buf, Marshal.SizeOf<Input>());
     }
+
+    /// <summary>
+    /// 修饰键保持下，依次发送一串按键（每个 key 完整 down+up），再释放修饰键。
+    /// <b>单次</b> SendInput 发送全部事件。对应 AHK 的 <c>Send("+{End}+{Right}")</c>
+    /// （Shift 全程保持，End 与 Right 为连续两次完整击键）。比两次独立 Combo 更稳定——
+    /// 不会在两次击键间释放/重按修饰键，避免跨进程+LL 钩子环境下修饰键状态不一致导致选区范围漂移。
+    /// </summary>
+    public static void ModifiedSequence(ushort modVk, params ushort[] keyVks)
+    {
+        if (keyVks.Length == 0) return;
+        var buf = new Input[2 + keyVks.Length * 2];
+        int p = 0;
+        buf[p++] = NewInput(modVk, DownFlags(modVk));
+        foreach (var vk in keyVks)
+        {
+            buf[p++] = NewInput(vk, DownFlags(vk));
+            buf[p++] = NewInput(vk, UpFlags(vk));
+        }
+        buf[p] = NewInput(modVk, UpFlags(modVk));
+        SendInput((uint)buf.Length, buf, Marshal.SizeOf<Input>());
+    }
+
+    private static uint DownFlags(ushort vk) => KeyEventKeydown | (IsExtendedKey(vk) ? KeyEventExtended : 0);
+    private static uint UpFlags(ushort vk) => KeyEventKeyup | (IsExtendedKey(vk) ? KeyEventExtended : 0);
 
     /// <summary>发送单字符（用 VkKeyScanW 取虚拟键 + shift 状态，模拟键盘输入）。</summary>
     public static void SendChar(char ch)
@@ -84,18 +117,20 @@ internal static class InputHelper
     {
         uint flags = (down ? KeyEventKeydown : KeyEventKeyup);
         if (IsExtendedKey(vk)) flags |= KeyEventExtended;
-        var input = new Input
-        {
-            Type = (int)InputKeyboard,
-            Vk = vk,
-            Scan = 0,
-            Flags = flags,
-            Time = 0,
-            ExtraInfo = IntPtr.Zero,
-        };
+        var input = NewInput(vk, flags);
         var buf = new[] { input };
         SendInput(1, buf, Marshal.SizeOf<Input>());
     }
+
+    private static Input NewInput(ushort vk, uint flags) => new()
+    {
+        Type = (int)InputKeyboard,
+        Vk = vk,
+        Scan = 0,
+        Flags = flags,
+        Time = 0,
+        ExtraInfo = IntPtr.Zero,
+    };
 
     /// <summary>扩展键判定（发送时需 KEYEVENTF_EXTENDEDKEY）。</summary>
     private static bool IsExtendedKey(ushort vk) => vk switch
