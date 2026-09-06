@@ -179,8 +179,8 @@ internal sealed class MenuPopup : Form
         TopMost = true;
         ShowInTaskbar = false;
         KeyPreview = true;
-        BackColor = Color.White;
-        Font = new Font("Segoe UI", 10f);
+        BackColor = UiTheme.Surface;
+        Font = UiTheme.UiFont;
         DoubleBuffered = true;
 
         BuildControls();
@@ -197,13 +197,14 @@ internal sealed class MenuPopup : Form
         {
             Text = _group.Name,
             TextAlign = ContentAlignment.MiddleCenter,
-            Bounds = new Rectangle(0, 0, 300, 45),
-            BackColor = Color.FromArgb(0xF5, 0xF5, 0xF5),
+            Bounds = new Rectangle(0, 0, 300, 48),
+            BackColor = UiTheme.Accent,
+            ForeColor = Color.White,
             Font = new Font("Segoe UI", 13f, FontStyle.Bold),
         };
         Controls.Add(title);
 
-        int y = 55;
+        int y = 58;
         const int btnH = 42, gap = 6, left = 15, numW = 30;
         int btnW = 300 - left - numW - left;
 
@@ -217,7 +218,7 @@ internal sealed class MenuPopup : Form
             {
                 Text = numText,
                 Bounds = new Rectangle(left + 5, y + 10, 24, 24),
-                ForeColor = Color.FromArgb(0x00, 0x78, 0xD4),
+                ForeColor = UiTheme.Accent,
                 Font = new Font("Segoe UI", 12f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
             };
@@ -227,10 +228,9 @@ internal sealed class MenuPopup : Form
             {
                 Text = "  " + item.Name,
                 Bounds = new Rectangle(left + numW, y, btnW, btnH),
-                FlatStyle = FlatStyle.Flat,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 10f),
             };
+            UiTheme.StyleButton(btn, UiTheme.ButtonRole.Secondary, false);
+            btn.TextAlign = ContentAlignment.MiddleLeft;
             btn.Click += (_, _) => MenuSystem.SelectItem(_groupIndex, itemIndex);
             Controls.Add(btn);
 
@@ -243,9 +243,8 @@ internal sealed class MenuPopup : Form
         {
             Text = "关闭 (Esc)",
             Bounds = new Rectangle(left, y, 300 - left - left, 36),
-            FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI", 10f),
         };
+        UiTheme.StyleButton(close, UiTheme.ButtonRole.Secondary, false);
         close.Click += (_, _) => MenuSystem.CloseCurrent();
         Controls.Add(close);
 
@@ -256,10 +255,7 @@ internal sealed class MenuPopup : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        // 圆角（DwmSetWindowAttribute，对应 EnableRoundedCorners）
-        int pref = Win32.DwmwcpRound;
-        try { Win32.DwmSetWindowAttribute(Handle, Win32.DwmwaWindowCornerPreference, ref pref, sizeof(int)); }
-        catch { /* 旧系统无 DWM 圆角，忽略 */ }
+        UiTheme.EnableRounded(Handle);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

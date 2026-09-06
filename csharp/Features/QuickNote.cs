@@ -159,7 +159,7 @@ internal sealed class QuickNoteForm : Form
     private readonly Button _newNoteBtn;
     private readonly Button _cancelBtn;
     private readonly Button _deleteBtn;
-    private readonly Control _buttonBar;
+    private readonly FlowLayoutPanel _buttonBar;
 
     public QuickNoteForm(string defaultDir, Dictionary<string, string> targets)
     {
@@ -170,26 +170,35 @@ internal sealed class QuickNoteForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         TopMost = true;
         KeyPreview = true;
-        Font = new Font("Segoe UI", 10f);
-        ClientSize = new Size(500, 400);
+        UiTheme.Apply(this);
+        ClientSize = new Size(520, 440);
         ShowInTaskbar = true;
 
-        _buttonBar = new Control { Bounds = new Rectangle(10, ClientSize.Height - 60, 480, 30) };
+        _buttonBar = new FlowLayoutPanel
+        {
+            Bounds = new Rectangle(10, ClientSize.Height - 56, 500, 36),
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = false,
+            BackColor = UiTheme.Background,
+        };
 
-        _viewToggleBtn = new Button { Text = "查看速记", Bounds = new Rectangle(10, 0, 80, 25) };
-        _searchLabel = new Label { Text = "搜索:", Bounds = new Rectangle(100, 5, 50, 20), Visible = false };
-        _searchEdit = new TextBox { Bounds = new Rectangle(155, 0, 150, 25), Visible = false };
+        _viewToggleBtn = MakeBtn("查看速记", UiTheme.ButtonRole.Secondary);
+        _searchLabel = new Label { Text = "搜索:", Visible = false, AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(8, 8, 2, 0), Font = UiTheme.UiFont, ForeColor = UiTheme.SecondaryText };
+        _searchEdit = new TextBox { Visible = false, AutoSize = false, Size = new Size(150, 25), Margin = new Padding(0, 2, 4, 0) };
+        UiTheme.StyleTextBox(_searchEdit);
         _buttonBar.Controls.AddRange(new Control[] { _viewToggleBtn, _searchLabel, _searchEdit });
 
         _listView = new ListView
         {
-            Bounds = new Rectangle(10, 40, 480, 200),
+            Bounds = new Rectangle(10, 44, 500, 200),
             View = View.Details,
             FullRowSelect = true,
             MultiSelect = false,
             Visible = false,
         };
-        _listView.Columns.Add("文件名", 220);
+        UiTheme.StyleListView(_listView);
+        _listView.Columns.Add("文件名", 230);
         _listView.Columns.Add("修改时间", 140);
         _listView.Columns.Add("目标", 80);
         _listView.Columns.Add("路径", 0);
@@ -197,19 +206,20 @@ internal sealed class QuickNoteForm : Form
 
         _edit = new TextBox
         {
-            Bounds = new Rectangle(10, 40, 480, 200),
+            Bounds = new Rectangle(10, 44, 500, 200),
             Multiline = true,
             AcceptsTab = true,
             ScrollBars = ScrollBars.Vertical,
             Text = "## ",
         };
+        UiTheme.StyleTextBox(_edit);
 
-        _statusBar = new Label { Text = "提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存" };
+        _statusBar = new Label { Text = "提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存", AutoSize = false, Bounds = new Rectangle(10, ClientSize.Height - 18, 500, 16), ForeColor = UiTheme.HintText, Font = UiTheme.SmallFont };
 
-        _saveBtn = new Button { Text = "保存", Bounds = new Rectangle(10, 0, 80, 25) };
-        _newNoteBtn = new Button { Text = "新建速记", Bounds = new Rectangle(100, 0, 80, 25) };
-        _cancelBtn = new Button { Text = "取消", Bounds = new Rectangle(190, 0, 80, 25) };
-        _deleteBtn = new Button { Text = "删除选中", Bounds = new Rectangle(280, 0, 80, 25), Visible = false };
+        _saveBtn = MakeBtn("保存", UiTheme.ButtonRole.Primary);
+        _newNoteBtn = MakeBtn("新建速记", UiTheme.ButtonRole.Secondary);
+        _cancelBtn = MakeBtn("取消", UiTheme.ButtonRole.Secondary);
+        _deleteBtn = MakeBtn("删除选中", UiTheme.ButtonRole.Danger, false);
         _buttonBar.Controls.AddRange(new Control[] { _saveBtn, _newNoteBtn, _cancelBtn, _deleteBtn });
 
         Controls.AddRange(new Control[] { _buttonBar, _edit, _listView, _statusBar });
@@ -228,9 +238,7 @@ internal sealed class QuickNoteForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        int pref = Win32.DwmwcpRound;
-        try { Win32.DwmSetWindowAttribute(Handle, Win32.DwmwaWindowCornerPreference, ref pref, sizeof(int)); }
-        catch { /* 旧系统无 DWM 圆角 */ }
+        UiTheme.EnableRounded(Handle);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -248,11 +256,12 @@ internal sealed class QuickNoteForm : Form
         base.OnResize(e);
         if (WindowState == FormWindowState.Minimized) return;
         // 构造期 ClientSize 赋值早于控件创建：控件未就绪时跳过布局
-        if (_edit == null || _listView == null || _buttonBar == null) return;
+        if (_edit == null || _listView == null || _buttonBar == null || _statusBar == null) return;
         int w = ClientSize.Width, h = ClientSize.Height;
-        _edit.Bounds = new Rectangle(10, 40, w - 20, h - 110);
-        _listView.Bounds = new Rectangle(10, 40, w - 20, h - 110);
-        _buttonBar.Bounds = new Rectangle(10, h - 60, w - 20, 30);
+        _edit.Bounds = new Rectangle(10, 44, w - 20, h - 120);
+        _listView.Bounds = new Rectangle(10, 44, w - 20, h - 120);
+        _buttonBar.Bounds = new Rectangle(10, h - 56, w - 20, 36);
+        _statusBar.Bounds = new Rectangle(10, h - 18, w - 20, 16);
     }
 
     protected override void OnShown(EventArgs e)
@@ -260,6 +269,13 @@ internal sealed class QuickNoteForm : Form
         base.OnShown(e);
         _edit.Focus();
         _edit.SelectionStart = _edit.TextLength;
+    }
+
+    private static Button MakeBtn(string text, UiTheme.ButtonRole role, bool visible = true)
+    {
+        var b = new Button { Text = text, Visible = visible };
+        UiTheme.StyleButton(b, role);
+        return b;
     }
 
     private void LoadIcon()

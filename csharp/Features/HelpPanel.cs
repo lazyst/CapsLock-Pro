@@ -191,15 +191,16 @@ internal sealed class HelpForm : Form
         TopMost = true;
         ShowInTaskbar = false;
         KeyPreview = true;
-        BackColor = Color.White;
+        BackColor = UiTheme.Surface;
         ClientSize = new Size(520, 500);
 
         var title = new Label
         {
             Text = "CapsLock++ 热键速查",
-            Bounds = new Rectangle(0, 0, 520, 36),
-            BackColor = Color.FromArgb(0xF5, 0xF5, 0xF5),
-            Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+            Bounds = new Rectangle(0, 0, 520, 40),
+            BackColor = UiTheme.Accent,
+            ForeColor = Color.White,
+            Font = UiTheme.TitleFont,
             TextAlign = ContentAlignment.MiddleCenter,
         };
         Controls.Add(title);
@@ -209,20 +210,21 @@ internal sealed class HelpForm : Form
             Multiline = true,
             ReadOnly = true,
             ScrollBars = ScrollBars.Vertical,
-            Bounds = new Rectangle(10, 42, 500, 410),
+            Bounds = new Rectangle(10, 48, 500, 408),
             Font = new Font("Consolas", 10f),
             Text = text,
             BorderStyle = BorderStyle.None,
+            BackColor = UiTheme.Surface,
+            ForeColor = UiTheme.Text,
         };
         Controls.Add(edit);
 
         var close = new Button
         {
             Text = "关闭 (Esc)",
-            Bounds = new Rectangle(195, 460, 130, 32),
-            FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI", 10f),
+            Bounds = new Rectangle(195, 462, 130, 32),
         };
+        UiTheme.StyleButton(close, UiTheme.ButtonRole.Secondary, false);
         close.Click += (_, _) => Close();
         Controls.Add(close);
 
@@ -233,9 +235,7 @@ internal sealed class HelpForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        int pref = Win32.DwmwcpRound;
-        try { Win32.DwmSetWindowAttribute(Handle, Win32.DwmwaWindowCornerPreference, ref pref, sizeof(int)); }
-        catch { /* 旧系统忽略 */ }
+        UiTheme.EnableRounded(Handle);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
