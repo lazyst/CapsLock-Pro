@@ -17,7 +17,9 @@ internal static class MouseMode
 {
     private static readonly System.Windows.Forms.Timer _moveTimer = new() { Interval = 10 };
     private static readonly System.Windows.Forms.Timer _wheelTimer = new() { Interval = 50 };
-    private static int _dx, _dy;        // 当前移动方向 (-1/0/1)
+    // E/D/S/F 持续按下状态。WH_KEYBOARD_LL 吞掉 keydown 后 GetAsyncKeyState 不再反映这些键，
+    // 必须由 OnKey 的 down/up 自行维护，MoveLoop 据此移动（对应 AHK GetKeyState("e","P") 的物理状态）。
+    private static bool _up, _down, _left, _right;
     private static int _wheelDir;      // 0=WheelUp,1=WheelDown,2=WheelLeft,3=WheelRight
 
     static MouseMode()
@@ -29,6 +31,8 @@ internal static class MouseMode
     /// <summary>进入鼠标模式。</summary>
     public static void Enter()
     {
+        _up = _down = _left = _right = false;
+        _moveTimer.Stop(); _wheelTimer.Stop();
         AppState.MouseModeActive = true;
         AppState.OtherKeyPressed = true;
         ShowTooltip($"鼠标模式已启用 (速度: {AppState.MouseModeSpeed})");
@@ -39,7 +43,8 @@ internal static class MouseMode
     {
         AppState.MouseModeActive = false;
         AppState.OtherKeyPressed = true;
-        _dx = _dy = 0; _moveTimer.Stop(); _wheelTimer.Stop();
+        _up = _down = _left = _right = false;
+        _moveTimer.Stop(); _wheelTimer.Stop();
         ShowTooltip("鼠标模式已关闭");
     }
 
@@ -59,10 +64,10 @@ internal static class MouseMode
     {
         switch (vk)
         {
-            case (ushort)'E': SetMove('E'); break; // 但多键需独立：用累加
-            case (ushort)'D': SetMove('D'); break;
-            case (ushort)'S': SetMove('S'); break;
-            case (ushort)'F': SetMove('F'); break;
+            case (ushort)'E': SetMove('E', down); break;
+            case (ushort)'D': SetMove('D', down); break;
+            case (ushort)'S': SetMove('S', down); break;
+            case (ushort)'F': SetMove('F', down); break;
             case (ushort)'Q': if (down) AdjustSpeed(+1); break;
             case (ushort)'A': if (down) AdjustSpeed(-1); break;
             case (ushort)'W': if (down) ClickLeft(); break;
@@ -76,26 +81,26 @@ internal static class MouseMode
     }
 
     // —— 移动 ——
-    // 注：多键同时按需独立方向分量。这里用每键独立判断再 StopMouseMove 兼容多键。
-    private static void SetMove(char key)
+    // 多键同时按需独立方向分量；吞键后 GetAsyncKeyState 失效，故由 OnKey 的 down/up 维护各键按下状态。
+    private static void SetMove(char key, bool down)
     {
-        // 直接覆盖该键对应分量；其他键仍按 GetAsyncKeyState 实时判断更稳
-        // 这里用 GetAsyncKeyState 重算 dx/dy（与 AHK MouseMoveLoop 一致）
-        _dx = 0; _dy = 0;
-        if ((Win32.GetAsyncKeyState('E') & 0x8000) != 0) _dy -= 1;
-        if ((Win32.GetAsyncKeyState('D') & 0x8000) != 0) _dy += 1;
-        if ((Win32.GetAsyncKeyState('S') & 0x8000) != 0) _dx -= 1;
-        if ((Win32.GetAsyncKeyState('F') & 0x8000) != 0) _dx += 1;
-        if (_dx != 0 || _dy != 0) _moveTimer.Start(); else _moveTimer.Stop();
+        switch (key)
+        {
+            case 'E': _up = down; break;
+            case 'D': _down = down; break;
+            case 'S': _left = down; break;
+            case 'F': _right = down; break;
+        }
+        if (_up || _down || _left || _right) _moveTimer.Start(); else _moveTimer.Stop();
     }
 
     private static void MoveLoop()
     {
         int dx = 0, dy = 0;
-        if ((Win32.GetAsyncKeyState('E') & 0x8000) != 0) dy -= 1;
-        if ((Win32.GetAsyncKeyState('D') & 0x8000) != 0) dy += 1;
-        if ((Win32.GetAsyncKeyState('S') & 0x8000) != 0) dx -= 1;
-        if ((Win32.GetAsyncKeyState('F') & 0x8000) != 0) dx += 1;
+        if (_up) dy -= 1;
+        if (_down) dy += 1;
+        if (_left) dx -= 1;
+        if (_right) dx += 1;
         if (dx == 0 && dy == 0) { _moveTimer.Stop(); return; }
         // 对角线归一化
         if (dx != 0 && dy != 0)
