@@ -1,4 +1,5 @@
 using System.Text;
+using CapsLockPro.Native;
 using CapsLockPro.Views;
 
 namespace CapsLockPro.Features;
@@ -12,6 +13,23 @@ namespace CapsLockPro.Features;
 internal static class HelpPanel
 {
     private static HelpPanelWindow? _window;
+
+    /// <summary>面板是否已打开。</summary>
+    public static bool IsOpen => _window != null;
+
+    /// <summary>
+    /// 判断屏幕物理坐标点是否落在面板窗口矩形内（供鼠标钩子判定“点击外部”）。
+    /// 鼠标钩子的坐标与 <see cref="Win32.GetWindowRect"/> 均为屏幕物理像素，同一坐标空间，无需 DIP 换算。
+    /// </summary>
+    public static bool PointInWindowRect(int x, int y)
+    {
+        var w = _window;
+        if (w == null) return false;
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+        if (hwnd == IntPtr.Zero) return false;
+        if (!Win32.GetWindowRect(hwnd, out var r)) return false;
+        return x >= r.Left && x <= r.Right && y >= r.Top && y <= r.Bottom;
+    }
 
     /// <summary>切换显示/关闭（钩子在 CapsLock+SC029 时调用）。</summary>
     public static void Toggle()
