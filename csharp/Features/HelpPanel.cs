@@ -1,44 +1,38 @@
-using System.Drawing;
 using System.Text;
-using System.Windows.Forms;
-using CapsLockPro.Native;
+using CapsLockPro.Views;
 
 namespace CapsLockPro.Features;
 
 /// <summary>
 /// 帮助面板（对应原版 lib/ui/HelpPanel.ahk）。CapsLock+`` ` ``（扫描码 SC029）切换。
-/// 无边框置顶工具窗口 + 只读 TextBox 展示热键速查表（9 分类）；
+/// 无边框置顶工具窗口 + 只读滚动文本展示热键速查表（9 分类）；
 /// Esc / 失焦 / 再次按 CapsLock+`` ` `` 关闭。
 /// </summary>
-/// <remarks>
-/// 翻译助手(CapsLock+T)按用户决定不复刻，故速查表不列该项。
-/// 阶段5 的杂项热键(放大镜/双引号/花括号/速记/搜索/配置助手)在原版速查表中列出，
-/// 本表一并列出（前瞻性，阶段5 落地后即生效）。
-/// </remarks>
+/// <remarks>翻译助手(CapsLock+T)按用户决定不复刻。</remarks>
 internal static class HelpPanel
 {
-    private static HelpForm? _form;
+    private static HelpPanelWindow? _window;
 
     /// <summary>切换显示/关闭（钩子在 CapsLock+SC029 时调用）。</summary>
     public static void Toggle()
     {
-        if (_form != null && !_form.IsDisposed)
+        if (_window != null)
         {
             Close();
             return;
         }
-        _form = new HelpForm(BuildHelpText());
-        _form.FormClosed += (_, _) => _form = null;
-        _form.Show();
+        _window = new HelpPanelWindow(BuildHelpText());
+        _window.Closed += (_, _) => _window = null;
+        _window.Show();
     }
 
     public static void Close()
     {
-        if (_form != null && !_form.IsDisposed)
+        if (_window != null)
         {
-            try { _form.Close(); } catch { /* 静默 */ }
+            try { _window.Close(); } catch { /* 静默 */ }
         }
-        _form = null;
+        _window = null;
     }
 
     // —— 热键速查表（对应 BuildHelpText）——
@@ -139,7 +133,7 @@ internal static class HelpPanel
         }),
     };
 
-    /// <summary>生成速查表文本（CJK 字符按 2 宽、ASCII 按 1 宽对齐，与 AHK 一致）。</summary>
+    /// <summary>生成速查表文本（CJK 按 2 宽、ASCII 按 1 宽对齐）。</summary>
     private static string BuildHelpText()
     {
         const int keyWidth = 32;
@@ -148,109 +142,33 @@ internal static class HelpPanel
 
         foreach (var cat in Categories)
         {
-            // 标题居中（━ 填充至 68 宽）
             string title = "  " + cat.Name + "  ";
             int totalPad = 68 - DisplayWidth(title);
             int leftPad = totalPad / 2;
             int rightPad = totalPad - leftPad;
-            sb.Append("\r\n");
+            sb.Append('\n');
             sb.Append(new string('━', leftPad)).Append(title).Append(new string('━', rightPad));
-            sb.Append("\r\n\r\n");
+            sb.Append("\n\n");
 
             foreach (var item in cat.Items)
             {
                 string paddedKey = item.Key;
                 int need = keyWidth - DisplayWidth(paddedKey);
                 while (need > 0) { paddedKey += " "; need--; }
-                sb.Append("  ").Append(paddedKey).Append(sep).Append(item.Desc).Append("\r\n");
+                sb.Append("  ").Append(paddedKey).Append(sep).Append(item.Desc).Append('\n');
             }
         }
 
-        sb.Append("\r\n").Append(new string('━', 68)).Append("\r\n");
-        sb.Append("  提示: 按 Esc 或点击外部区域关闭  |  再次按 CapsLock + ` 关闭\r\n");
+        sb.Append('\n').Append(new string('━', 68)).Append('\n');
+        sb.Append("  提示: 按 Esc 或点击外部区域关闭  |  再次按 CapsLock + ` 关闭\n");
         return sb.ToString();
     }
 
-    /// <summary>显示宽度：CJK(>127)=2，ASCII=1。</summary>
     private static int DisplayWidth(string s)
     {
         int w = 0;
         foreach (var ch in s)
             w += (ch > 127) ? 2 : 1;
         return w;
-    }
-}
-
-/// <summary>帮助面板窗口（无边框置顶 + 只读 TextBox）。</summary>
-internal sealed class HelpForm : Form
-{
-    public HelpForm(string text)
-    {
-        FormBorderStyle = FormBorderStyle.None;
-        StartPosition = FormStartPosition.Manual;
-        TopMost = true;
-        ShowInTaskbar = false;
-        KeyPreview = true;
-        BackColor = UiTheme.Surface;
-        ClientSize = new Size(520, 500);
-
-        var title = new Label
-        {
-            Text = "CapsLock++ 热键速查",
-            Bounds = new Rectangle(0, 0, 520, 40),
-            BackColor = UiTheme.Accent,
-            ForeColor = Color.White,
-            Font = UiTheme.TitleFont,
-            TextAlign = ContentAlignment.MiddleCenter,
-        };
-        Controls.Add(title);
-
-        var edit = new TextBox
-        {
-            Multiline = true,
-            ReadOnly = true,
-            ScrollBars = ScrollBars.Vertical,
-            Bounds = new Rectangle(10, 48, 500, 408),
-            Font = new Font("Consolas", 10f),
-            Text = text,
-            BorderStyle = BorderStyle.None,
-            BackColor = UiTheme.Surface,
-            ForeColor = UiTheme.Text,
-        };
-        Controls.Add(edit);
-
-        var close = new Button
-        {
-            Text = "关闭 (Esc)",
-            Bounds = new Rectangle(195, 462, 130, 32),
-        };
-        UiTheme.StyleButton(close, UiTheme.ButtonRole.Secondary, false);
-        close.Click += (_, _) => Close();
-        Controls.Add(close);
-
-        var wa = Screen.PrimaryScreen!.WorkingArea;
-        Location = new Point(wa.X + (wa.Width - Width) / 2, wa.Y + (wa.Height - Height) / 2);
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        UiTheme.EnableRounded(Handle);
-    }
-
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        base.OnKeyDown(e);
-        if (e.KeyCode == Keys.Escape)
-        {
-            Close();
-            e.Handled = true;
-        }
-    }
-
-    protected override void OnDeactivate(EventArgs e)
-    {
-        base.OnDeactivate(e);
-        if (!IsDisposed) Close();
     }
 }

@@ -105,7 +105,7 @@ internal static class QuickSearch
     }
 
     private static void ShowTooltip(string msg) =>
-        AppState.TrayIcon?.ShowBalloonTip(1500, "CapsLock++", msg, ToolTipIcon.Info);
+        TrayService.ShowBalloon(msg);
 
     private static void RunOnSta(ThreadStart action)
     {

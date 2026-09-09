@@ -94,7 +94,7 @@ internal static class WindowPin
     }
 
     private static void ShowTooltip(string msg) =>
-        AppState.TrayIcon?.ShowBalloonTip(2000, "CapsLock++", msg, ToolTipIcon.Info);
+        TrayService.ShowBalloon(msg);
 
     [DllImport("user32.dll")]
     private static extern IntPtr WindowFromPoint(int x, int y);

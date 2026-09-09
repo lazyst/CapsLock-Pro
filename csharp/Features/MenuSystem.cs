@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using System.Drawing;
-using System.Windows.Forms;
+using System.Text;
 using CapsLockPro.Config;
 using CapsLockPro.Native;
+using CapsLockPro.Views;
 
 namespace CapsLockPro.Features;
 
@@ -20,14 +20,17 @@ namespace CapsLockPro.Features;
 /// </remarks>
 internal static class MenuSystem
 {
-    private const int GroupCount = 10;
-    private static readonly MenuGroup?[] _groups = new MenuGroup?[GroupCount + 1]; // 1-indexed
-    private static MenuPopup? _current;
+    private const int MaxGroups = 10;
+    private static readonly MenuGroup?[] _groups = new MenuGroup?[MaxGroups + 1]; // 1-indexed
+    private static MenuPopupWindow? _current;
+
+    /// <summary>菜单组槽位总数（1..N）。</summary>
+    public static int GroupCount => MaxGroups;
 
     /// <summary>从 INI 加载全部 10 个菜单组（启动时调用一次）。</summary>
     public static void Load(string? iniPath)
     {
-        for (int i = 1; i <= GroupCount; i++)
+        for (int i = 1; i <= MaxGroups; i++)
             _groups[i] = LoadGroup(iniPath, i);
     }
 
@@ -75,15 +78,15 @@ internal static class MenuSystem
         CloseCurrent();
         var g = _groups[groupIndex];
         if (g == null) return;
-        _current = new MenuPopup(g, groupIndex);
-        _current.FormClosed += (_, _) => _current = null;
+        _current = new MenuPopupWindow(g.Name, groupIndex, g.Items.Select(x => x.Name).ToList());
+        _current.Closed += (_, _) => _current = null;
         _current.Show();
     }
 
     /// <summary>关闭当前菜单（若存在）。</summary>
     public static void CloseCurrent()
     {
-        if (_current != null && !_current.IsDisposed)
+        if (_current != null)
         {
             try { _current.Close(); } catch { /* 关闭失败静默 */ }
         }
@@ -144,6 +147,111 @@ internal static class MenuSystem
         return true;
     }
 
+    // —— 配置助手 CRUD（由 Views.ConfigHelperWindow 调用）——
+
+    /// <summary>取得 1..N 的菜单组（可能为 null）。</summary>
+    public static MenuGroup? GetGroup(int groupIndex) =>
+        (groupIndex >= 1 && groupIndex <= MaxGroups) ? _groups[groupIndex] : null;
+
+    /// <summary>在首个空槽添加菜单组，返回槽位索引；无空槽返回 -1。</summary>
+    public static int AddGroup(string name)
+    {
+        for (int i = 1; i <= MaxGroups; i++)
+            if (_groups[i] == null)
+            {
+                _groups[i] = new MenuGroup(name, new List<MenuItem>());
+                return i;
+            }
+        return -1;
+    }
+
+    /// <summary>修改组名（保留原项目）。</summary>
+    public static void EditGroup(int groupIndex, string name)
+    {
+        var g = GetGroup(groupIndex);
+        if (g == null) return;
+        _groups[groupIndex] = new MenuGroup(name, g.Items);
+    }
+
+    /// <summary>删除菜单组（置空槽位）。</summary>
+    public static void DeleteGroup(int groupIndex)
+    {
+        if (groupIndex >= 1 && groupIndex <= MaxGroups) _groups[groupIndex] = null;
+    }
+
+    /// <summary>在组末尾添加菜单项。</summary>
+    public static void AddItem(int groupIndex, string name, string cmd, string terminal, bool keepWindow)
+    {
+        var g = GetGroup(groupIndex);
+        if (g == null) return;
+        g.Items.Add(new MenuItem(name, CommandString.Build(cmd, terminal, keepWindow)));
+    }
+
+    /// <summary>修改指定菜单项。</summary>
+    public static void EditItem(int groupIndex, int itemIndex, string name, string cmd, string terminal, bool keepWindow)
+    {
+        var g = GetGroup(groupIndex);
+        if (g == null || itemIndex < 0 || itemIndex >= g.Items.Count) return;
+        g.Items[itemIndex] = new MenuItem(name, CommandString.Build(cmd, terminal, keepWindow));
+    }
+
+    /// <summary>删除指定菜单项。</summary>
+    public static void DeleteItem(int groupIndex, int itemIndex)
+    {
+        var g = GetGroup(groupIndex);
+        if (g == null || itemIndex < 0 || itemIndex >= g.Items.Count) return;
+        g.Items.RemoveAt(itemIndex);
+        if (g.Items.Count == 0) _groups[groupIndex] = null; // 空组视为不存在
+    }
+
+    /// <summary>移动菜单项；delta=-1 上移 / +1 下移；返回是否实际移动。</summary>
+    public static bool MoveMenuItem(int groupIndex, int itemIndex, int delta)
+    {
+        var g = GetGroup(groupIndex);
+        if (g == null) return false;
+        int ni = itemIndex + delta;
+        if (ni < 0 || ni >= g.Items.Count) return false;
+        (g.Items[itemIndex], g.Items[ni]) = (g.Items[ni], g.Items[itemIndex]);
+        return true;
+    }
+
+    /// <summary>从 INI 重新加载全部组。</summary>
+    public static void ReloadFromIni(string? iniPath)
+    {
+        CloseCurrent();
+        Load(iniPath);
+    }
+
+    /// <summary>将当前 10 个组写回 INI（整体重写菜单相关 section）。</summary>
+    public static void SaveToIni(string iniPath)
+    {
+        string? dir = Path.GetDirectoryName(iniPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        for (int i = 1; i <= MaxGroups; i++)
+        {
+            string itemsSection = "MenuGroups" + i + "Items";
+            try { IniFile.DeleteSection(iniPath, itemsSection); } catch { /* 静默 */ }
+            var g = _groups[i];
+            if (g == null || g.Items.Count == 0)
+            {
+                IniFile.WriteValue(iniPath, "MenuGroupsEnable", "enableGroup" + i, "false");
+                IniFile.WriteValue(iniPath, "MenuGroupName", "name" + i, "菜单组 " + i);
+                IniFile.WriteValue(iniPath, "MenuGroupCount", "count" + i, "0");
+                continue;
+            }
+            IniFile.WriteValue(iniPath, "MenuGroupsEnable", "enableGroup" + i, "true");
+            IniFile.WriteValue(iniPath, "MenuGroupName", "name" + i, g.Name);
+            IniFile.WriteValue(iniPath, "MenuGroupCount", "count" + i, g.Items.Count.ToString());
+            for (int j = 0; j < g.Items.Count; j++)
+            {
+                IniFile.WriteValue(iniPath, itemsSection, "name" + (j + 1), g.Items[j].Name);
+                IniFile.WriteValue(iniPath, itemsSection, "action" + (j + 1), g.Items[j].Action);
+            }
+        }
+    }
+
     // —— 数据模型 ——
     internal sealed class MenuGroup
     {
@@ -160,138 +268,3 @@ internal static class MenuSystem
     }
 }
 
-/// <summary>
-/// 菜单弹出窗口（对应 lib/ui/MenuUI.ahk CreateMenuGUI）。
-/// 无边框置顶工具窗口；标题 + 序号按钮列表 + 关闭按钮；Esc/点击外部/选号 关闭。
-/// </summary>
-internal sealed class MenuPopup : Form
-{
-    private readonly MenuSystem.MenuGroup _group;
-    private readonly int _groupIndex;
-
-    public MenuPopup(MenuSystem.MenuGroup group, int groupIndex)
-    {
-        _group = group;
-        _groupIndex = groupIndex;
-
-        FormBorderStyle = FormBorderStyle.None;
-        StartPosition = FormStartPosition.Manual;
-        TopMost = true;
-        ShowInTaskbar = false;
-        KeyPreview = true;
-        BackColor = UiTheme.Surface;
-        Font = UiTheme.UiFont;
-        DoubleBuffered = true;
-
-        BuildControls();
-
-        // 居中（主屏工作区）
-        var wa = Screen.PrimaryScreen!.WorkingArea;
-        Location = new Point(wa.X + (wa.Width - Width) / 2, wa.Y + (wa.Height - Height) / 2);
-    }
-
-    private void BuildControls()
-    {
-        // 标题
-        var title = new Label
-        {
-            Text = _group.Name,
-            TextAlign = ContentAlignment.MiddleCenter,
-            Bounds = new Rectangle(0, 0, 300, 48),
-            BackColor = UiTheme.Accent,
-            ForeColor = Color.White,
-            Font = new Font("Segoe UI", 13f, FontStyle.Bold),
-        };
-        Controls.Add(title);
-
-        int y = 58;
-        const int btnH = 42, gap = 6, left = 15, numW = 30;
-        int btnW = 300 - left - numW - left;
-
-        for (int i = 0; i < _group.Items.Count; i++)
-        {
-            var item = _group.Items[i];
-            string numText = (i < 9) ? (i + 1).ToString() : "0";
-            int itemIndex = i + 1; // 闭包捕获
-
-            var num = new Label
-            {
-                Text = numText,
-                Bounds = new Rectangle(left + 5, y + 10, 24, 24),
-                ForeColor = UiTheme.Accent,
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter,
-            };
-            Controls.Add(num);
-
-            var btn = new Button
-            {
-                Text = "  " + item.Name,
-                Bounds = new Rectangle(left + numW, y, btnW, btnH),
-            };
-            UiTheme.StyleButton(btn, UiTheme.ButtonRole.Secondary, false);
-            btn.TextAlign = ContentAlignment.MiddleLeft;
-            btn.Click += (_, _) => MenuSystem.SelectItem(_groupIndex, itemIndex);
-            Controls.Add(btn);
-
-            y += btnH + gap;
-        }
-
-        // 关闭按钮
-        y += 8;
-        var close = new Button
-        {
-            Text = "关闭 (Esc)",
-            Bounds = new Rectangle(left, y, 300 - left - left, 36),
-        };
-        UiTheme.StyleButton(close, UiTheme.ButtonRole.Secondary, false);
-        close.Click += (_, _) => MenuSystem.CloseCurrent();
-        Controls.Add(close);
-
-        y += 36 + 12;
-        ClientSize = new Size(300, y);
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        UiTheme.EnableRounded(Handle);
-    }
-
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        base.OnKeyDown(e);
-        int idx = e.KeyCode switch
-        {
-            Keys.D1 => 1, Keys.D2 => 2, Keys.D3 => 3, Keys.D4 => 4, Keys.D5 => 5,
-            Keys.D6 => 6, Keys.D7 => 7, Keys.D8 => 8, Keys.D9 => 9,
-            Keys.D0 => 10,
-            Keys.NumPad1 => 1, Keys.NumPad2 => 2, Keys.NumPad3 => 3, Keys.NumPad4 => 4,
-            Keys.NumPad5 => 5, Keys.NumPad6 => 6, Keys.NumPad7 => 7, Keys.NumPad8 => 8,
-            Keys.NumPad9 => 9, Keys.NumPad0 => 10,
-            _ => -1,
-        };
-        if (idx >= 1)
-        {
-            if (idx <= _group.Items.Count)
-                MenuSystem.SelectItem(_groupIndex, idx);
-            else
-                MenuSystem.CloseCurrent();
-            e.Handled = true;
-            return;
-        }
-        if (e.KeyCode == Keys.Escape)
-        {
-            MenuSystem.CloseCurrent();
-            e.Handled = true;
-        }
-    }
-
-    protected override void OnDeactivate(EventArgs e)
-    {
-        base.OnDeactivate(e);
-        // 点击外部自动关闭（对应 CheckMenuActive）
-        if (!IsDisposed)
-            MenuSystem.CloseCurrent();
-    }
-}

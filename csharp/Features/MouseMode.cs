@@ -162,5 +162,5 @@ internal static class MouseMode
     }
 
     private static void ShowTooltip(string msg) =>
-        AppState.TrayIcon?.ShowBalloonTip(1000, "CapsLock++", msg, ToolTipIcon.Info);
+        TrayService.ShowBalloon(msg);
 }

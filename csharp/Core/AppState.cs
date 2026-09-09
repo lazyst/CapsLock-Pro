@@ -58,8 +58,7 @@ internal static class AppState
     /// <summary>是否正在执行符号跳转搜索（对应原版 isSeekingSymbol）。</summary>
     public static volatile bool IsSeekingSymbol;
 
-    // —— 托盘图标引用（供状态机/功能模块显示气球提示，对应原版 ShowTooltipNearMouse）——
-    public static System.Windows.Forms.NotifyIcon? TrayIcon;
+    // 托盘气球提示已移至 TrayService.ShowBalloon（不再持有 WinForms NotifyIcon）
 
     /// <summary>CapsLock 是否当前按下（便捷查询，供功能模块判断）。</summary>
     public static bool IsCapsLockDown => CapsLockIsDown;

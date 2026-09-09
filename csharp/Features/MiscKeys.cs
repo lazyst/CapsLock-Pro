@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using CapsLockPro.Core;
 using CapsLockPro.Native;
 
 namespace CapsLockPro.Features;
@@ -68,5 +69,5 @@ internal static class MiscKeys
     });
 
     private static void ShowTooltip(string msg) =>
-        Core.AppState.TrayIcon?.ShowBalloonTip(1200, "CapsLock++", msg, System.Windows.Forms.ToolTipIcon.Info);
+        Core.TrayService.ShowBalloon(msg);
 }
