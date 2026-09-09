@@ -28,6 +28,9 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // —— UI 线程未捕获异常兑底：记录到崩溃日志并吞掉（常驻输入工具不因单次异常退出）——
+        DispatcherUnhandledException += App_DispatcherUnhandledException;
+
         // —— 单实例 ——
         _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out bool createdNew);
         if (!createdNew)
@@ -104,6 +107,12 @@ public partial class App : Application
             catch { /* 尝试下一个 */ }
         }
         return null;
+    }
+
+    private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        CrashLog.Write("Dispatcher", e.Exception);
+        e.Handled = true;
     }
 
     private void ExitApplication()
