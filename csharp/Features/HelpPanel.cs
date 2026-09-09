@@ -16,14 +16,21 @@ internal static class HelpPanel
     /// <summary>切换显示/关闭（钩子在 CapsLock+SC029 时调用）。</summary>
     public static void Toggle()
     {
-        if (_window != null)
+        if (_window != null) { Close(); return; }
+
+        // 钩子回调（WH_KEYBOARD_LL）内直接 Show 时窗口拿不到前台——
+        // 输入尚未处理完 / 前台权限受限，面板不是活动窗口，
+        // 首次点击外部不触发 Deactivated（需先点面板激活再点外部才关）。
+        // 延迟到下一 Dispatcher 周期执行（对应 AHK 热键在输入处理完后才触发的语义），
+        // 并显式 Activate 确保成为前台窗口，使首次点击外部即触发 Deactivated 关闭。
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
         {
-            Close();
-            return;
-        }
-        _window = new HelpPanelWindow(BuildHelpText());
-        _window.Closed += (_, _) => _window = null;
-        _window.Show();
+            if (_window != null) { Close(); return; } // 期间可能已打开/关闭
+            _window = new HelpPanelWindow(BuildHelpText());
+            _window.Closed += (_, _) => _window = null;
+            _window.Show();
+            _window.Activate();
+        }));
     }
 
     public static void Close()
