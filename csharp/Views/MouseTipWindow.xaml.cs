@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Media;
 using CapsLockPro.Native;
 
 namespace CapsLockPro.Views;
@@ -17,24 +18,39 @@ public partial class MouseTipWindow : Window
     /// <summary>设置文本（支持 \n 换行）。</summary>
     public void SetText(string text) => TipText.Text = text;
 
-    /// <summary>定位到光标右下角，避开屏幕右下边缘。</summary>
+    /// <summary>定位到光标右下角，避开屏幕右下边缘。
+    /// 注意 DPI：GetCursorPos 返回物理像素，而 Window.Left/Top 是 DIP（逻辑像素），
+    /// 需用 TransformFromDevice 换算，否则在缩放 >100% 的显示器上会偏右偏下。</summary>
     public void PlaceNearCursor()
     {
         if (!Win32.GetCursorPos(out var pt)) return;
 
-        // 先测量尺寸（需要曾 Show 过一次才有 ActualWidth/Height；首次用 Estimated）
-        double w = ActualWidth > 0 ? ActualWidth : 200;
+        // 物理→DIP 换算因子（TransformFromDevice.M11 = 1/scaleX）
+        double m11 = 1.0, m22 = 1.0;
+        var src = PresentationSource.FromVisual(this);
+        if (src != null)
+        {
+            var tfd = src.CompositionTarget.TransformFromDevice;
+            m11 = tfd.M11; m22 = tfd.M22;
+        }
+
+        double cx = pt.X * m11; // 光标 DIP
+        double cy = pt.Y * m22;
+        double w = ActualWidth > 0 ? ActualWidth : 200; // DIP
         double h = ActualHeight > 0 ? ActualHeight : 32;
 
-        double x = pt.X + 16;
-        double y = pt.Y + 16;
+        const double gap = 16; // DIP 间距
+        double x = cx + gap;
+        double y = cy + gap;
 
-        // 屏幕工作区避让（多显示器：用光标所在显示器）
+        // 屏幕工作区避让（多显示器：取光标所在显示器，rcWork 是物理像素→转 DIP）
         var screen = GetScreenBounds(pt.X, pt.Y);
-        if (x + w > screen.Right - 8) x = pt.X - w - 16; // 右溢出→放左侧
-        if (x < screen.Left + 8) x = screen.Left + 8;
-        if (y + h > screen.Bottom - 8) y = pt.Y - h - 16; // 下溢出→放上方
-        if (y < screen.Top + 8) y = screen.Top + 8;
+        double sLeft = screen.Left * m11, sTop = screen.Top * m22;
+        double sRight = screen.Right * m11, sBottom = screen.Bottom * m22;
+        if (x + w > sRight - 8) x = cx - w - gap; // 右溢出→放左侧
+        if (x < sLeft + 8) x = sLeft + 8;
+        if (y + h > sBottom - 8) y = cy - h - gap; // 下溢出→放上方
+        if (y < sTop + 8) y = sTop + 8;
 
         Left = x;
         Top = y;
