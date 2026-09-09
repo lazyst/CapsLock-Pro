@@ -96,6 +96,57 @@ internal static class InputHelper
     private static uint DownFlags(ushort vk) => KeyEventKeydown | (IsExtendedKey(vk) ? KeyEventExtended : 0);
     private static uint UpFlags(ushort vk) => KeyEventKeyup | (IsExtendedKey(vk) ? KeyEventExtended : 0);
 
+    /// <summary>
+    /// 释放当前物理按下的干扰修饰键（Alt/Ctrl/Shift），注入组合键，再恢复被释放的修饰键。
+    /// 全部在<b>单次</b> SendInput 批内完成。对应 AHK <c>Send</c> 临时释放未被发送串包含的物理修饰键、
+    /// 之后恢复的行为。用于 CapsLock+Alt 分支跳页方法：用户物理按住 Alt，若不释放，编辑器会收到
+    /// Ctrl+Alt+Home 等不被识别为"跳到文件头尾"的组合。无 Alt 修饰的路径（Ctrl+C/V/X、普通 Home/End）
+    /// 不要用此方法。<paramref name="tapAfter"/> 非 0 时在组合键后追加一次完整击键（用于删到文件头尾的 {Delete}）。
+    /// </summary>
+    public static void ComboReleasingHeldModifiers(params ushort[] vks)
+        => ComboThenTapReleasingHeldModifiers(vks, tapAfter: 0);
+
+    /// <summary>
+    /// 同 <see cref="ComboReleasingHeldModifiers(ushort[])"/>，但在组合键后追加一次 <paramref name="tapAfter"/> 完整击键
+    /// （如删到文件头尾：Ctrl+Shift+Home 后接 Delete），整组在单次 SendInput 批内发送，Alt 全程被释放。
+    /// </summary>
+    public static void ComboThenTapReleasingHeldModifiers(ushort[] comboVks, ushort tapAfter)
+    {
+        if (comboVks.Length == 0) return;
+        var held = HeldModifiers();
+        bool hasTap = tapAfter != 0;
+        int tapCount = hasTap ? 2 : 0;
+        var buf = new Input[held.Count + comboVks.Length * 2 + tapCount + held.Count];
+        int p = 0;
+        foreach (var vk in held) buf[p++] = NewInput(vk, UpFlags(vk));
+        for (int i = 0; i < comboVks.Length; i++)
+            buf[p++] = NewInput(comboVks[i], DownFlags(comboVks[i]));
+        for (int i = 0; i < comboVks.Length; i++)
+            buf[p++] = NewInput(comboVks[comboVks.Length - 1 - i], UpFlags(comboVks[comboVks.Length - 1 - i]));
+        if (hasTap)
+        {
+            buf[p++] = NewInput(tapAfter, DownFlags(tapAfter));
+            buf[p++] = NewInput(tapAfter, UpFlags(tapAfter));
+        }
+        foreach (var vk in held) buf[p++] = NewInput(vk, DownFlags(vk));
+        SendInput((uint)buf.Length, buf, Marshal.SizeOf<Input>());
+    }
+
+    /// <summary>检测当前物理按下的左右 Alt/Ctrl/Shift（Win 一般不涉及，不在此处理），返回需临时释放的 VK 列表。</summary>
+    private static List<ushort> HeldModifiers()
+    {
+        var list = new List<ushort>(6);
+        if (IsDown(Win32.VkLshift)) list.Add((ushort)Win32.VkLshift);
+        if (IsDown(Win32.VkRshift)) list.Add((ushort)Win32.VkRshift);
+        if (IsDown(Win32.VkLcontrol)) list.Add((ushort)Win32.VkLcontrol);
+        if (IsDown(Win32.VkRcontrol)) list.Add((ushort)Win32.VkRcontrol);
+        if (IsDown(Win32.VkLmenu)) list.Add((ushort)Win32.VkLmenu);
+        if (IsDown(Win32.VkRmenu)) list.Add((ushort)Win32.VkRmenu);
+        return list;
+    }
+
+    private static bool IsDown(int vk) => (Win32.GetAsyncKeyState(vk) & 0x8000) != 0;
+
     /// <summary>发送单字符（用 VkKeyScanW 取虚拟键 + shift 状态，模拟键盘输入）。</summary>
     public static void SendChar(char ch)
     {

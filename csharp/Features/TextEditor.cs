@@ -77,8 +77,8 @@ internal static class TextEditor
     static void MoveWordRight() => InputHelper.Combo((ushort)Win32.VkControl, (ushort)Win32.VkRight);
     static void MoveHome() => InputHelper.Tap((ushort)Win32.VkHome);
     static void MoveEnd() => InputHelper.Tap((ushort)Win32.VkEnd);
-    static void MoveToPageBeginning() => InputHelper.Combo((ushort)Win32.VkControl, (ushort)Win32.VkHome);
-    static void MoveToPageEnd() => InputHelper.Combo((ushort)Win32.VkControl, (ushort)Win32.VkEnd);
+    static void MoveToPageBeginning() => InputHelper.ComboReleasingHeldModifiers((ushort)Win32.VkControl, (ushort)Win32.VkHome);
+    static void MoveToPageEnd() => InputHelper.ComboReleasingHeldModifiers((ushort)Win32.VkControl, (ushort)Win32.VkEnd);
     static void MoveWordLeftOrPageStart(bool alt) { if (alt) MoveToPageBeginning(); else MoveWordLeft(); }
     static void MoveWordRightOrPageEnd(bool alt) { if (alt) MoveToPageEnd(); else MoveWordRight(); }
 
@@ -91,8 +91,8 @@ internal static class TextEditor
     static void SelectWordRight() => InputHelper.Combo((ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkRight);
     static void SelectHome() => InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkHome);
     static void SelectEnd() => InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkEnd);
-    static void SelectToPageBeginning() => InputHelper.Combo((ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkHome);
-    static void SelectToPageEnd() => InputHelper.Combo((ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkEnd);
+    static void SelectToPageBeginning() => InputHelper.ComboReleasingHeldModifiers((ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkHome);
+    static void SelectToPageEnd() => InputHelper.ComboReleasingHeldModifiers((ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkEnd);
     static void SelectWordLeftOrPageStart(bool alt) { if (alt) SelectToPageBeginning(); else SelectWordLeft(); }
     static void SelectWordRightOrPageEnd(bool alt) { if (alt) SelectToPageEnd(); else SelectWordRight(); }
 
@@ -115,15 +115,17 @@ internal static class TextEditor
         InputHelper.Combo((ushort)Win32.VkShift, (ushort)Win32.VkEnd);
         InputHelper.Tap((ushort)Win32.VkDelete);
     }
-    static void DeleteToPageBeginning() // ^+{Home}{Delete}
+    static void DeleteToPageBeginning() // ^+{Home}{Delete}（Alt 物理按下，需临时释放再恢复）
     {
-        InputHelper.Combo((ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkHome);
-        InputHelper.Tap((ushort)Win32.VkDelete);
+        InputHelper.ComboThenTapReleasingHeldModifiers(
+            new ushort[] { (ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkHome },
+            (ushort)Win32.VkDelete);
     }
-    static void DeleteToPageEnd() // ^+{End}{Delete}
+    static void DeleteToPageEnd() // ^+{End}{Delete}（Alt 物理按下，需临时释放再恢复）
     {
-        InputHelper.Combo((ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkEnd);
-        InputHelper.Tap((ushort)Win32.VkDelete);
+        InputHelper.ComboThenTapReleasingHeldModifiers(
+            new ushort[] { (ushort)Win32.VkControl, (ushort)Win32.VkShift, (ushort)Win32.VkEnd },
+            (ushort)Win32.VkDelete);
     }
     static void DeleteToLineBeginningOrPageStart(bool alt) { if (alt) DeleteToPageBeginning(); else DeleteToLineBeginning(); }
     static void DeleteToLineEndOrPageEnd(bool alt) { if (alt) DeleteToPageEnd(); else DeleteToLineEnd(); }
