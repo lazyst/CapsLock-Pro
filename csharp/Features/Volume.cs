@@ -10,7 +10,7 @@ namespace CapsLockPro.Features;
 internal static class Volume
 {
     private const int BottomMargin = 5; // 底部 5px 触发
-    private const int Step = 2;         // 每格步长（与原版一致）
+    private const int Step = 1;         // 每格滚轮敲击次数；VK_VOLUME_UP/Down 每次约2%，故 1 步≈2% 与 AHK 原版一致
 
     /// <summary>处理一次滚轮事件。返回 true 表示已消费（吞掉滚轮）。</summary>
     public static bool OnWheel(int x, int y, int delta)
