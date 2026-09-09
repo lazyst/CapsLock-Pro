@@ -2,7 +2,7 @@
 
 > **分支**：`csharp-refactor`　**目标框架**：.NET 8 (`net8.0-windows`)　**当前**：`UseWindowsForms=true`
 >
-> 状态：**执行中** — 决策已锁定：托盘 `H.NotifyIcon.Wpf`；整体重写；允许必要的轻量库；本会话完成 Phase 0~7
+> 状态：**Phase 0~6 完成（整体重写落地）** — 决策已锁定：托盘 `H.NotifyIcon.Wpf`；整体重写；允许必要的轻量库。提交：`c3404bf`（WPF 整体重写）、`53df8cf`（关闭重入崩溃修复）。全部 6 个窗口经 RenderTargetBitmap 截图核验忠实还原原版浅色主题。Phase 7（NativeAOT/收尾）待后续。
 
 ---
 
