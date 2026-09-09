@@ -1,9 +1,11 @@
 <Window x:Class="CapsLockPro.Views.MouseTipWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MouseTip" Width="Auto" Height="Auto"
+        Title="MouseTip"
+        SizeToContent="WidthAndHeight"
         WindowStyle="None" AllowsTransparency="True" Topmost="True"
         ShowInTaskbar="False" ResizeMode="NoResize" Focusable="False"
+        WindowStartupLocation="Manual"
         Background="Transparent" ShowActivated="False">
     <Border Background="#1E1F2D" CornerRadius="6" Padding="12,7"
             BorderBrush="#00000000" BorderThickness="0" MaxWidth="380">

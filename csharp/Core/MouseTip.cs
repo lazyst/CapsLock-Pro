@@ -32,10 +32,11 @@ internal static class MouseTip
         _window ??= new MouseTipWindow();
         _window.SetText(text);
 
-        // 先 Show 一次以完成 measure（拿真实尺寸定位），随后放置并置可见。
-        _window.Visibility = Visibility.Visible;
-        _window.PlaceNearCursor();
+        // 先离屏 Show 让 SizeToContent 拿到真实尺寸，再定位到光标右下角，避免闪现错位。
+        _window.Left = -10000;
+        _window.Top = -10000;
         _window.Show();
+        _window.PlaceNearCursor();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(durationMs) };
         _timer.Tick += (_, _) =>

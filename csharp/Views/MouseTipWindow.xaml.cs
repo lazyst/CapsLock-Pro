@@ -11,9 +11,7 @@ public partial class MouseTipWindow : Window
     public MouseTipWindow()
     {
         InitializeComponent();
-        // 不抢焦点、不参与 Alt+Tab
         ShowActivated = false;
-        Visibility = Visibility.Collapsed;
     }
 
     /// <summary>设置文本（支持 \n 换行）。</summary>

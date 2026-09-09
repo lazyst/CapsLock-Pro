@@ -64,10 +64,14 @@ internal static class MouseHook
                     break;
 
                 case Win32.WmRbuttondown:
+                case Win32.WmRbuttonup:
+                    // CapsLock+右键整组吞掉（down+up），否则 WM_RBUTTONUP 仍会合成 WM_CONTEXTMENU
+                    // 弹出原生右键菜单。AHK 原版 RButton:: 默认吞 down+up。
                     if (AppState.IsToolEnabled && AppState.IsCapsLockDown)
                     {
-                        WindowPin.ToggleAtCursor(ms.Pt.X, ms.Pt.Y);
-                        return (IntPtr)1; // 吞掉右键，避免弹出系统右键菜单
+                        if ((int)wParam == Win32.WmRbuttondown)
+                            WindowPin.ToggleAtCursor(ms.Pt.X, ms.Pt.Y);
+                        return (IntPtr)1; // 吞掉
                     }
                     break;
 
