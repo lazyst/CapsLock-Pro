@@ -95,7 +95,7 @@ internal static class MouseHook
     {
         // 触发瞬间捕获前台窗口与光标下窗口的类名（决定是否需要先激活）
         string activeClass = GetWindowClass(Win32.GetForegroundWindow());
-        IntPtr mouseWin = Win32.WindowFromPoint(cursorAtTrigger);
+        IntPtr mouseWin = TopLevelFromPoint(cursorAtTrigger);
         string mouseClass = GetWindowClass(mouseWin);
         bool needActivate = IsExplorerBrowserOwnerCase(activeClass, mouseClass);
 
@@ -135,7 +135,7 @@ internal static class MouseHook
     private static void TryRenameUnderCursor()
     {
         Win32.GetCursorPos(out var pt);
-        IntPtr hwnd = Win32.WindowFromPoint(pt);
+        IntPtr hwnd = TopLevelFromPoint(pt);
         if (hwnd == IntPtr.Zero) return;
         string cls = GetWindowClass(hwnd);
         if (cls == "CabinetWClass" || cls == "ExploreWClass" ||
@@ -143,6 +143,17 @@ internal static class MouseHook
         {
             InputHelper.Tap((ushort)Win32.VkF2);
         }
+    }
+
+    /// <summary>取光标下顶层拥有者窗口（<see cref="Win32.WindowFromPoint"/> 返回子控件如列表视图，
+    /// 需上溯到顶层；否则类名是子控件类名而非 CabinetWClass/Progman 等，重命名判定永不命中）。
+    /// 对应 AHK <c>MouseGetPos</c> 第三输出返回的顶层窗口。</summary>
+    private static IntPtr TopLevelFromPoint(Win32.Point pt)
+    {
+        var raw = Win32.WindowFromPoint(pt);
+        if (raw == IntPtr.Zero) return IntPtr.Zero;
+        var root = Win32.GetAncestor(raw, Win32.GaRootOwner);
+        return root != IntPtr.Zero ? root : raw;
     }
 
     private static bool IsExplorerBrowserOwnerCase(string activeClass, string mouseClass)
