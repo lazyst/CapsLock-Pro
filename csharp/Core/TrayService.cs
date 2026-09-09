@@ -4,23 +4,20 @@ using H.NotifyIcon;
 namespace CapsLockPro.Core;
 
 /// <summary>
-/// 托盘气球提示服务（替代旧 <c>AppState.TrayIcon?.ShowBalloonTip</c>）。
-/// 功能模块（速记/配置助手等）通过本类显示提示，不直接依赖 <see cref="TaskbarIcon"/>。
+/// 提示与确认服务。
+/// <see cref="Notify"/>：显示跟随鼠标右下角的文本提示（不再用系统托盘气球，
+/// 对应原版 AHK <c>ToolTip</c>），实现见 <see cref="MouseTip"/>。
+/// <see cref="Confirm"/>：模态 Yes/No 确认（WPF MessageBox）。
 /// </summary>
 internal static class TrayService
 {
     private static TaskbarIcon? _tray;
 
-    /// <summary>由 App 启动时注入托盘图标实例。</summary>
+    /// <summary>由 App 启动时注入托盘图标实例（仅用于右键菜单/退出，不再用于气球）。</summary>
     public static void Init(TaskbarIcon tray) => _tray = tray;
 
-    /// <summary>显示气球提示（失败静默，不干扰主流程）。</summary>
-    public static void ShowBalloon(string message)
-    {
-        if (_tray == null) return;
-        try { _tray.ShowNotification("CapsLock++", message); }
-        catch { /* 静默 */ }
-    }
+    /// <summary>显示跟随鼠标的提示文本（替代系统通知）。</summary>
+    public static void Notify(string message) => MouseTip.Show(message);
 
     /// <summary>WPF MessageBox 封装（统一标题）。</summary>
     public static MessageBoxResult Confirm(string message, string title)

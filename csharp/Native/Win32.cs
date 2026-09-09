@@ -40,6 +40,14 @@ internal static class Win32
     public static extern IntPtr WindowFromPoint(Point pt);
 
     [DllImport("user32.dll")]
+    public static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+    /// <summary>GetAncestor 取根拥有者窗口（跟随 owner 链到顶层，对应 AHK MouseGetPos 的顶层窗口）。</summary>
+    public const uint GaRootOwner = 3;
+    /// <summary>GetAncestor 取根窗口（不跟随 owner 链）。</summary>
+    public const uint GaRoot = 2;
+
+    [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]

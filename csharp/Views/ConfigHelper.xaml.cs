@@ -163,7 +163,7 @@ public partial class ConfigHelperWindow : Window
         _selectedGroupDisplay = -1;
         _selectedItemDisplay = -1;
         PopulateGroupList();
-        TrayService.ShowBalloon("已重新加载配置");
+        TrayService.Notify("已重新加载配置");
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
@@ -172,7 +172,7 @@ public partial class ConfigHelperWindow : Window
         {
             MenuSystem.SaveToIni(_iniPath);
             QuickNote.ReloadTargets();
-            TrayService.ShowBalloon("配置已保存");
+            TrayService.Notify("配置已保存");
         }
         catch (Exception ex)
         {

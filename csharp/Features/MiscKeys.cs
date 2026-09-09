@@ -69,5 +69,5 @@ internal static class MiscKeys
     });
 
     private static void ShowTooltip(string msg) =>
-        Core.TrayService.ShowBalloon(msg);
+        Core.TrayService.Notify(msg);
 }

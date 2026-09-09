@@ -105,7 +105,7 @@ internal static class QuickSearch
     }
 
     private static void ShowTooltip(string msg) =>
-        TrayService.ShowBalloon(msg);
+        TrayService.Notify(msg);
 
     private static void RunOnSta(ThreadStart action)
     {

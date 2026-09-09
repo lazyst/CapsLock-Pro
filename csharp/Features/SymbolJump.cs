@@ -416,6 +416,6 @@ internal static class SymbolJump
 
     private static void ShowTooltip(string msg)
     {
-        TrayService.ShowBalloon(msg);
+        TrayService.Notify(msg);
     }
 }

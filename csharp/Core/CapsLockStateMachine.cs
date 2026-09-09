@@ -178,6 +178,6 @@ internal static class CapsLockStateMachine
     /// <summary>在鼠标附近显示提示（阶段1 用托盘气球，后续可改原生 Tooltip）。</summary>
     private static void ShowTooltip(string msg)
     {
-        TrayService.ShowBalloon(msg);
+        TrayService.Notify(msg);
     }
 }

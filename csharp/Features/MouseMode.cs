@@ -162,5 +162,5 @@ internal static class MouseMode
     }
 
     private static void ShowTooltip(string msg) =>
-        TrayService.ShowBalloon(msg);
+        TrayService.Notify(msg);
 }

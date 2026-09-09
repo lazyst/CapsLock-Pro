@@ -137,7 +137,7 @@ public partial class QuickNoteWindow : Window
         {
             File.Delete(sel.Path);
             LoadFilesToList(SearchBox.Text);
-            TrayService.ShowBalloon("已删除「" + sel.Name + "」");
+            TrayService.Notify("已删除「" + sel.Name + "」");
         }
         catch (Exception ex)
         {
@@ -165,7 +165,7 @@ public partial class QuickNoteWindow : Window
                 string ts = Features.QuickNote.Timestamp();
                 content = Regex.Replace(content, @"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]", "[" + ts + "]");
                 File.WriteAllText(_currentEditingFile, content, new UTF8Encoding(false));
-                TrayService.ShowBalloon("已保存到「" + _currentEditingFile + "」");
+                TrayService.Notify("已保存到「" + _currentEditingFile + "」");
                 EditBox.Focus();
                 return;
             }
@@ -256,7 +256,7 @@ public partial class QuickNoteWindow : Window
                 if (i == 0 && hasNewTitle) continue;
                 sb.Append(lines[i]).Append("\n");
             }
-            try { File.AppendAllText(filePath, sb.ToString(), new UTF8Encoding(false)); TrayService.ShowBalloon("已追加到「" + filePath + "」"); }
+            try { File.AppendAllText(filePath, sb.ToString(), new UTF8Encoding(false)); TrayService.Notify("已追加到「" + filePath + "」"); }
             catch (Exception ex) { MessageBox.Show("保存失败: " + ex.Message, "速记", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
         else
@@ -288,7 +288,7 @@ public partial class QuickNoteWindow : Window
                 sb.Append("[").Append(ts).Append("]\n\n");
                 foreach (var line in lines) sb.Append(line).Append("\n");
             }
-            try { File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(false)); TrayService.ShowBalloon("已保存到「" + filePath + "」"); }
+            try { File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(false)); TrayService.Notify("已保存到「" + filePath + "」"); }
             catch (Exception ex) { MessageBox.Show("保存失败: " + ex.Message, "速记", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
         return filePath;
@@ -313,7 +313,7 @@ public partial class QuickNoteWindow : Window
         {
             File.AppendAllText(filePath, sb.ToString(), new UTF8Encoding(false));
             string tip = displayName.Length > 0 ? "已保存到「" + displayName + "」" : "已保存到「" + Path.GetFileName(filePath) + "」";
-            TrayService.ShowBalloon(tip);
+            TrayService.Notify(tip);
         }
         catch (Exception ex)
         {
