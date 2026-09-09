@@ -12,6 +12,7 @@ public partial class MenuPopupWindow : Window
 {
     private readonly int _groupIndex;
     private readonly IReadOnlyList<string> _itemNames;
+    private bool _isClosing;
 
     public MenuPopupWindow(string groupName, int groupIndex, IReadOnlyList<string> itemNames)
     {
@@ -88,7 +89,12 @@ public partial class MenuPopupWindow : Window
         }
     }
 
-    private void Window_Deactivated(object sender, EventArgs e) => MenuSystem.CloseCurrent();
+    private void Window_Deactivated(object sender, EventArgs e)
+    {
+        if (_isClosing) return;
+        _isClosing = true;
+        try { MenuSystem.CloseCurrent(); } catch { /* 静默 */ }
+    }
 
     private void Close_Click(object sender, RoutedEventArgs e) => MenuSystem.CloseCurrent();
 }
