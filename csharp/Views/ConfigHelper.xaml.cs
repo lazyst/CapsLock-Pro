@@ -40,7 +40,7 @@ public partial class ConfigHelperWindow : Window
     {
         _selectedGroupDisplay = GroupList.SelectedIndex;
         _selectedItemDisplay = -1;
-        PopulateItemList(SearchBox.Text);
+        PopulateItemList(string.Empty);
     }
 
     private void PopulateItemList(string filter)
@@ -53,7 +53,7 @@ public partial class ConfigHelperWindow : Window
         {
             if (string.IsNullOrEmpty(filter) || g.Items[i].Name.Contains(filter))
             {
-                ItemList.Items.Add(g.Items[i].Name);
+                ItemList.Items.Add($"{i + 1}. {g.Items[i].Name}");
                 _itemDisplayToIndex.Add(i);
             }
         }
@@ -67,8 +67,6 @@ public partial class ConfigHelperWindow : Window
         if (d >= 0 && d < _itemDisplayToIndex.Count)
             _selectedItemDisplay = _itemDisplayToIndex[d];
     }
-
-    private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => PopulateItemList(SearchBox.Text);
 
     // —— 组操作 ——
     private void AddGroup_Click(object sender, RoutedEventArgs e)
@@ -111,7 +109,7 @@ public partial class ConfigHelperWindow : Window
         if (dlg != null)
         {
             MenuSystem.AddItem(SelectedSlot, dlg.ItemName, dlg.Cmd, dlg.Terminal, dlg.KeepWindow);
-            PopulateItemList(SearchBox.Text);
+            PopulateItemList(string.Empty);
         }
     }
 
@@ -126,7 +124,7 @@ public partial class ConfigHelperWindow : Window
         if (dlg != null)
         {
             MenuSystem.EditItem(SelectedSlot, _selectedItemDisplay, dlg.ItemName, dlg.Cmd, dlg.Terminal, dlg.KeepWindow);
-            PopulateItemList(SearchBox.Text);
+            PopulateItemList(string.Empty);
         }
     }
 
@@ -134,21 +132,21 @@ public partial class ConfigHelperWindow : Window
     {
         if (MenuSystem.GetGroup(SelectedSlot) == null || _selectedItemDisplay < 0) return;
         MenuSystem.DeleteItem(SelectedSlot, _selectedItemDisplay);
-        PopulateItemList(SearchBox.Text);
+        PopulateItemList(string.Empty);
     }
 
     private void MoveUp_Click(object sender, RoutedEventArgs e)
     {
         if (MenuSystem.GetGroup(SelectedSlot) == null || _selectedItemDisplay < 0) return;
         if (MenuSystem.MoveMenuItem(SelectedSlot, _selectedItemDisplay, -1)) SelectRealIndex(_selectedItemDisplay - 1);
-        PopulateItemList(SearchBox.Text);
+        PopulateItemList(string.Empty);
     }
 
     private void MoveDown_Click(object sender, RoutedEventArgs e)
     {
         if (MenuSystem.GetGroup(SelectedSlot) == null || _selectedItemDisplay < 0) return;
         if (MenuSystem.MoveMenuItem(SelectedSlot, _selectedItemDisplay, 1)) SelectRealIndex(_selectedItemDisplay + 1);
-        PopulateItemList(SearchBox.Text);
+        PopulateItemList(string.Empty);
     }
 
     private void SelectRealIndex(int realIndex)

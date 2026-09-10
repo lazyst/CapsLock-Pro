@@ -1,52 +1,67 @@
 <Window x:Class="CapsLockPro.Views.ConfigHelperWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="配置助手" Width="720" Height="520"
+        Title="配置助手" Width="760" Height="540"
+        MinWidth="640" MinHeight="420"
         Topmost="True" ShowInTaskbar="True" ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgBrush}" FontFamily="{StaticResource UiFont}">
-    <Grid Margin="10">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
+        <!-- 卡片区 -->
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="220" MinWidth="180"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="*" MinWidth="300"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 菜单组 -->
-            <DockPanel Grid.Column="0" Margin="0,0,5,0">
-                <TextBlock DockPanel.Dock="Top" Text="菜单组" FontWeight="Medium" Margin="0,0,0,6"/>
-                <ListBox x:Name="GroupList" SelectionChanged="GroupList_SelectedIndexChanged"/>
-            </DockPanel>
+            <!-- 左卡片：菜单组 -->
+            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock DockPanel.Dock="Top" Text="菜单组" FontWeight="Medium" Margin="0,0,0,8"/>
+                        <ListBox x:Name="GroupList" SelectionChanged="GroupList_SelectedIndexChanged"/>
+                    </DockPanel>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <Button Style="{StaticResource Btn}" Content="添加" Click="AddGroup_Click" Margin="0,0,4,0"/>
+                        <Button Style="{StaticResource Btn}" Content="编辑" Click="EditGroup_Click" Margin="0,0,4,0"/>
+                        <Button Style="{StaticResource BtnDanger}" Content="删除" Click="DeleteGroup_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
-            <!-- 操作按钮（组 + 项） -->
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Width="120">
-                <TextBlock Text="菜单组操作" FontWeight="Medium" Margin="0,0,0,6"/>
-                <Button Style="{StaticResource Btn}" Content="添加组" Click="AddGroup_Click" Margin="0,0,0,4"/>
-                <Button Style="{StaticResource Btn}" Content="编辑组" Click="EditGroup_Click" Margin="0,0,0,4"/>
-                <Button Style="{StaticResource BtnDanger}" Content="删除组" Click="DeleteGroup_Click" Margin="0,0,0,12"/>
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+                          Background="Transparent" ShowsPreview="True"/>
 
-                <TextBlock Text="菜单项操作" FontWeight="Medium" Margin="0,0,0,6"/>
-                <Button Style="{StaticResource Btn}" Content="添加项" Click="AddItem_Click" Margin="0,0,0,4"/>
-                <Button Style="{StaticResource Btn}" Content="编辑项" Click="EditItem_Click" Margin="0,0,0,4"/>
-                <Button Style="{StaticResource BtnDanger}" Content="删除项" Click="DeleteItem_Click" Margin="0,0,0,4"/>
-                <Button Style="{StaticResource Btn}" Content="↑ 上移" Click="MoveUp_Click" Margin="0,0,0,4"/>
-                <Button Style="{StaticResource Btn}" Content="↓ 下移" Click="MoveDown_Click"/>
-            </StackPanel>
-
-            <!-- 菜单项 -->
-            <DockPanel Grid.Column="2" Margin="5,0,0,0">
-                <TextBlock DockPanel.Dock="Top" Text="菜单项" FontWeight="Medium" Margin="0,0,0,6"/>
-                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                    <TextBlock Text="搜索:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <TextBox x:Name="SearchBox" Height="28" TextChanged="SearchBox_TextChanged"/>
-                </DockPanel>
-                <ListBox x:Name="ItemList" SelectionChanged="ItemList_SelectedIndexChanged"/>
-            </DockPanel>
+            <!-- 右卡片：菜单项 -->
+            <Border Grid.Column="2" Style="{StaticResource Card}" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="菜单项" FontWeight="Medium" Margin="0,0,0,8"/>
+                    <ListBox Grid.Row="1" x:Name="ItemList" SelectionChanged="ItemList_SelectedIndexChanged"/>
+                    <!-- 操作工具条 -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Style="{StaticResource Btn}" Content="添加" Click="AddItem_Click" Margin="0,0,4,0"/>
+                        <Button Style="{StaticResource Btn}" Content="编辑" Click="EditItem_Click" Margin="0,0,4,0"/>
+                        <Button Style="{StaticResource BtnDanger}" Content="删除" Click="DeleteItem_Click" Margin="0,0,8,0"/>
+                        <Button Style="{StaticResource Btn}" Content="上移" Click="MoveUp_Click" Margin="0,0,4,0"/>
+                        <Button Style="{StaticResource Btn}" Content="下移" Click="MoveDown_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- 底部 -->

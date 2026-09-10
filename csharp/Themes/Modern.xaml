@@ -14,6 +14,16 @@
     <Color x:Key="DangerHoverColor">#B91C1C</Color>
     <Color x:Key="HoverBgColor">#F0F1F5</Color>
 
+    <!-- 浅色变体（Primary/Danger 按钮浅底深字） -->
+    <Color x:Key="LightAccentColor">#DBEAFE</Color>
+    <Color x:Key="LightAccentTextColor">#1D4ED8</Color>
+    <Color x:Key="LightAccentBorderColor">#93C5FD</Color>
+    <Color x:Key="LightAccentHoverColor">#BFDBFE</Color>
+    <Color x:Key="LightDangerColor">#FEE2E2</Color>
+    <Color x:Key="LightDangerTextColor">#B91C1C</Color>
+    <Color x:Key="LightDangerBorderColor">#FCA5A5</Color>
+    <Color x:Key="LightDangerHoverColor">#FECACA</Color>
+
     <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/>
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
@@ -25,6 +35,14 @@
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
     <SolidColorBrush x:Key="DangerHoverBrush" Color="{StaticResource DangerHoverColor}"/>
     <SolidColorBrush x:Key="HoverBgBrush" Color="{StaticResource HoverBgColor}"/>
+    <SolidColorBrush x:Key="LightAccentBrush" Color="{StaticResource LightAccentColor}"/>
+    <SolidColorBrush x:Key="LightAccentTextBrush" Color="{StaticResource LightAccentTextColor}"/>
+    <SolidColorBrush x:Key="LightAccentBorderBrush" Color="{StaticResource LightAccentBorderColor}"/>
+    <SolidColorBrush x:Key="LightAccentHoverBrush" Color="{StaticResource LightAccentHoverColor}"/>
+    <SolidColorBrush x:Key="LightDangerBrush" Color="{StaticResource LightDangerColor}"/>
+    <SolidColorBrush x:Key="LightDangerTextBrush" Color="{StaticResource LightDangerTextColor}"/>
+    <SolidColorBrush x:Key="LightDangerBorderBrush" Color="{StaticResource LightDangerBorderColor}"/>
+    <SolidColorBrush x:Key="LightDangerHoverBrush" Color="{StaticResource LightDangerHoverColor}"/>
 
     <!-- 字体 -->
     <FontFamily x:Key="UiFont">Segoe UI</FontFamily>
@@ -80,27 +98,27 @@
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="16,7"/>
+        <Setter Property="Padding" Value="10,4"/>
         <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="12"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="MinWidth" Value="36"/>
+        <Setter Property="MinWidth" Value="28"/>
         <Setter Property="Tag" Value="{StaticResource HoverBgBrush}"/>
         <Setter Property="Template" Value="{StaticResource BtnTemplate}"/>
     </Style>
-    <!-- Primary（蓝底白字） -->
+    <!-- Primary（浅蓝底深蓝字） -->
     <Style x:Key="BtnPrimary" TargetType="Button" BasedOn="{StaticResource Btn}">
-        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-        <Setter Property="Tag" Value="{StaticResource AccentHoverBrush}"/>
+        <Setter Property="Background" Value="{StaticResource LightAccentBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource LightAccentTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource LightAccentBorderBrush}"/>
+        <Setter Property="Tag" Value="{StaticResource LightAccentHoverBrush}"/>
     </Style>
-    <!-- Danger（红底白字） -->
+    <!-- Danger（浅红底深红字） -->
     <Style x:Key="BtnDanger" TargetType="Button" BasedOn="{StaticResource Btn}">
-        <Setter Property="Background" Value="{StaticResource DangerBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
-        <Setter Property="Tag" Value="{StaticResource DangerHoverBrush}"/>
+        <Setter Property="Background" Value="{StaticResource LightDangerBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource LightDangerTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource LightDangerBorderBrush}"/>
+        <Setter Property="Tag" Value="{StaticResource LightDangerHoverBrush}"/>
     </Style>
 
     <!-- TextBox -->
