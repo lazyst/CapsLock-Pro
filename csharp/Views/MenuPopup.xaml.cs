@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using CapsLockPro.Features;
 
 namespace CapsLockPro.Views;
@@ -33,8 +34,8 @@ public partial class MenuPopupWindow : Window
             var num = new TextBlock
             {
                 Text = numText,
-                Foreground = (System.Windows.Media.Brush)FindResource("LightAccentTextBrush"),
-                FontSize = 14,
+                Foreground = (System.Windows.Media.Brush)FindResource("MenuAccentBrush"),
+                FontSize = 16,
                 FontWeight = FontWeights.Bold,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -46,6 +47,7 @@ public partial class MenuPopupWindow : Window
             {
                 Style = (Style)FindResource("Btn"),
                 Content = itemNames[i],
+                MinHeight = 42,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Left,
             };
@@ -55,6 +57,27 @@ public partial class MenuPopupWindow : Window
 
             ItemsHost.Children.Add(row);
         }
+
+        // 淑入动画（对应 AHK FadeInWindow 150ms）
+        Opacity = 0;
+        Loaded += (_, _) =>
+            BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150)));
+    }
+
+    // 淡出动画（对应 AHK FadeOutWindow 100ms）：关闭时先淡出再真实销毁
+    private bool _fading;
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (!_fading)
+        {
+            _fading = true;
+            e.Cancel = true;
+            var anim = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(100));
+            anim.Completed += (_, _) => Close();
+            BeginAnimation(OpacityProperty, anim);
+            return;
+        }
+        base.OnClosing(e);
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)

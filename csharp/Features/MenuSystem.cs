@@ -27,6 +27,9 @@ internal static class MenuSystem
     /// <summary>菜单组槽位总数（1..N）。</summary>
     public static int GroupCount => MaxGroups;
 
+    /// <summary>当前是否有菜单弹出。</summary>
+    public static bool IsMenuOpen => _current != null;
+
     /// <summary>从 INI 加载全部 10 个菜单组（启动时调用一次）。</summary>
     public static void Load(string? iniPath)
     {

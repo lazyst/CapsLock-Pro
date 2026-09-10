@@ -1,3 +1,4 @@
+using CapsLockPro.Features;
 using CapsLockPro.Native;
 
 namespace CapsLockPro.Core;
@@ -16,6 +17,9 @@ namespace CapsLockPro.Core;
 internal static class CapsLockStateMachine
 {
     private const int ClickThresholdMs = 300; // 单击判定时长阈值
+
+    /// <summary>菜单打开期间记录一次新 CapsLock 按下，用于 keyup 时直接关闭菜单。</summary>
+    private static bool _menuClosePending;
 
     /// <summary>
     /// 处理一次性键盘事件。
@@ -63,6 +67,8 @@ internal static class CapsLockStateMachine
                 AppState.CapsLockPressTime = Environment.TickCount;
                 AppState.OtherKeyPressed = false;
                 AppState.CapsLockEscPressed = (Win32.GetAsyncKeyState(Win32.VkEscape) & 0x8000) != 0;
+                // 菜单打开期间的新一次按下：标记 keyup 时直接关闭菜单（不依赖 300ms 阈值）
+                _menuClosePending = MenuSystem.IsMenuOpen;
             }
 
             if (AppState.IsToolEnabled)
@@ -123,6 +129,15 @@ internal static class CapsLockStateMachine
                 // CapsLock+Esc → 禁用
                 AppState.IsToolEnabled = false;
                 ShowTooltip("CapsLock++ 已禁用");
+                ResetEscOther();
+                return true;
+            }
+
+            // 菜单打开期间的一次 CapsLock 单击（无其他键、无 Esc）→ 直接关闭菜单
+            if (_menuClosePending && !AppState.OtherKeyPressed)
+            {
+                _menuClosePending = false;
+                MenuSystem.CloseCurrent();
                 ResetEscOther();
                 return true;
             }
