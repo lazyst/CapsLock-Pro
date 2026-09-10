@@ -33,7 +33,7 @@ public partial class MenuPopupWindow : Window
             var num = new TextBlock
             {
                 Text = numText,
-                Foreground = (System.Windows.Media.Brush)FindResource("AccentBrush"),
+                Foreground = (System.Windows.Media.Brush)FindResource("LightAccentTextBrush"),
                 FontSize = 14,
                 FontWeight = FontWeights.Bold,
                 HorizontalAlignment = HorizontalAlignment.Center,
@@ -45,7 +45,7 @@ public partial class MenuPopupWindow : Window
             var btn = new Button
             {
                 Style = (Style)FindResource("Btn"),
-                Content = "  " + itemNames[i],
+                Content = itemNames[i],
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Left,
             };

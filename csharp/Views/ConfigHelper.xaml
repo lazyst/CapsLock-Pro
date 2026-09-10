@@ -51,7 +51,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Text="菜单项" FontWeight="Medium" Margin="0,0,0,8"/>
-                    <ListBox Grid.Row="1" x:Name="ItemList" SelectionChanged="ItemList_SelectedIndexChanged"/>
+                    <ListBox Grid.Row="1" x:Name="ItemList" SelectionChanged="ItemList_SelectedIndexChanged" MouseDoubleClick="ItemList_MouseDoubleClick"/>
                     <!-- 操作工具条 -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Style="{StaticResource Btn}" Content="添加" Click="AddItem_Click" Margin="0,0,4,0"/>

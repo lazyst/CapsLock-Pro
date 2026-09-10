@@ -68,6 +68,12 @@ public partial class ConfigHelperWindow : Window
             _selectedItemDisplay = _itemDisplayToIndex[d];
     }
 
+    private void ItemList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (ItemList.SelectedIndex < 0) return;
+        EditItem_Click(sender, e);
+    }
+
     // —— 组操作 ——
     private void AddGroup_Click(object sender, RoutedEventArgs e)
     {
