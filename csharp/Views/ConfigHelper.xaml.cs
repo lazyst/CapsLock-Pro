@@ -181,7 +181,7 @@ public partial class ConfigHelperWindow : Window
         try
         {
             MenuSystem.SaveToIni(_iniPath);
-            QuickNote.ReloadTargets();
+            QuickNote.Refresh();
             TrayService.Notify("配置已保存");
         }
         catch (Exception ex)

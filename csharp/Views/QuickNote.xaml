@@ -1,7 +1,7 @@
 <Window x:Class="CapsLockPro.Views.QuickNoteWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="速记" Width="540" Height="500"
+        Title="速记" Width="780" Height="540"
         Topmost="True" ShowInTaskbar="True" ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgBrush}" FontFamily="{StaticResource UiFont}"
@@ -11,38 +11,58 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 按钮/搜索栏 -->
+        <!-- 顶栏：分类 / 搜索 / 操作 -->
         <WrapPanel Grid.Row="0" Orientation="Horizontal" Margin="10,8,10,4">
-            <Button Style="{StaticResource Btn}" x:Name="ViewToggleBtn" Content="查看速记" Click="ViewToggle_Click" Margin="0,0,8,4"/>
-            <TextBlock x:Name="SearchLabel" Text="搜索:" VerticalAlignment="Center" Margin="8,0,4,0" Visibility="Collapsed"/>
-            <TextBox x:Name="SearchBox" Width="160" Height="28" Visibility="Collapsed" Margin="0,0,8,4"
-                     TextChanged="SearchBox_TextChanged"/>
+            <TextBlock Text="分类:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+            <ComboBox x:Name="CategoryBox" Width="120" Height="28" SelectionChanged="CategoryBox_SelectionChanged" Margin="0,0,6,4"/>
+            <Button Style="{StaticResource Btn}" x:Name="NewCategoryBtn" Content="新建分类" Click="NewCategory_Click" Margin="0,0,8,4"/>
+            <TextBlock Text="搜索:" VerticalAlignment="Center" Margin="8,0,4,0"/>
+            <TextBox x:Name="SearchBox" Width="150" Height="28" TextChanged="SearchBox_TextChanged" Margin="0,0,8,4"/>
             <Button Style="{StaticResource BtnPrimary}" x:Name="SaveBtn" Content="保存" Click="Save_Click" Margin="0,0,8,4"/>
             <Button Style="{StaticResource Btn}" x:Name="NewNoteBtn" Content="新建速记" Click="NewNote_Click" Margin="0,0,8,4"/>
-            <Button Style="{StaticResource Btn}" x:Name="CancelBtn" Content="取消" Click="Cancel_Click" Margin="0,0,8,4"/>
-            <Button Style="{StaticResource BtnDanger}" x:Name="DeleteBtn" Content="删除选中" Click="Delete_Click" Margin="0,0,8,4" Visibility="Collapsed"/>
+            <Button Style="{StaticResource BtnDanger}" x:Name="DeleteBtn" Content="删除" Click="Delete_Click" Margin="0,0,8,4"/>
+            <Button Style="{StaticResource Btn}" x:Name="CloseBtn" Content="关闭" Click="Close_Click" Margin="0,0,8,4"/>
         </WrapPanel>
 
-        <!-- 内容区：编辑框 / 列表 切换 -->
-        <TextBox Grid.Row="1" x:Name="EditBox" Margin="10,4,10,4" AcceptsReturn="True" AcceptsTab="True"
-                 VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" FontFamily="{StaticResource UiFont}"
-                 Text="## "/>
-        <ListView Grid.Row="1" x:Name="NoteList" Margin="10,4,10,4" Visibility="Collapsed" MouseDoubleClick="NoteList_DoubleClick">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="文件名" Width="200" DisplayMemberBinding="{Binding Name}"/>
-                    <GridViewColumn Header="修改时间" Width="130" DisplayMemberBinding="{Binding Mtime}"/>
-                    <GridViewColumn Header="目标" Width="80" DisplayMemberBinding="{Binding Target}"/>
-                </GridView>
-            </ListView.View>
-        </ListView>
+        <!-- 双列：左列表 + 右编辑区 -->
+        <Grid Grid.Row="1" Margin="10,4,10,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" MinWidth="180"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- 状态提示 -->
+            <ListView Grid.Column="0" x:Name="NoteList" MouseDoubleClick="NoteList_DoubleClick">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="标题" Width="160" DisplayMemberBinding="{Binding Title}"/>
+                        <GridViewColumn Header="修改时间" Width="120" DisplayMemberBinding="{Binding MtimeText}"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="{StaticResource BgBrush}"/>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBox Grid.Row="0" x:Name="TitleBox" Margin="0,0,0,4" Height="30"
+                         FontSize="15" FontWeight="Bold" Tag="标题"
+                         TextChanged="TitleBox_TextChanged"/>
+                <TextBox Grid.Row="1" x:Name="BodyBox" AcceptsReturn="True" AcceptsTab="True"
+                         VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"
+                         FontFamily="{StaticResource UiFont}" TextChanged="BodyBox_TextChanged"/>
+            </Grid>
+        </Grid>
+
+        <!-- 状态栏 -->
         <TextBlock Grid.Row="2" x:Name="StatusBar" Margin="10,2,10,8"
                    Foreground="{StaticResource HintTextBrush}" FontSize="12"
-                   Text="提示: 输入标题或删除## | 最后一行使用==目标==指定保存位置 | Ctrl+S保存"/>
+                   Text="提示: Ctrl+S 保存 | 双击列表载入 | 新建速记清空编辑区"/>
     </Grid>
 </Window>
