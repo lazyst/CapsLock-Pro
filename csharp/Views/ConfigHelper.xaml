@@ -65,9 +65,12 @@
         </Grid>
 
         <!-- 底部 -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Style="{StaticResource Btn}" Content="重新加载配置" Click="Reload_Click" Margin="0,0,8,0"/>
-            <Button Style="{StaticResource BtnPrimary}" Content="保存配置" Click="Save_Click"/>
-        </StackPanel>
+        <DockPanel Grid.Row="1" LastChildFill="False">
+            <Button DockPanel.Dock="Left" Style="{StaticResource Btn}" Content="终端路径..." Click="TerminalPaths_Click" Margin="0,12,8,0"/>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <Button Style="{StaticResource Btn}" Content="重新加载配置" Click="Reload_Click" Margin="0,0,8,0"/>
+                <Button Style="{StaticResource BtnPrimary}" Content="保存配置" Click="Save_Click"/>
+            </StackPanel>
+        </DockPanel>
     </Grid>
 </Window>

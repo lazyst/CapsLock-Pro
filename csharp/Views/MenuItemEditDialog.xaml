@@ -31,8 +31,13 @@
         <CheckBox Grid.Row="2" Grid.Column="2" x:Name="KeepWindowCheck" Content="保持窗口"
                   VerticalAlignment="Center" Margin="8,0,0,0" Checked="UpdatePreview" Unchecked="UpdatePreview"/>
 
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="完整命令:" VerticalAlignment="Center" Margin="0,6"/>
-        <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" x:Name="PreviewBox" Margin="0,4" MinHeight="30" IsReadOnly="True"/>
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="工作目录:" VerticalAlignment="Center" Margin="0,6"/>
+        <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" x:Name="WorkdirBox" Margin="0,4" MinHeight="30"
+                  ToolTip="留空默认桌面" TextChanged="UpdatePreview"/>
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="启动命令:" VerticalAlignment="Center" Margin="0,6"/>
+        <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" x:Name="PreviewBox" Margin="0,4" MinHeight="30" IsReadOnly="True"
+                  ToolTip="终端路由器实际将执行的命令"/>
 
         <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Style="{StaticResource BtnPrimary}" Content="确定" MinWidth="80" Margin="0,0,8,0" IsDefault="True" Click="Ok_Click"/>

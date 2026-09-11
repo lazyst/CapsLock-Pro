@@ -15,8 +15,9 @@ public partial class MenuItemEditDialog : Window
     public string Cmd { get; private set; } = "";
     public string Terminal { get; private set; } = "direct";
     public bool KeepWindow { get; private set; }
+    public string Workdir { get; private set; } = "";
 
-    public MenuItemEditDialog(string title, string name, string cmd, string terminal, bool keepWindow)
+    public MenuItemEditDialog(string title, string name, string cmd, string terminal, bool keepWindow, string workdir)
     {
         InitializeComponent();
         Title = title;
@@ -24,6 +25,7 @@ public partial class MenuItemEditDialog : Window
         CmdBox.Text = cmd;
         _terminalKey = terminal;
         KeepWindowCheck.IsChecked = keepWindow;
+        WorkdirBox.Text = workdir;
 
         foreach (var (display, _) in CommandString.Terminals)
             TerminalCombo.Items.Add(display);
@@ -37,9 +39,9 @@ public partial class MenuItemEditDialog : Window
     }
 
     /// <summary>弹出模态编辑框。</summary>
-    public static MenuItemEditDialog? ShowDialog(Window? owner, string title, string name, string cmd, string terminal, bool keepWindow)
+    public static MenuItemEditDialog? ShowDialog(Window? owner, string title, string name, string cmd, string terminal, bool keepWindow, string workdir)
     {
-        var dlg = new MenuItemEditDialog(title, name, cmd, terminal, keepWindow);
+        var dlg = new MenuItemEditDialog(title, name, cmd, terminal, keepWindow, workdir);
         if (owner != null) dlg.Owner = owner;
         dlg.ShowDialog();
         return dlg._ok ? dlg : null;
@@ -56,7 +58,7 @@ public partial class MenuItemEditDialog : Window
     private void UpdatePreview(object sender, EventArgs e) => UpdatePreview();
 
     private void UpdatePreview() =>
-        PreviewBox.Text = CommandString.Build(CmdBox.Text, _terminalKey, KeepWindowCheck.IsChecked == true);
+        PreviewBox.Text = TerminalLauncher.BuildPreview(_terminalKey, KeepWindowCheck.IsChecked == true, CmdBox.Text, WorkdirBox.Text);
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
@@ -65,6 +67,7 @@ public partial class MenuItemEditDialog : Window
         Cmd = CmdBox.Text;
         Terminal = _terminalKey;
         KeepWindow = KeepWindowCheck.IsChecked == true;
+        Workdir = WorkdirBox.Text;
         _ok = true;
         DialogResult = true;
     }

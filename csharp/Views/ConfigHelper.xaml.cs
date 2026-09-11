@@ -111,10 +111,10 @@ public partial class ConfigHelperWindow : Window
     private void AddItem_Click(object sender, RoutedEventArgs e)
     {
         if (MenuSystem.GetGroup(SelectedSlot) == null) return;
-        var dlg = MenuItemEditDialog.ShowDialog(this, "添加菜单项", "", "", "direct", false);
+        var dlg = MenuItemEditDialog.ShowDialog(this, "添加菜单项", "", "", "direct", false, "");
         if (dlg != null)
         {
-            MenuSystem.AddItem(SelectedSlot, dlg.ItemName, dlg.Cmd, dlg.Terminal, dlg.KeepWindow);
+            MenuSystem.AddItem(SelectedSlot, dlg.ItemName, dlg.Cmd, dlg.Terminal, dlg.KeepWindow, dlg.Workdir);
             PopulateItemList(string.Empty);
         }
     }
@@ -125,11 +125,10 @@ public partial class ConfigHelperWindow : Window
         if (g == null || _selectedItemDisplay < 0) return;
         if (_selectedItemDisplay >= g.Items.Count) return;
         var item = g.Items[_selectedItemDisplay];
-        var (cmd, terminal, keepWindow) = CommandString.Parse(item.Action);
-        var dlg = MenuItemEditDialog.ShowDialog(this, "编辑菜单项", item.Name, cmd, terminal, keepWindow);
+        var dlg = MenuItemEditDialog.ShowDialog(this, "编辑菜单项", item.Name, item.Cmd, item.Terminal, item.KeepWindow, item.Workdir);
         if (dlg != null)
         {
-            MenuSystem.EditItem(SelectedSlot, _selectedItemDisplay, dlg.ItemName, dlg.Cmd, dlg.Terminal, dlg.KeepWindow);
+            MenuSystem.EditItem(SelectedSlot, _selectedItemDisplay, dlg.ItemName, dlg.Cmd, dlg.Terminal, dlg.KeepWindow, dlg.Workdir);
             PopulateItemList(string.Empty);
         }
     }
@@ -159,6 +158,13 @@ public partial class ConfigHelperWindow : Window
     {
         int d = _itemDisplayToIndex.IndexOf(realIndex);
         _selectedItemDisplay = d;
+    }
+
+    private void TerminalPaths_Click(object sender, RoutedEventArgs e)
+    {
+        TerminalPathsDialog.ShowDialog(this);
+        MenuSystem.ReloadFromIni(_iniPath);
+        PopulateGroupList();
     }
 
     private void Reload_Click(object sender, RoutedEventArgs e)

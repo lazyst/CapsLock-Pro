@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using CapsLockPro.Config;
+using CapsLockPro.Core;
 using CapsLockPro.Native;
 using CapsLockPro.Views;
 
@@ -23,6 +24,7 @@ internal static class MenuSystem
     private const int MaxGroups = 10;
     private static readonly MenuGroup?[] _groups = new MenuGroup?[MaxGroups + 1]; // 1-indexed
     private static MenuPopupWindow? _current;
+    private static int _currentGroup; // 当前弹出菜单的组索引（供钩子路由选择用）
 
     /// <summary>菜单组槽位总数（1..N）。</summary>
     public static int GroupCount => MaxGroups;
@@ -33,6 +35,7 @@ internal static class MenuSystem
     /// <summary>从 INI 加载全部 10 个菜单组（启动时调用一次）。</summary>
     public static void Load(string? iniPath)
     {
+        TerminalLauncher.LoadFromIni(iniPath);
         for (int i = 1; i <= MaxGroups; i++)
             _groups[i] = LoadGroup(iniPath, i);
     }
@@ -56,7 +59,11 @@ internal static class MenuSystem
             string iname = IniFile.ReadValue(iniPath, section, "name" + j) ?? "";
             if (iname.Length == 0) continue;
             string action = IniFile.ReadValue(iniPath, section, "action" + j) ?? "";
-            items.Add(new MenuItem(iname, action));
+            string term = IniFile.ReadValue(iniPath, section, "terminal" + j) ?? "direct";
+            string keep = IniFile.ReadValue(iniPath, section, "keepwindow" + j) ?? "false";
+            string workdir = IniFile.ReadValue(iniPath, section, "workdir" + j) ?? "";
+            items.Add(new MenuItem(iname, action, term,
+                keep.Equals("true", StringComparison.OrdinalIgnoreCase), workdir));
         }
         if (items.Count == 0) return null;
         return new MenuGroup(name, items);
@@ -81,9 +88,33 @@ internal static class MenuSystem
         CloseCurrent();
         var g = _groups[groupIndex];
         if (g == null) return;
+        _currentGroup = groupIndex;
         _current = new MenuPopupWindow(g.Name, groupIndex, g.Items.Select(x => x.Name).ToList());
         _current.Closed += (_, _) => _current = null;
         _current.Show();
+    }
+
+    /// <summary>菜单内按键路由（由全局钩子调用，不依赖窗口焦点）：
+    /// 数字 1~9/0 → 选第 N 项（超范围→关菜单）；Esc → 关菜单。对齐 AHK #HotIf WinActive(menu) 的数字热键。</summary>
+    public static bool HandleMenuKey(ushort vk, bool isDown)
+    {
+        if (!IsMenuOpen || !isDown) return false;
+        if (vk >= '0' && vk <= '9')
+        {
+            int idx = (vk == '0') ? 10 : (vk - '0');
+            var g = _groups[_currentGroup];
+            if (g != null && idx >= 1 && idx <= g.Items.Count)
+                SelectItem(_currentGroup, idx);
+            else
+                CloseCurrent();
+            return true;
+        }
+        if (vk == Win32.VkEscape)
+        {
+            CloseCurrent();
+            return true;
+        }
+        return false;
     }
 
     /// <summary>关闭当前菜单（若存在）。</summary>
@@ -101,14 +132,52 @@ internal static class MenuSystem
     {
         var g = _groups[groupIndex];
         if (g == null || itemIndex < 1 || itemIndex > g.Items.Count) return;
-        string action = g.Items[itemIndex - 1].Action;
+        var item = g.Items[itemIndex - 1];
         CloseCurrent();
-        if (!string.IsNullOrEmpty(action))
-            Task.Run(() => RunCommand(action));
+        // direct 且空命令 → no-op；其余（含非 direct 仅开 shell）→ 执行
+        if (!string.IsNullOrEmpty(item.Cmd) || (item.Terminal != "direct" && item.Terminal.Length != 0))
+            Task.Run(() => RunCommand(item));
     }
 
-    /// <summary>解析命令行并启动进程（对应 AHK Run / RunCommand）。</summary>
-    private static void RunCommand(string cmd)
+    /// <summary>按菜单项的终端路由启动进程（direct 走原命令拆分+ShellExecute 回退，其余走 TerminalLauncher）。</summary>
+    private static void RunCommand(MenuItem item)
+    {
+        if (item.Terminal == "direct" || item.Terminal.Length == 0)
+        {
+            RunDirect(item.Cmd);
+            return;
+        }
+        var r = TerminalLauncher.TryBuildLaunch(item.Terminal, item.KeepWindow, item.Cmd, item.Workdir);
+        if (!r.Ok)
+        {
+            if (r.Error != null)
+            {
+                CrashLog.Write("RunCommand", new InvalidOperationException(r.Error));
+                MessageBox.Show(r.Error, "CapsLock++", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            return;
+        }
+        try
+        {
+            var psi = new ProcessStartInfo(r.Exe!)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = false,
+            };
+            if (!string.IsNullOrEmpty(r.Args)) psi.Arguments = r.Args;
+            if (!string.IsNullOrEmpty(r.Workdir) && Directory.Exists(r.Workdir))
+                psi.WorkingDirectory = r.Workdir;
+            Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("RunCommand", ex);
+            Debug.WriteLine($"终端启动失败: {item.Terminal} {item.Cmd} - {ex.Message}");
+        }
+    }
+
+    /// <summary>direct 终端：拆 exe+args 启动，失败回退 ShellExecute（URL/文档/含空格非可执行首段）。</summary>
+    private static void RunDirect(string cmd)
     {
         try
         {
@@ -123,7 +192,6 @@ internal static class MenuSystem
         }
         catch
         {
-            // 回退 ShellExecute（URL / 文档路径 / 含空格且非可执行的首段）
             try { Process.Start(new ProcessStartInfo(cmd) { UseShellExecute = true }); }
             catch (Exception ex) { Debug.WriteLine($"菜单动作执行失败: {cmd} - {ex.Message}"); }
         }
@@ -183,19 +251,19 @@ internal static class MenuSystem
     }
 
     /// <summary>在组末尾添加菜单项。</summary>
-    public static void AddItem(int groupIndex, string name, string cmd, string terminal, bool keepWindow)
+    public static void AddItem(int groupIndex, string name, string cmd, string terminal, bool keepWindow, string workdir)
     {
         var g = GetGroup(groupIndex);
         if (g == null) return;
-        g.Items.Add(new MenuItem(name, CommandString.Build(cmd, terminal, keepWindow)));
+        g.Items.Add(new MenuItem(name, cmd, terminal, keepWindow, workdir));
     }
 
     /// <summary>修改指定菜单项。</summary>
-    public static void EditItem(int groupIndex, int itemIndex, string name, string cmd, string terminal, bool keepWindow)
+    public static void EditItem(int groupIndex, int itemIndex, string name, string cmd, string terminal, bool keepWindow, string workdir)
     {
         var g = GetGroup(groupIndex);
         if (g == null || itemIndex < 0 || itemIndex >= g.Items.Count) return;
-        g.Items[itemIndex] = new MenuItem(name, CommandString.Build(cmd, terminal, keepWindow));
+        g.Items[itemIndex] = new MenuItem(name, cmd, terminal, keepWindow, workdir);
     }
 
     /// <summary>删除指定菜单项。</summary>
@@ -249,8 +317,12 @@ internal static class MenuSystem
             IniFile.WriteValue(iniPath, "MenuGroupCount", "count" + i, g.Items.Count.ToString());
             for (int j = 0; j < g.Items.Count; j++)
             {
-                IniFile.WriteValue(iniPath, itemsSection, "name" + (j + 1), g.Items[j].Name);
-                IniFile.WriteValue(iniPath, itemsSection, "action" + (j + 1), g.Items[j].Action);
+                var it = g.Items[j];
+                IniFile.WriteValue(iniPath, itemsSection, "name" + (j + 1), it.Name);
+                IniFile.WriteValue(iniPath, itemsSection, "action" + (j + 1), it.Cmd);
+                IniFile.WriteValue(iniPath, itemsSection, "terminal" + (j + 1), it.Terminal);
+                IniFile.WriteValue(iniPath, itemsSection, "keepwindow" + (j + 1), it.KeepWindow ? "true" : "false");
+                IniFile.WriteValue(iniPath, itemsSection, "workdir" + (j + 1), it.Workdir ?? "");
             }
         }
     }
@@ -266,8 +338,12 @@ internal static class MenuSystem
     internal sealed class MenuItem
     {
         public string Name { get; }
-        public string Action { get; }
-        public MenuItem(string name, string action) { Name = name; Action = action; }
+        public string Cmd { get; }           // 原始命令（不再 bake 终端信息）
+        public string Terminal { get; }      // direct/pwsh7/pwsh5/cmd/gitbash/wslbash
+        public bool KeepWindow { get; }
+        public string Workdir { get; }       // 空则执行时默认桌面
+        public MenuItem(string name, string cmd, string terminal, bool keepWindow, string workdir)
+        { Name = name; Cmd = cmd; Terminal = terminal; KeepWindow = keepWindow; Workdir = workdir ?? ""; }
     }
 }
 

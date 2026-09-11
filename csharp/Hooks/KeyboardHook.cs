@@ -69,6 +69,14 @@ internal static class KeyboardHook
                 return swallow ? (IntPtr)1 : Win32.CallNextHookEx(_handle, nCode, wParam, lParam);
             }
 
+            // 菜单打开期间：数字键选项 / Esc 关菜单由钩子路由（不依赖窗口焦点，对齐 AHK #HotIf WinActive(menu)）
+            if (isDown && MenuSystem.IsMenuOpen && MenuSystem.HandleMenuKey(vk, isDown))
+            {
+                AppState.OtherKeyPressed = true; // 视为 CapsLock 组合键，避免 keyup 误触发单击→Esc
+                MarkSwallowed(vk);
+                return (IntPtr)1;
+            }
+
             // 已吞键的 keyup：一并吞掉，保持事件平衡（防止被吞的 keydown 配对走漏）
             if (isUp && AppState.SwallowedVks.Contains((int)vk))
             {
