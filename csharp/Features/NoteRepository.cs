@@ -57,6 +57,50 @@ internal sealed class NoteRepository
         }
     }
 
+    /// <summary>分类是否存在（真实目录）。</summary>
+    public bool CategoryExists(string name)
+    {
+        string clean = CleanCategoryName(name);
+        if (string.IsNullOrEmpty(clean)) return false;
+        return Directory.Exists(System.IO.Path.Combine(_root, clean));
+    }
+
+    /// <summary>重命名分类（目录改名）。目标已存在或同名抛异常。</summary>
+    public void RenameCategory(string oldName, string newName)
+    {
+        string oldClean = CleanCategoryName(oldName);
+        string newClean = CleanCategoryName(newName);
+        if (string.IsNullOrEmpty(oldClean) || string.IsNullOrEmpty(newClean))
+            throw new ArgumentException("分类名无效");
+        string oldDir = System.IO.Path.Combine(_root, oldClean);
+        string newDir = System.IO.Path.Combine(_root, newClean);
+        if (!Directory.Exists(oldDir)) throw new InvalidOperationException("分类「" + oldClean + "」不存在");
+        if (string.Equals(oldClean, newClean, StringComparison.OrdinalIgnoreCase)) return;
+        if (Directory.Exists(newDir)) throw new InvalidOperationException("分类「" + newClean + "」已存在");
+        Directory.Move(oldDir, newDir);
+    }
+
+    /// <summary>统计分类下 .txt 数。</summary>
+    public int CountNotes(string name)
+    {
+        string clean = CleanCategoryName(name);
+        string dir = System.IO.Path.Combine(_root, clean);
+        if (!Directory.Exists(dir)) return 0;
+        try { return Directory.GetFiles(dir, "*.txt").Length; }
+        catch { return 0; }
+    }
+
+    /// <summary>删除分类及其全部笔记。返回删除的 .txt 数。</summary>
+    public int DeleteCategory(string name)
+    {
+        string clean = CleanCategoryName(name);
+        string dir = System.IO.Path.Combine(_root, clean);
+        if (!Directory.Exists(dir)) return 0;
+        int count = CountNotes(clean);
+        Directory.Delete(dir, recursive: true);
+        return count;
+    }
+
     /// <summary>枚举条目。category 为 null/空/“全部”时跨所有分类；filter 非空时按标题/正文子串过滤。按修改时间倒序。</summary>
     public IReadOnlyList<NoteEntry> List(string? category, string? filter)
     {

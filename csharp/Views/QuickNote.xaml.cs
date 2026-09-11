@@ -1,19 +1,23 @@
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using CapsLockPro.Core;
 using CapsLockPro.Features;
 
 namespace CapsLockPro.Views;
 
-/// <summary>速记 GUI（双列：左列表 + 右编辑区）。数据层见 <see cref="NoteRepository"/>。</summary>
+/// <summary>速记 GUI（双列：左列表 + 右编辑区，正文带行号）。数据层见 <see cref="NoteRepository"/>。</summary>
 public partial class QuickNoteWindow : Window
 {
     private readonly NoteRepository _repo;
     private NoteEntry? _current;
     private bool _loading;
     private string _filter = "";
+
+    private ScrollViewer? _bodyScroll;
 
     // 列表行（供 GridView 绑定；NoteEntry 的 Mtime 是 DateTime 不便直接显示）
     private record NoteRow(string Title, string MtimeText, string Path, string Category, DateTime Mtime, string Body);
@@ -22,9 +26,17 @@ public partial class QuickNoteWindow : Window
     {
         InitializeComponent();
         _repo = repo;
-        Loaded += (_, _) => { NewNote(); };
+        Loaded += OnLoaded;
         PopulateCategoryBox(NoteRepository.Unclassified);
         ReloadList();
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        // 钩住 BodyBox 内部 ScrollViewer，按垂直滚动偏移平移行号 gutter
+        _bodyScroll = FindVisualChild<ScrollViewer>(BodyBox);
+        if (_bodyScroll != null) _bodyScroll.ScrollChanged += BodyScroll_ScrollChanged;
+        NewNote();
     }
 
     /// <summary>外部（QuickNote.Refresh）通知仓库可能变化，重刷分类+列表。</summary>
@@ -35,7 +47,7 @@ public partial class QuickNoteWindow : Window
         ReloadList();
     }
 
-    // —— 顶栏 ——
+    // —— 顶栏：分类 ——
 
     private void CategoryBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -51,6 +63,48 @@ public partial class QuickNoteWindow : Window
         PopulateCategoryBox(name.Trim());
     }
 
+    private void RenameCategory_Click(object sender, RoutedEventArgs e)
+    {
+        string? cat = SelectedRealCategory();
+        if (cat == null)
+        {
+            ConfirmDialog.Info(this, "重命名分类", "请先在下拉框选择一个具体分类（不能是“全部”）");
+            return;
+        }
+        var (ok, name) = InputDialog.Show(this, "重命名分类", "输入新分类名:", cat);
+        if (!ok || string.IsNullOrWhiteSpace(name)) return;
+        try { _repo.RenameCategory(cat, name.Trim()); }
+        catch (Exception ex) { ConfirmDialog.Info(this, "重命名分类", ex.Message); return; }
+        PopulateCategoryBox(name.Trim());
+        // 当前编辑中的笔记若在被改名的分类，更新其分类归属
+        if (_current != null && _current.Category == cat) _current = _repo.Load(_current.Path);
+        ReloadList();
+        TrayService.Notify("已重命名「" + cat + "」→「" + name.Trim() + "」");
+    }
+
+    private void DeleteCategory_Click(object sender, RoutedEventArgs e)
+    {
+        string? cat = SelectedRealCategory();
+        if (cat == null)
+        {
+            ConfirmDialog.Info(this, "删除分类", "请先在下拉框选择一个具体分类（不能是“全部”）");
+            return;
+        }
+        int count = _repo.CountNotes(cat);
+        string msg = count == 0
+            ? "确认删除空分类「" + cat + "」？"
+            : "确认删除分类「" + cat + "」及其下 " + count + " 条速记？此操作不可撤销。";
+        if (!ConfirmDialog.Confirm(this, "删除分类", msg, danger: true)) return;
+        int removed = _repo.DeleteCategory(cat);
+        if (_current != null && _current.Category == cat) { _current = null; NewNote(); }
+        PopulateCategoryBox(NoteRepository.AllCategories);
+        ReloadList();
+        TrayService.Notify("已删除分类「" + cat + "」（" + removed + " 条速记）");
+    }
+
+    private string? SelectedRealCategory()
+        => CategoryBox.SelectedItem is string s && s != NoteRepository.AllCategories ? s : null;
+
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         _filter = SearchBox.Text ?? "";
@@ -65,11 +119,11 @@ public partial class QuickNoteWindow : Window
     {
         if (_current == null || _current.IsNew)
         {
-            MessageBox.Show("没有可删除的速记（当前是新建未保存内容）", "删除速记", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ConfirmDialog.Info(this, "删除速记", "当前是新建未保存内容，没有可删除的速记");
             return;
         }
         var name = System.IO.Path.GetFileName(_current.Path);
-        if (MessageBox.Show("确认删除「" + name + "」？", "删除速记", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        if (!ConfirmDialog.Confirm(this, "删除速记", "确认删除「" + name + "」？此操作不可撤销。", danger: true)) return;
         _repo.Delete(_current.Path);
         TrayService.Notify("已删除「" + name + "」");
         _current = null;
@@ -96,6 +150,8 @@ public partial class QuickNoteWindow : Window
         TitleBox.Text = entry.Title;
         BodyBox.Text = entry.Body;
         _loading = false;
+        BodyBox.ScrollToHome();
+        UpdateLineNumbers();
         StatusBar.Text = "提示: 正在编辑「" + entry.Title + "」 | Ctrl+S 保存";
         BodyBox.Focus();
         BodyBox.CaretIndex = BodyBox.Text.Length;
@@ -139,6 +195,8 @@ public partial class QuickNoteWindow : Window
         TitleBox.Text = "";
         BodyBox.Text = "";
         _loading = false;
+        BodyBox.ScrollToHome();
+        UpdateLineNumbers();
         StatusBar.Text = "提示: 输入标题与正文后 Ctrl+S 保存";
         TitleBox.Focus();
     }
@@ -151,8 +209,41 @@ public partial class QuickNoteWindow : Window
 
     private void BodyBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        UpdateLineNumbers();
         if (_loading) return;
         StatusBar.Text = "提示: 未保存改动 | Ctrl+S 保存";
+    }
+
+    private void BodyBox_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateLineNumbers();
+
+    // —— 行号 gutter ——
+
+    private void BodyScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        LineNumTransform.Y = -e.VerticalOffset;
+    }
+
+    private void UpdateLineNumbers()
+    {
+        if (LineNumbers == null) return;
+        int n = BodyBox.LineCount;
+        if (n < 1) n = 1;
+        var sb = new StringBuilder(n * 3);
+        for (int i = 1; i <= n; i++) sb.Append(i).Append('\n');
+        LineNumbers.Text = sb.ToString(0, sb.Length - 1); // 去末尾换行
+        if (_bodyScroll != null) LineNumTransform.Y = -_bodyScroll.VerticalOffset;
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var c = VisualTreeHelper.GetChild(root, i);
+            if (c is T t) return t;
+            var r = FindVisualChild<T>(c);
+            if (r != null) return r;
+        }
+        return null;
     }
 
     private void SaveCurrent()
@@ -161,7 +252,7 @@ public partial class QuickNoteWindow : Window
         string body = BodyBox.Text;
         if (string.IsNullOrWhiteSpace(body) && string.IsNullOrWhiteSpace(title))
         {
-            MessageBox.Show("标题和正文都为空，未保存", "速记", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ConfirmDialog.Info(this, "速记", "标题和正文都为空，未保存");
             return;
         }
 
@@ -178,7 +269,7 @@ public partial class QuickNoteWindow : Window
 
         string savedPath;
         try { savedPath = _repo.Save(entry, oldPath); }
-        catch (Exception ex) { MessageBox.Show("保存失败: " + ex.Message, "速记", MessageBoxButton.OK, MessageBoxImage.Error); return; }
+        catch (Exception ex) { ConfirmDialog.Info(this, "速记", "保存失败: " + ex.Message); return; }
 
         TrayService.Notify("已保存「" + (string.IsNullOrEmpty(title) ? System.IO.Path.GetFileNameWithoutExtension(savedPath) : title) + "」");
         _current = _repo.Load(savedPath);
