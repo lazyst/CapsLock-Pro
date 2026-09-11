@@ -81,7 +81,7 @@ public partial class ConfigHelperWindow : Window
         var (ok, name) = InputDialog.Show(this, "添加菜单组", "请输入菜单组名称:", "");
         if (!ok || string.IsNullOrWhiteSpace(name)) return;
         int slot = MenuSystem.AddGroup(name.Trim());
-        if (slot < 0) { MessageBox.Show("菜单组已满 (最多10组)", "配置助手", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (slot < 0) { ConfirmDialog.Info(this, "配置助手", "菜单组已满 (最多10组)"); return; }
         _selectedGroupDisplay = slot - 1;
         PopulateGroupList();
     }
@@ -101,7 +101,7 @@ public partial class ConfigHelperWindow : Window
     private void DeleteGroup_Click(object sender, RoutedEventArgs e)
     {
         if (MenuSystem.GetGroup(SelectedSlot) == null) return;
-        if (TrayService.Confirm("确定要删除选中的菜单组吗？", "删除菜单组") != MessageBoxResult.Yes) return;
+        if (!ConfirmDialog.Confirm(this, "删除菜单组", "确定要删除选中的菜单组吗？", danger: true)) return;
         MenuSystem.DeleteGroup(SelectedSlot);
         _selectedGroupDisplay = -1;
         _selectedItemDisplay = -1;
@@ -187,7 +187,7 @@ public partial class ConfigHelperWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show("保存失败: " + ex.Message, "配置助手", MessageBoxButton.OK, MessageBoxImage.Error);
+            ConfirmDialog.Info(this, "配置助手", "保存失败: " + ex.Message);
         }
     }
 }

@@ -52,9 +52,9 @@ public partial class App : Application
 
         // —— 钩子（主线程安装，Dispatcher 泵送）——
         try { KeyboardHook.Install(); }
-        catch (Win32Exception ex) { System.Diagnostics.Debug.WriteLine($"键盘钩子失败: {ex.Message}"); }
+        catch (Win32Exception ex) { CrashLog.Write("KeyboardHookInstall", ex); }
         try { MouseHook.Install(); }
-        catch (Win32Exception ex) { System.Diagnostics.Debug.WriteLine($"鼠标钩子失败: {ex.Message}"); }
+        catch (Win32Exception ex) { CrashLog.Write("MouseHookInstall", ex); }
 
         // —— 加载配置 ——
         var iniPath = FindIniPath();

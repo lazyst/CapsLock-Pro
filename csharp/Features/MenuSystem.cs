@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-using System.Windows;
 using CapsLockPro.Config;
 using CapsLockPro.Core;
 using CapsLockPro.Native;
@@ -154,7 +153,7 @@ internal static class MenuSystem
             if (r.Error != null)
             {
                 CrashLog.Write("RunCommand", new InvalidOperationException(r.Error));
-                MessageBox.Show(r.Error, "CapsLock++", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ConfirmDialog.Info(null, "CapsLock++", r.Error);
             }
             return;
         }
@@ -173,7 +172,6 @@ internal static class MenuSystem
         catch (Exception ex)
         {
             CrashLog.Write("RunCommand", ex);
-            Debug.WriteLine($"终端启动失败: {item.Terminal} {item.Cmd} - {ex.Message}");
         }
     }
 
@@ -194,7 +192,7 @@ internal static class MenuSystem
         catch
         {
             try { Process.Start(new ProcessStartInfo(cmd) { UseShellExecute = true }); }
-            catch (Exception ex) { Debug.WriteLine($"菜单动作执行失败: {cmd} - {ex.Message}"); }
+            catch (Exception ex) { CrashLog.Write("MenuRunDirect", ex); }
         }
     }
 

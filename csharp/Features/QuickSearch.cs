@@ -96,13 +96,13 @@ internal static class QuickSearch
     private static void RunShell(string cmd)
     {
         try { Process.Start(new ProcessStartInfo(cmd) { UseShellExecute = true }); }
-        catch (Exception ex) { Debug.WriteLine($"QuickSearch Run 失败: {cmd} - {ex.Message}"); }
+        catch (Exception ex) { CrashLog.Write("QuickSearchRun", ex); }
     }
 
     private static void RunExplorer(string path)
     {
         try { Process.Start("explorer.exe", "\"" + path + "\""); }
-        catch (Exception ex) { Debug.WriteLine($"QuickSearch 打开路径失败: {path} - {ex.Message}"); }
+        catch (Exception ex) { CrashLog.Write("QuickSearchOpenPath", ex); }
     }
 
     private static void ShowTooltip(string msg) =>

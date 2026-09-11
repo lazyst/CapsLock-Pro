@@ -91,7 +91,6 @@ internal static class TerminalLauncher
             string? wt0 = ResolveWt();
             if (wt0 != null && File.Exists(wt0))
                 return new LaunchResult(true, wt0, shellToken, workdir2, null);
-            Debug.WriteLine($"[TerminalLauncher] wt 不可用，降级直接启动 {terminal}");
             return new LaunchResult(true, shell, "", workdir2, null);
         }
 
@@ -106,8 +105,7 @@ internal static class TerminalLauncher
             // 及用户命令里的 ';'）必须转义为 '\\;' 让 wt 传字面分号给 shell，否则会被拆成多个 tab。
             return new LaunchResult(true, wt, $"{shellToken} {WtEscapeSemicolon(shellArgs)}", workdir2, null);
         }
-        Debug.WriteLine($"[TerminalLauncher] wt 不可用，降级到 {terminal} 控制台窗口");
-        return new LaunchResult(true, shell, shellArgs, workdir2, null);
+            return new LaunchResult(true, shell, shellArgs, workdir2, null);
     }
 
     /// <summary>预览：返回实际将启动的 exe + args 串（direct 返回原始 cmd；非 direct 空命令返回“仅打开 shell”）。</summary>

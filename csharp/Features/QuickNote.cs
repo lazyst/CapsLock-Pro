@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using CapsLockPro.Config;
+using CapsLockPro.Core;
 using CapsLockPro.Views;
 
 namespace CapsLockPro.Features;
@@ -23,7 +23,7 @@ internal static class QuickNote
         _iniPath = iniPath;
         string root = ComputeDefaultDir(iniPath);
         try { if (!Directory.Exists(root)) Directory.CreateDirectory(root); }
-        catch (Exception ex) { Debug.WriteLine($"创建速记目录失败: {ex.Message}"); }
+        catch (Exception ex) { CrashLog.Write("QuickNoteInit", ex); }
 
         _repo = new NoteRepository(root);
         _repo.MigrateRootScatteredNotes();
