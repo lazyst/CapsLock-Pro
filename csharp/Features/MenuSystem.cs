@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Windows;
 using CapsLockPro.Config;
 using CapsLockPro.Core;
 using CapsLockPro.Native;

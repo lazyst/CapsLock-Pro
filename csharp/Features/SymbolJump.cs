@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
+using Clipboard = System.Windows.Clipboard;
+using IDataObject = System.Windows.IDataObject;
 using CapsLockPro.Core;
 using CapsLockPro.Native;
 
