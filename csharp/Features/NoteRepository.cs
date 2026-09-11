@@ -22,9 +22,6 @@ internal sealed class NoteRepository
 
     public NoteRepository(string root) => _root = root;
 
-    /// <summary>速记根目录（.../速记/）。</summary>
-    public string Root => _root;
-
     /// <summary>枚举分类（子目录名），保证“未分类”在列。</summary>
     public IReadOnlyList<string> Categories()
     {
@@ -55,14 +52,6 @@ internal sealed class NoteRepository
             try { Directory.CreateDirectory(dir); }
             catch (Exception ex) { CrashLog.Write("创建速记分类目录失败: " + clean, ex); }
         }
-    }
-
-    /// <summary>分类是否存在（真实目录）。</summary>
-    public bool CategoryExists(string name)
-    {
-        string clean = CleanCategoryName(name);
-        if (string.IsNullOrEmpty(clean)) return false;
-        return Directory.Exists(System.IO.Path.Combine(_root, clean));
     }
 
     /// <summary>重命名分类（目录改名）。目标已存在或同名抛异常。</summary>

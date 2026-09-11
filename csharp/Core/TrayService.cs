@@ -1,5 +1,4 @@
 using System.Windows;
-using H.NotifyIcon;
 
 namespace CapsLockPro.Core;
 
@@ -11,11 +10,6 @@ namespace CapsLockPro.Core;
 /// </summary>
 internal static class TrayService
 {
-    private static TaskbarIcon? _tray;
-
-    /// <summary>由 App 启动时注入托盘图标实例（仅用于右键菜单/退出，不再用于气球）。</summary>
-    public static void Init(TaskbarIcon tray) => _tray = tray;
-
     /// <summary>显示跟随鼠标的提示文本（替代系统通知）。</summary>
     public static void Notify(string message) => MouseTip.Show(message);
 }

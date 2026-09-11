@@ -78,7 +78,6 @@ public partial class App : Application
             IconSource = LoadIconSource(),
             ContextMenu = menu,
         };
-        TrayService.Init(_tray);
         _tray.ForceCreate();
     }
 

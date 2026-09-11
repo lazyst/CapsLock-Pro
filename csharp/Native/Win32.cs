@@ -44,8 +44,6 @@ internal static class Win32
 
     /// <summary>GetAncestor 取根拥有者窗口（跟随 owner 链到顶层，对应 AHK MouseGetPos 的顶层窗口）。</summary>
     public const uint GaRootOwner = 3;
-    /// <summary>GetAncestor 取根窗口（不跟随 owner 链）。</summary>
-    public const uint GaRoot = 2;
 
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -64,9 +62,6 @@ internal static class Win32
 
     [DllImport("user32.dll")]
     public static extern bool GetGUIThreadInfo(uint idThread, ref Guithreadinfo lpgui);
-
-    [DllImport("dwmapi.dll", PreserveSig = true)]
-    public static extern int DwmSetWindowAttribute(IntPtr hwnd, uint dwAttribute, ref int pvAttribute, int cbAttribute);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetModuleHandle(string? moduleName);
@@ -100,7 +95,6 @@ internal static class Win32
     public const int VkLmenu = 0xA4;     // Alt
     public const int VkRmenu = 0xA5;
     public const int VkLwin = 0x5B;
-    public const int VkRwin = 0x5C;
     public const int VkShift = 0x10;
     public const int VkControl = 0x11;
     public const int VkMenu = 0x12;
@@ -110,7 +104,6 @@ internal static class Win32
     public const int VkTab = 0x09;
     public const int VkBack = 0x08;
     public const int VkDelete = 0x2E;
-    public const int VkVolumeMute = 0xAD;
     public const int VkVolumeUp = 0xAF;
     public const int VkVolumeDown = 0xAE;
 
@@ -121,9 +114,6 @@ internal static class Win32
     public const int VkDown = 0x28;
     public const int VkHome = 0x24;
     public const int VkEnd = 0x23;
-    public const int VkPrior = 0x21;  // PageUp
-    public const int VkNext = 0x22;  // PageDown
-    public const int VkInsert = 0x2D;
     public const int VkF2 = 0x71;   // 重命名键（资源管理器选中文件 F2）
 
     // —— OEM 符号键（CapsLock+ 符号动作用）——
@@ -133,7 +123,6 @@ internal static class Win32
     public const int VkOemMinus = 0xBD;
     public const int VkOemPeriod = 0xBE;
     public const int VkOem2 = 0xBF;      // /?
-    public const int VkOem3 = 0xC0;      // `~
     public const int VkOem4 = 0xDB;      // [{
     public const int VkOem5 = 0xDC;      // \|
     public const int VkOem6 = 0xDD;      // ]}
@@ -188,39 +177,25 @@ internal static class Win32
     }
 
     // KBDLLHOOKSTRUCT.Flags 位
-    public const uint LlkhfExtended = 0x01;
-    public const uint LlkhfLowerIlInjected = 0x02;
     public const uint LlkhfInjected = 0x10;
-    public const uint LlkhfUp = 0x80;
 
     // MSLLHOOKSTRUCT.Flags 位（注意与键盘不同：LLMHF_INJECTED=0x01，非 0x10）
     public const uint LlmhfInjected = 0x01;
-    public const uint LlmhfLowerIlInjected = 0x02;
 
     // 鼠标消息
-    public const int WmMousemove = 0x0200;
     public const int WmLbuttondown = 0x0201;
-    public const int WmLbuttonup = 0x0202;
     public const int WmRbuttondown = 0x0204;
     public const int WmRbuttonup = 0x0205;
     public const int WmMousewheel = 0x020A;
-    public const int WmMousehwheel = 0x020E;
 
     // mouse_event 标志
-    public const uint MouseeventfMove = 0x0001;
     public const uint MouseeventfLeftdown = 0x0002;
     public const uint MouseeventfLeftup = 0x0004;
     public const uint MouseeventfRightdown = 0x0008;
     public const uint MouseeventfRightup = 0x0010;
-    public const uint MouseeventfMiddledown = 0x0020;
-    public const uint MouseeventfMiddleup = 0x0040;
     public const uint MouseeventfWheel = 0x0800;
     public const uint MouseeventfHwheel = 0x01000;
     public const uint WheelDelta = 120;
-
-    // DwmSetWindowAttribute
-    public const uint DwmwaWindowCornerPreference = 33;
-    public const int DwmwcpRound = 2;
 
     // ShowWindow 命令
     public const int SwMinimize = 6;
