@@ -83,20 +83,17 @@
                         <ColumnDefinition Width="42"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <!-- 行号 gutter：与 BodyBox 同字体同行高，按滚动偏移平移对齐 -->
-                    <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0"
-                            ClipToBounds="True" Padding="4,4,4,4">
-                        <TextBlock x:Name="LineNumbers" Text="1"
-                                   FontFamily="{StaticResource UiFont}" FontSize="14"
-                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                   TextAlignment="Right" HorizontalAlignment="Stretch"
-                                   VerticalAlignment="Top">
-                            <TextBlock.RenderTransform>
-                                <TranslateTransform x:Name="LineNumTransform"/>
-                            </TextBlock.RenderTransform>
-                        </TextBlock>
-                    </Border>
+                    <!-- 行号 gutter：只读 TextBox，与 BodyBox 同字体/Padding/行高，按滚动偏移同步 ScrollToVerticalOffset → 行高天然一致零漂移 -->
+                    <TextBox Grid.Column="0" x:Name="LineNumbers" Text="1"
+                             IsReadOnly="True" Focusable="False" IsHitTestVisible="False"
+                             Background="{StaticResource SurfaceBrush}"
+                             BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0"
+                             FontFamily="{StaticResource UiFont}" FontSize="14"
+                             Foreground="{StaticResource SecondaryTextBrush}"
+                             TextAlignment="Right" TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Hidden"
+                             HorizontalScrollBarVisibility="Hidden"
+                             VerticalContentAlignment="Top"/>
                     <TextBox Grid.Column="1" x:Name="BodyBox" AcceptsReturn="True" AcceptsTab="True"
                              VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"
                              VerticalContentAlignment="Top"

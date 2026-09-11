@@ -220,7 +220,7 @@ public partial class QuickNoteWindow : Window
 
     private void BodyScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        LineNumTransform.Y = -e.VerticalOffset;
+        LineNumbers.ScrollToVerticalOffset(e.VerticalOffset);
     }
 
     private void UpdateLineNumbers()
@@ -231,7 +231,7 @@ public partial class QuickNoteWindow : Window
         var sb = new StringBuilder(n * 3);
         for (int i = 1; i <= n; i++) sb.Append(i).Append('\n');
         LineNumbers.Text = sb.ToString(0, sb.Length - 1); // 去末尾换行
-        if (_bodyScroll != null) LineNumTransform.Y = -_bodyScroll.VerticalOffset;
+        if (_bodyScroll != null) LineNumbers.ScrollToVerticalOffset(_bodyScroll.VerticalOffset);
     }
 
     private static T? FindVisualChild<T>(DependencyObject root) where T : DependencyObject
