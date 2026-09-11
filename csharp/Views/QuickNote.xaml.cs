@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CapsLockPro.Core;
 using CapsLockPro.Features;
 
@@ -19,6 +20,9 @@ public partial class QuickNoteWindow : Window
 
     private ScrollViewer? _bodyScroll;
 
+    // 搜索防抖：按键间隙不重扫目录，停顿 300ms 后统一刷新一次
+    private DispatcherTimer? _searchDebounce;
+
     // 列表行（供 GridView 绑定；NoteEntry 的 Mtime 是 DateTime 不便直接显示）
     private record NoteRow(string Title, string MtimeText, string Path, string Category, DateTime Mtime, string Body);
 
@@ -26,6 +30,8 @@ public partial class QuickNoteWindow : Window
     {
         InitializeComponent();
         _repo = repo;
+        _searchDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        _searchDebounce.Tick += (_, _) => { _searchDebounce.Stop(); ReloadList(); };
         Loaded += OnLoaded;
         PopulateCategoryBox(NoteRepository.Unclassified);
         ReloadList();
@@ -108,7 +114,9 @@ public partial class QuickNoteWindow : Window
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         _filter = SearchBox.Text ?? "";
-        ReloadList();
+        // 防抖：停顿 300ms 后重扫一次，避免每键都全量扫目录+读文件
+        _searchDebounce?.Stop();
+        _searchDebounce?.Start();
     }
 
     private void NewNote_Click(object sender, RoutedEventArgs e) => NewNote();

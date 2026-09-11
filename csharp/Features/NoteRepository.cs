@@ -101,7 +101,8 @@ internal sealed class NoteRepository
         return count;
     }
 
-    /// <summary>枚举条目。category 为 null/空/“全部”时跨所有分类；filter 非空时按标题/正文子串过滤。按修改时间倒序。</summary>
+    /// <summary>枚举条目。category 为 null/空/“全部”时跨所有分类；filter 非空时按标题/正文子串过滤。按修改时间倒序。
+    /// 列表只需标题+mtime，正文不预读；过滤时仅对标题不匹配的条目懒读正文做子串匹配（保留正文搜索能力）。</summary>
     public IReadOnlyList<NoteEntry> List(string? category, string? filter)
     {
         var result = new List<NoteEntry>();
@@ -116,12 +117,22 @@ internal sealed class NoteRepository
             try { files = Directory.GetFiles(dir, "*.txt"); }
             catch { continue; }
             foreach (var f in files)
-                result.Add(BuildEntry(f, cat));
+                result.Add(BuildEntryLight(f, cat));
         }
 
         string? flt = string.IsNullOrWhiteSpace(filter) ? null : filter!.Trim();
         if (flt != null)
-            result = result.Where(e => (e.Title?.Contains(flt) ?? false) || (e.Body?.Contains(flt) ?? false)).ToList();
+        {
+            // 标题先匹配短路；仅标题不命中的条目才读正文做子串匹配，减少无谓 IO
+            var filtered = new List<NoteEntry>(result.Count);
+            foreach (var e in result)
+            {
+                if (e.Title != null && e.Title.Contains(flt)) { filtered.Add(e); continue; }
+                string? body = TryReadBody(e.Path);
+                if (body != null && body.Contains(flt)) { e.Body = body; filtered.Add(e); }
+            }
+            result = filtered;
+        }
 
         result.Sort((a, b) => b.Mtime.CompareTo(a.Mtime));
         return result;
@@ -225,16 +236,29 @@ internal sealed class NoteRepository
 
     private NoteEntry BuildEntry(string path, string cat)
     {
-        var e = new NoteEntry
+        var e = BuildEntryLight(path, cat);
+        e.Body = TryReadBody(path) ?? "";
+        return e;
+    }
+
+    /// <summary>轻量构造（不读正文）：列表只需标题+mtime，正文延迟到 <see cref="Load"/> 或过滤时的懒读。</summary>
+    private static NoteEntry BuildEntryLight(string path, string cat)
+    {
+        return new NoteEntry
         {
             Path = path,
             Category = cat,
             Mtime = File.GetLastWriteTime(path),
             Title = ParseTitleFromFileName(System.IO.Path.GetFileName(path)),
+            Body = "",
         };
-        try { e.Body = File.ReadAllText(path, new UTF8Encoding(false)); }
-        catch { try { e.Body = File.ReadAllText(path); } catch { } }
-        return e;
+    }
+
+    /// <summary>读正文（UTF-8 优先，降级默认编码）。失败返回 null。</summary>
+    private static string? TryReadBody(string path)
+    {
+        try { return File.ReadAllText(path, new UTF8Encoding(false)); }
+        catch { try { return File.ReadAllText(path); } catch { return null; } }
     }
 
     /// <summary>文件名 → 标题：剥离 <c>yyyy-MM-dd</c> 日期前缀。无标题（_HHmmss 形式）返回空。</summary>
