@@ -177,7 +177,9 @@ internal static class InputHelper
     {
         Type = (int)InputKeyboard,
         Vk = vk,
-        Scan = 0,
+        // 填充扫描码（与 AHK SendInput 一致）：DirectInput/RawInput 类游戏读扫描码，
+        // scan=0 的事件会被忽略（原实现恒为 0，导致游戏里 CapsLock 单点击发的 Esc 不生效）。
+        Scan = (ushort)MapVirtualKey(vk, MapvkVkToScancode),
         Flags = flags,
         Time = 0,
         ExtraInfo = IntPtr.Zero,
