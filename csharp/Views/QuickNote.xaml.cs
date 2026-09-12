@@ -150,9 +150,11 @@ public partial class QuickNoteWindow : Window
 
     // —— 列表 ——
 
-    private void NoteList_DoubleClick(object sender, MouseButtonEventArgs e)
+    private void NoteList_Click(object sender, MouseButtonEventArgs e)
     {
-        if (NoteList.SelectedItem is not NoteRow row) return;
+        // 从命中点沿可视化树向上找 ListViewItem，取其 DataContext(NoteRow)，不依赖 ListView 选中状态
+        var item = FindAncestor<System.Windows.Controls.ListViewItem>(e.OriginalSource as DependencyObject);
+        if (item?.DataContext is not NoteRow row) return;
         var entry = _repo.Load(row.Path);
         if (entry == null) { ReloadList(); return; }
         LoadEntry(entry);
@@ -254,6 +256,16 @@ public partial class QuickNoteWindow : Window
         if (_bodyScroll != null) LineNumbers.ScrollToVerticalOffset(_bodyScroll.VerticalOffset);
     }
 
+    private static T? FindAncestor<T>(DependencyObject? d) where T : DependencyObject
+    {
+        while (d != null)
+        {
+            if (d is T t) return t;
+            d = VisualTreeHelper.GetParent(d);
+        }
+        return null;
+    }
+
     private static T? FindVisualChild<T>(DependencyObject root) where T : DependencyObject
     {
         for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
@@ -295,7 +307,7 @@ public partial class QuickNoteWindow : Window
         _current = _repo.Load(savedPath);
         PopulateCategoryBox(category);
         ReloadList();
-        StatusBar.Text = "提示: 已保存 | Ctrl+S 保存 | 双击列表载入";
+        StatusBar.Text = "提示: 已保存 | Ctrl+S 保存 | 单击列表载入";
         BodyBox.Focus();
     }
 
