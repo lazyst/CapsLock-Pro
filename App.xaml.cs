@@ -4,6 +4,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using CapsLockPro.Config;
 using CapsLockPro.Core;
 using CapsLockPro.Features;
 using CapsLockPro.Hooks;
@@ -57,10 +58,12 @@ public partial class App : Application
         catch (Win32Exception ex) { CrashLog.Write("MouseHookInstall", ex); }
 
         // —— 加载配置 ——
-        var iniPath = FindIniPath();
-        MenuSystem.Load(iniPath);
-        QuickNote.Initialize(iniPath);
-        ConfigHelper.Initialize(iniPath);
+        var cfgPath = ConfigLocator.FindPath();
+        var cfg = AppConfig.Load(cfgPath);
+        AppState.MouseModeSpeed = cfg.MouseModeSpeed;
+        MenuSystem.Load(cfgPath);
+        QuickNote.Initialize(cfgPath);
+        ConfigHelper.Initialize(cfgPath);
 
         // —— 启动提示：鼠标旁显示“CapsLockPro 已启动”（复用 MouseTip，1.8s 后自动隐藏）——
         MouseTip.Show("CapsLockPro 已启动");
@@ -125,20 +128,5 @@ public partial class App : Application
         _tray?.Dispose();
         _singleInstanceMutex?.ReleaseMutex();
         Shutdown();
-    }
-
-    /// <summary>定位 CapsLock++.ini（发布=exe 同级，开发=上溯仓库根）。</summary>
-    private static string? FindIniPath()
-    {
-        var candidates = new[]
-        {
-            // dev：优先仓库根（项目扁平化后 bin/Debug/net8.0-windows 上溯 3 级即仓库根），速记目录指向仓库根 速记/
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "CapsLock++.ini"),
-            // prod/兜底：exe 同级
-            Path.Combine(AppContext.BaseDirectory, "CapsLock++.ini"),
-        };
-        foreach (var p in candidates)
-            if (File.Exists(p)) return p;
-        return null;
     }
 }

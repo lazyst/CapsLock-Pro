@@ -13,25 +13,26 @@ namespace CapsLockPro.Features;
 /// workdir 为空默认桌面（对齐 AHK RunCommand）。钩子回调在 UI 线程，执行 spawn 到后台线程。</summary>
 internal static class TerminalLauncher
 {
-    private static string? _iniPath;
-    private static string? _gitBashOverride; // INI 配置的 git bash 路径；空=自动探测
+    private static string? _gitBashOverride; // 配置中的 git bash 路径；空=自动探测
 
-    /// <summary>从 INI [TerminalPaths] 加载终端路径覆盖（启动时调用一次）。</summary>
-    public static void LoadFromIni(string? iniPath)
+    /// <summary>从 AppConfig 加载终端路径覆盖（启动时调用一次）。</summary>
+    public static void LoadFromConfig(AppConfig cfg)
     {
-        _iniPath = iniPath;
-        if (string.IsNullOrEmpty(iniPath) || !File.Exists(iniPath))
-        { _gitBashOverride = null; return; }
-        _gitBashOverride = IniFile.ReadValue(iniPath, "TerminalPaths", "gitbash")?.Trim();
-        if (_gitBashOverride != null && _gitBashOverride.Length == 0) _gitBashOverride = null;
+        if (cfg.TerminalPaths.TryGetValue("gitbash", out var v) && !string.IsNullOrWhiteSpace(v))
+            _gitBashOverride = v.Trim();
+        else
+            _gitBashOverride = null;
     }
 
-    /// <summary>写回 Git Bash 路径到 INI（终端路径对话框保存调用）。</summary>
+    /// <summary>写回 Git Bash 路径到配置（终端路径对话框保存调用）。</summary>
     public static void SaveGitBashPath(string path)
     {
         _gitBashOverride = string.IsNullOrWhiteSpace(path) ? null : path.Trim();
-        if (!string.IsNullOrEmpty(_iniPath) && File.Exists(_iniPath))
-            IniFile.WriteValue(_iniPath, "TerminalPaths", "gitbash", _gitBashOverride ?? "");
+        var cfgPath = ConfigLocator.FindPath();
+        var cfg = AppConfig.Load(cfgPath);
+        if (_gitBashOverride == null) cfg.TerminalPaths.Remove("gitbash");
+        else cfg.TerminalPaths["gitbash"] = _gitBashOverride;
+        cfg.Save(cfgPath);
     }
 
     /// <summary>当前 Git Bash 路径（配置或探测；探测不到返回 null）。</summary>

@@ -9,17 +9,17 @@ namespace CapsLockPro.Views;
 /// 菜单组/菜单项双列表 + 增删改 + 上下移动 + 搜索 + 保存/重载；逻辑委托 <see cref="MenuSystem"/>。</summary>
 public partial class ConfigHelperWindow : Window
 {
-    private readonly string _iniPath;
+    private readonly string _configPath;
     private int _selectedGroupDisplay = -1;   // ListBox 0-indexed 显示位置
     private int _selectedItemDisplay = -1;    // ListBox 0-indexed 显示位置
     private List<int> _itemDisplayToIndex = new(); // 显示位置 → 组内真实索引
     private bool _initializing = true;   // 初始化设 IsChecked 会触发 Checked/Unchecked，用此标志跳过
 
-    public ConfigHelperWindow(string iniPath)
+    public ConfigHelperWindow(string configPath)
     {
         InitializeComponent();
-        _iniPath = iniPath;
-        try { MenuSystem.Load(_iniPath); } catch { /* 加载失败留空 */ }
+        _configPath = configPath;
+        try { MenuSystem.Load(_configPath); } catch { /* 加载失败留空 */ }
         PopulateGroupList();
         // 初始化开机自启勾选状态（按任务计划实际存在与否，不依赖配置文件）
         Loaded += (_, _) =>
@@ -188,13 +188,13 @@ public partial class ConfigHelperWindow : Window
     private void TerminalPaths_Click(object sender, RoutedEventArgs e)
     {
         TerminalPathsDialog.ShowDialog(this);
-        MenuSystem.ReloadFromIni(_iniPath);
+        MenuSystem.ReloadFromConfig(_configPath);
         PopulateGroupList();
     }
 
     private void Reload_Click(object sender, RoutedEventArgs e)
     {
-        MenuSystem.ReloadFromIni(_iniPath);
+        MenuSystem.ReloadFromConfig(_configPath);
         _selectedGroupDisplay = -1;
         _selectedItemDisplay = -1;
         PopulateGroupList();
@@ -205,7 +205,7 @@ public partial class ConfigHelperWindow : Window
     {
         try
         {
-            MenuSystem.SaveToIni(_iniPath);
+            MenuSystem.SaveToConfig(_configPath);
             QuickNote.Refresh();
             TrayService.Notify("配置已保存");
         }

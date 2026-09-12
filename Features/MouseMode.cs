@@ -136,8 +136,10 @@ internal static class MouseMode
 
     private static void SaveSpeed()
     {
-        var ini = IniPath();
-        if (ini != null) IniFile.WriteValue(ini, "MouseMode", "Speed", AppState.MouseModeSpeed.ToString());
+        var cfgPath = ConfigLocator.FindPath();
+        var cfg = AppConfig.Load(cfgPath);
+        cfg.MouseModeSpeed = AppState.MouseModeSpeed;
+        cfg.Save(cfgPath);
     }
 
     // —— 点击 / 拖动 ——
@@ -194,19 +196,6 @@ internal static class MouseMode
             CrashLog.Write("MouseMode.WheelLoop", ex);
             _wheelTimer.Stop();
         }
-    }
-
-    private static string? IniPath()
-    {
-        var dir = AppContext.BaseDirectory;
-        // 发布：exe 同目录；开发：向上找仓库根
-        var candidates = new[]
-        {
-            Path.Combine(dir, "CapsLock++.ini"),
-            Path.Combine(dir, "..", "..", "..", "..", "..", "CapsLock++.ini"),
-        };
-        foreach (var p in candidates) if (File.Exists(p)) return p;
-        return candidates[0]; // 不存在则创建在 exe 同目录
     }
 
     private static void ShowTooltip(string msg) =>

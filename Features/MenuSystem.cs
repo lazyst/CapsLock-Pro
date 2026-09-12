@@ -13,8 +13,8 @@ namespace CapsLockPro.Features;
 /// 否则显示菜单（见 CHANGELOG v1.1）。菜单内按 1~0 执行对应项，Esc 或点击外部关闭。
 /// </summary>
 /// <remarks>
-/// 配置从 <c>CapsLock++.ini</c> 加载：[MenuGroupsEnable]/[MenuGroupName]/
-/// [MenuGroupCount]/[MenuGroups{N}Items](name+action)。动作字符串按命令行解析执行
+/// 配置从 <c>CapsLock++.json</c> 加载（AppConfig）。菜单组为固定 10 槽位数组，
+/// 下标对应 CapsLock+1~0；动作字符串按命令行解析执行
 /// （exe + 参数，失败回退 ShellExecute 处理 URL/文档）。
 /// 钩子回调运行在 UI 线程，故 <see cref="Show"/> 可直接创建 WinForms 窗口（modeless，
 /// 非阻塞）。动作执行 spawn 到后台线程（Process.Start 可能阻塞，避免冻 UI）。
@@ -32,42 +32,24 @@ internal static class MenuSystem
     /// <summary>当前是否有菜单弹出。</summary>
     public static bool IsMenuOpen => _current != null;
 
-    /// <summary>从 INI 加载全部 10 个菜单组（启动时调用一次）。</summary>
-    public static void Load(string? iniPath)
+    /// <summary>从 JSON 加载全部 10 个菜单组（启动时调用一次）。</summary>
+    public static void Load(string? configPath)
     {
-        TerminalLauncher.LoadFromIni(iniPath);
+        var cfg = AppConfig.Load(configPath ?? "");
+        TerminalLauncher.LoadFromConfig(cfg);
         for (int i = 1; i <= MaxGroups; i++)
-            _groups[i] = LoadGroup(iniPath, i);
+            _groups[i] = FromDto(cfg.MenuGroups.Count >= i ? cfg.MenuGroups[i - 1] : null);
     }
 
-    private static MenuGroup? LoadGroup(string? iniPath, int idx)
+    private static MenuGroup? FromDto(MenuGroupDto? d)
     {
-        if (string.IsNullOrEmpty(iniPath) || !File.Exists(iniPath))
-            return null;
-
-        string enabled = IniFile.ReadValue(iniPath, "MenuGroupsEnable", "enableGroup" + idx) ?? "true";
-        if (!enabled.Equals("true", StringComparison.OrdinalIgnoreCase))
-            return null; // 禁用组视为空
-
-        string name = IniFile.ReadValue(iniPath, "MenuGroupName", "name" + idx) ?? ("菜单组 " + idx);
-        int count = int.TryParse(IniFile.ReadValue(iniPath, "MenuGroupCount", "count" + idx), out var c) ? c : 0;
-
-        var items = new List<MenuItem>();
-        string section = "MenuGroups" + idx + "Items";
-        for (int j = 1; j <= count; j++)
-        {
-            string iname = IniFile.ReadValue(iniPath, section, "name" + j) ?? "";
-            if (iname.Length == 0) continue;
-            string action = IniFile.ReadValue(iniPath, section, "action" + j) ?? "";
-            string term = IniFile.ReadValue(iniPath, section, "terminal" + j) ?? "direct";
-            string keep = IniFile.ReadValue(iniPath, section, "keepwindow" + j) ?? "false";
-            string workdir = IniFile.ReadValue(iniPath, section, "workdir" + j) ?? "";
-            items.Add(new MenuItem(iname, action, term,
-                keep.Equals("true", StringComparison.OrdinalIgnoreCase), workdir));
-        }
-        if (items.Count == 0) return null;
-        return new MenuGroup(name, items);
+        if (d == null) return null;
+        var items = d.Items.Select(FromDto).ToList();
+        return items.Count == 0 ? null : new MenuGroup(d.Name, items);
     }
+
+    private static MenuItem FromDto(MenuItemDto d) =>
+        new MenuItem(d.Name, d.Cmd, d.Terminal, d.KeepWindow, d.Workdir);
 
     /// <summary>第 groupIndex 组是否为空（未启用或无项目）。</summary>
     public static bool IsEmpty(int groupIndex) => _groups[groupIndex] == null;
@@ -285,46 +267,42 @@ internal static class MenuSystem
         return true;
     }
 
-    /// <summary>从 INI 重新加载全部组。</summary>
-    public static void ReloadFromIni(string? iniPath)
+    /// <summary>从 JSON 重新加载全部组（关闭已开菜单）。</summary>
+    public static void ReloadFromConfig(string? configPath)
     {
         CloseCurrent();
-        Load(iniPath);
+        Load(configPath);
     }
 
-    /// <summary>将当前 10 个组写回 INI（整体重写菜单相关 section）。</summary>
-    public static void SaveToIni(string iniPath)
+    /// <summary>将当前 10 个组写回 JSON（读现有配置→替换菜单部分→整体写回，保留终端/鼠标等其它配置）。</summary>
+    public static void SaveToConfig(string configPath)
     {
-        string? dir = Path.GetDirectoryName(iniPath);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-
+        var cfg = AppConfig.Load(configPath);
+        cfg.MenuGroups = new List<MenuGroupDto?>();
         for (int i = 1; i <= MaxGroups; i++)
-        {
-            string itemsSection = "MenuGroups" + i + "Items";
-            try { IniFile.DeleteSection(iniPath, itemsSection); } catch { /* 静默 */ }
-            var g = _groups[i];
-            if (g == null || g.Items.Count == 0)
-            {
-                IniFile.WriteValue(iniPath, "MenuGroupsEnable", "enableGroup" + i, "false");
-                IniFile.WriteValue(iniPath, "MenuGroupName", "name" + i, "菜单组 " + i);
-                IniFile.WriteValue(iniPath, "MenuGroupCount", "count" + i, "0");
-                continue;
-            }
-            IniFile.WriteValue(iniPath, "MenuGroupsEnable", "enableGroup" + i, "true");
-            IniFile.WriteValue(iniPath, "MenuGroupName", "name" + i, g.Name);
-            IniFile.WriteValue(iniPath, "MenuGroupCount", "count" + i, g.Items.Count.ToString());
-            for (int j = 0; j < g.Items.Count; j++)
-            {
-                var it = g.Items[j];
-                IniFile.WriteValue(iniPath, itemsSection, "name" + (j + 1), it.Name);
-                IniFile.WriteValue(iniPath, itemsSection, "action" + (j + 1), it.Cmd);
-                IniFile.WriteValue(iniPath, itemsSection, "terminal" + (j + 1), it.Terminal);
-                IniFile.WriteValue(iniPath, itemsSection, "keepwindow" + (j + 1), it.KeepWindow ? "true" : "false");
-                IniFile.WriteValue(iniPath, itemsSection, "workdir" + (j + 1), it.Workdir ?? "");
-            }
-        }
+            cfg.MenuGroups.Add(ToDto(_groups[i]));
+        cfg.Save(configPath);
     }
+
+    private static MenuGroupDto? ToDto(MenuGroup? g)
+    {
+        if (g == null) return null;
+        return new MenuGroupDto
+        {
+            Enabled = true,
+            Name = g.Name,
+            Items = g.Items.Select(ToDto).ToList(),
+        };
+    }
+
+    private static MenuItemDto ToDto(MenuItem it) => new MenuItemDto
+    {
+        Name = it.Name,
+        Cmd = it.Cmd,
+        Terminal = it.Terminal,
+        KeepWindow = it.KeepWindow,
+        Workdir = it.Workdir,
+    };
 
     // —— 数据模型 ——
     internal sealed class MenuGroup

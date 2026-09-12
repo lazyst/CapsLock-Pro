@@ -4,6 +4,8 @@ namespace CapsLockPro.Config;
 
 /// <summary>
 /// 轻量 INI 读写（对应原版 Utils.ahk 的 IniRead/IniWrite）。
+/// <para>仅用于旧版 CapsLock++.ini 的一次性迁移（见 <see cref="AppConfig.MigrateFromIni"/>）；
+/// 迁移完成后运行时配置统一走 AppConfig(System.Text.Json)，不再使用本类。</para>
 /// 采用逐行编辑而非整文件重写，最大限度保留用户原 INI 的注释/顺序/格式。
 /// - 读：定位 [section] 块 → 块内找首个 key=... 取值。
 /// - 写：定位 [section] 块 → 块内找 key= 行原地替换；块存在无该键 → 块尾插入；
