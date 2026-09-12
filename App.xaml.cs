@@ -129,8 +129,7 @@ public partial class App : Application
     {
         var candidates = new[]
         {
-            // dev：优先仓库根（紧邻源码 INI），速记目录指向仓库根 速记/（含历史笔记）
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "CapsLock++.ini"),
+            // dev：优先仓库根（项目扁平化后 bin/Debug/net8.0-windows 上溯 3 级即仓库根），速记目录指向仓库根 速记/
             Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "CapsLock++.ini"),
             // prod/兜底：exe 同级
             Path.Combine(AppContext.BaseDirectory, "CapsLock++.ini"),
