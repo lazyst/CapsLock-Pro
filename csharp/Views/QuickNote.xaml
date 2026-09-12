@@ -36,7 +36,7 @@
             <Button Style="{StaticResource Btn}" x:Name="RenameCategoryBtn" Content="重命名分类" Click="RenameCategory_Click" Margin="0,0,8,4"/>
             <Button Style="{StaticResource BtnDanger}" x:Name="DeleteCategoryBtn" Content="删除分类" Click="DeleteCategory_Click" Margin="0,0,8,4"/>
             <TextBlock Text="搜索:" VerticalAlignment="Center" Margin="8,0,4,0"/>
-            <TextBox x:Name="SearchBox" Width="150" Height="28" TextChanged="SearchBox_TextChanged" Margin="0,0,8,4"/>
+            <TextBox x:Name="SearchBox" Width="150" MinHeight="32" Padding="6,2" VerticalContentAlignment="Center" TextChanged="SearchBox_TextChanged" Margin="0,0,8,4"/>
             <Button Style="{StaticResource BtnPrimary}" x:Name="SaveBtn" Content="保存" Click="Save_Click" Margin="0,0,8,4"/>
             <Button Style="{StaticResource Btn}" x:Name="NewNoteBtn" Content="新建速记" Click="NewNote_Click" Margin="0,0,8,4"/>
             <Button Style="{StaticResource BtnDanger}" x:Name="DeleteBtn" Content="删除" Click="Delete_Click" Margin="0,0,8,4"/>
@@ -46,7 +46,7 @@
         <!-- 双列：左列表 + 右编辑区 -->
         <Grid Grid.Row="1" Margin="10,4,10,4">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300" MinWidth="180"/>
+                <ColumnDefinition Width="240" MinWidth="160"/>
                 <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
@@ -55,8 +55,8 @@
                       ItemContainerStyle="{StaticResource NoteListItem}">
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="标题" Width="160" DisplayMemberBinding="{Binding Title}"/>
-                        <GridViewColumn Header="修改时间" Width="120" DisplayMemberBinding="{Binding MtimeText}"/>
+                        <GridViewColumn Header="标题" Width="120" DisplayMemberBinding="{Binding Title}"/>
+                        <GridViewColumn Header="修改时间" Width="110" DisplayMemberBinding="{Binding MtimeText}"/>
                     </GridView>
                 </ListView.View>
             </ListView>

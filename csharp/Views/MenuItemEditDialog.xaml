@@ -32,8 +32,11 @@
                   VerticalAlignment="Center" Margin="8,0,0,0" Checked="UpdatePreview" Unchecked="UpdatePreview"/>
 
         <TextBlock Grid.Row="3" Grid.Column="0" Text="工作目录:" VerticalAlignment="Center" Margin="0,6"/>
-        <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" x:Name="WorkdirBox" Margin="0,4" MinHeight="30"
+        <TextBox Grid.Row="3" Grid.Column="1" x:Name="WorkdirBox" Margin="0,4" MinHeight="30"
                   ToolTip="留空默认桌面" TextChanged="UpdatePreview"/>
+        <Button Grid.Row="3" Grid.Column="2" Style="{StaticResource Btn}" Content="选择..."
+                VerticalAlignment="Center" Margin="8,0,0,0" Click="BrowseWorkdir_Click"
+                ToolTip="从文件管理器选择工作目录"/>
 
         <TextBlock Grid.Row="4" Grid.Column="0" Text="启动命令:" VerticalAlignment="Center" Margin="0,6"/>
         <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" x:Name="PreviewBox" Margin="0,4" MinHeight="30" IsReadOnly="True"

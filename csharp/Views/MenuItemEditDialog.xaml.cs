@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using CapsLockPro.Features;
+using CapsLockPro.Native;
 
 namespace CapsLockPro.Views;
 
@@ -70,5 +72,11 @@ public partial class MenuItemEditDialog : Window
         Workdir = WorkdirBox.Text;
         _ok = true;
         DialogResult = true;
+    }
+
+    private void BrowseWorkdir_Click(object sender, RoutedEventArgs e)
+    {
+        var picked = FolderPicker.PickFolder(new WindowInteropHelper(this).Handle, "选择工作目录");
+        if (picked != null) WorkdirBox.Text = picked;
     }
 }
