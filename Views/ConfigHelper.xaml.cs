@@ -39,7 +39,8 @@ public partial class ConfigHelperWindow : Window
         for (int i = 1; i <= MenuSystem.GroupCount; i++)
         {
             var g = MenuSystem.GetGroup(i);
-            GroupList.Items.Add(g != null ? g.Name : "(空)");
+            string seq = (i % 10).ToString();   // 1-9→"1"~"9"，10→"0"，对应 CapsLock+1~9,0 选组热键
+            GroupList.Items.Add($"{seq}. {g?.Name ?? "(空)"}");
         }
         if (GroupList.Items.Count > 0 && _selectedGroupDisplay >= 0 && _selectedGroupDisplay < GroupList.Items.Count)
             GroupList.SelectedIndex = _selectedGroupDisplay;
