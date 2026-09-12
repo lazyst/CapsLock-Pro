@@ -1,0 +1,41 @@
+name: release
+
+# 打 v* tag 时自动构建独立部署 zip 并上传到该 tag 对应的 GitHub Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write   # 创建/更新 release 需要
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # 独立部署：内嵌 .NET 运行时，用户免装 .NET 即可运行
+      - name: Publish self-contained
+        run: dotnet publish -c Release -r win-x64 --self-contained true -p:DebugType=none -p:DebugSymbols=false -o publish
+
+      - name: Pack zip
+        shell: pwsh
+        run: |
+          # zip 内顶层为 CapsLockPro/ 目录，用户解压即得此目录
+          New-Item -ItemType Directory -Path staging/CapsLockPro -Force | Out-Null
+          Copy-Item publish/* staging/CapsLockPro/ -Recurse
+          $ver = ${env:GITHUB_REF_NAME}   # 如 v2.0.0
+          Compress-Archive -Path staging/CapsLockPro -DestinationPath "CapsLockPro-$ver-win-x64.zip" -CompressionLevel Optimal
+          Write-Host "Built CapsLockPro-$ver-win-x64.zip"
+          Get-Item "CapsLockPro-$ver-win-x64.zip" | Format-List Name,Length
+
+      - name: Create/Update release & upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: CapsLockPro-${{ github.ref_name }}-win-x64.zip
+          generate_release_notes: true   # 自动从 commits 生成 release notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
