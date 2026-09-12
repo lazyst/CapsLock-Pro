@@ -34,3 +34,6 @@ bin/
 
 # C# 构建产物（项目扁平化后）
 obj/
+
+# 发布产物（本地构建）
+CapsLockPro-*.zip
