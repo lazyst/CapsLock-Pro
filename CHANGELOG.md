@@ -2,6 +2,45 @@
 
 所有项目的重要更改都将记录在此文件中。
 
+## \[v2.0.0\] - 2026-09-13
+
+### 🔥 重构
+
+- **C# / .NET 8 / WPF 全面重构**: 由 AutoHotkey v2 脚本重构为 C# / .NET 8 / WPF 桌面程序，功能行为与 AHK 版本一致，性能与可维护性显著提升
+  - 全局键盘/鼠标钩子、托盘、速记、配置助手、快捷菜单、帮助面板、鼠标模式等全部重写
+  - AHK 原版代码归档至 `ahk-legacy` 分支保留
+- **仓库结构扄平化**: 取消 `csharp/` 子目录，所有源码/`.csproj`/`.sln` 提升到仓库根，新增 `CapsLockPro.sln` 解决方案文件
+- **清理 AHK 拥留**: 删除 `CapsLock++.{ahk,exe}`、`lib/`（19 个 `.ahk`）、`窗口信息收集工具.{ahk,exe}`、`Icon/QuickNote.ico` 等 AHK 专属文件
+
+### ⚡ 性能
+
+- **速记列表搜索优化**: `NoteRepository.List` 拆分 `BuildEntryLight`（不读正文）+ `TryReadBody`（懒读）；无过滤时零正文 IO，过滤时标题先匹配短路仅不命中才读正文；搜索框加 300ms 防抖
+- **拖动分隔条不再卡顿**: 行号更新加 50ms 防抖，拖动期间不重建行号，停顿后更新一次（大正文时不再每像素 O(N) 重建）
+
+### 🎨 UI
+
+- **速记窗按钮就近归属**: 取消全局顶栏，左列顶栏放分类/搜索/新建速记（操作列表），右列顶栏放保存/删除/关闭（操作详情），中间分隔线贯通
+- **速记列表单击打开**: 由双击载入改为 `PreviewMouseLeftButtonUp` 单击载入
+- **速记搜索框裁切修复**: 去掉固定 `Height=28`（被模板 Padding 裁切），改 `MinHeight=32` + 垂直居中，CJK 文字完整可见
+- **速记标题/正文输入框对齐**: 「标题」「正文」标签与两输入框左侧统一偏移 42px 与行号栏宽度对齐
+- **配置助手工作目录选择按钮**: 新增「选择...」按钮，弹出现代文件夹选择器（左侧含快速访问导航栏），路径正确回填
+- **修改时间列完整显示**: 列宽调整，`yyyy-MM-dd HH:mm` 不再裁切
+
+### 🐛 修复与健壮性
+
+- **弹窗统一为 `ConfirmDialog`**: 4 处 `MessageBox.Show` 统一为 `ConfirmDialog`（信息单按钮 / 危险操作红按钮）
+- **`Debug.WriteLine` 清理**: 异常路径转 `CrashLog.Write`，信息性日志删除，冗余清理
+- **删除死代码**: `NoteRepository.Root`、`CategoryExists`、`TrayService._tray/Init` 等无入口 public API；`Win32.DwmSetWindowAttribute` P-Invoke + 19 个未引用常量
+
+### 🔧 工程与依赖
+
+- **剪贴板备份/恢复改用 WPF Clipboard**: `System.Windows.Forms.Clipboard` → `System.Windows.Clipboard`（COM IDataObject 多格式备份，行为不变），后因 FolderBrowserDialog 需要重新启用 `<UseWindowsForms>` 并恢复 `GlobalUsings.cs` 消歧别名
+- **GitHub Actions CI**: 新增 `.github/workflows/build.yml`（push master 跑构建验证）+ `release.yml`（打 `v*` tag 自动构建独立部署 zip 上传到 Release）
+- **绿色发布**: v2.0.0 Release 提供 `CapsLockPro-v2.0.0-win-x64.zip`，独立部署内嵌 .NET 运行时，用户免装 .NET 解压即用
+- **README 重写为 C#/.NET 8 WPF 版**: 构建方式、功能说明、配置助手、ahk-legacy 分支指引
+
+---
+
 ## \[v1.7.1\] - 2026-05-23
 
 ### ✨ 新增
