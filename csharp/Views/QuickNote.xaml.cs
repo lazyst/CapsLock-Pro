@@ -23,6 +23,11 @@ public partial class QuickNoteWindow : Window
     // 搜索防抖：按键间隙不重扫目录，停顿 300ms 后统一刷新一次
     private DispatcherTimer? _searchDebounce;
 
+    // 行号防抖：拖动 GridSplitter / 缩放窗口时 SizeChanged 高频触发（每像素一次），
+    // 若每次都对全部 N 行重建行号串 + 重排行号 TextBox 排版，大正文时严重卡顿。
+    // 改为停顿 50ms 后更新一次；键盘输入走 TextChanged 即时更新不受影响。
+    private DispatcherTimer? _lineNumDebounce;
+
     // 列表行（供 GridView 绑定；NoteEntry 的 Mtime 是 DateTime 不便直接显示）
     private record NoteRow(string Title, string MtimeText, string Path, string Category, DateTime Mtime, string Body);
 
@@ -32,6 +37,8 @@ public partial class QuickNoteWindow : Window
         _repo = repo;
         _searchDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
         _searchDebounce.Tick += (_, _) => { _searchDebounce.Stop(); ReloadList(); };
+        _lineNumDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _lineNumDebounce.Tick += (_, _) => { _lineNumDebounce.Stop(); UpdateLineNumbers(); };
         Loaded += OnLoaded;
         PopulateCategoryBox(NoteRepository.Unclassified);
         ReloadList();
@@ -222,7 +229,12 @@ public partial class QuickNoteWindow : Window
         StatusBar.Text = "提示: 未保存改动 | Ctrl+S 保存";
     }
 
-    private void BodyBox_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateLineNumbers();
+    private void BodyBox_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // 拖动分隔条 / 窗口缩放时高频触发：防抖，停顿后重建行号，避免大正文每像素 O(N) 重建
+        _lineNumDebounce?.Stop();
+        _lineNumDebounce?.Start();
+    }
 
     // —— 行号 gutter ——
 
