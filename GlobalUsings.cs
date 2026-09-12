@@ -14,6 +14,7 @@ global using MessageBoxResult = System.Windows.MessageBoxResult;
 global using MessageBoxButton = System.Windows.MessageBoxButton;
 global using MessageBoxImage = System.Windows.MessageBoxImage;
 global using Button = System.Windows.Controls.Button;
+global using CheckBox = System.Windows.Controls.CheckBox;
 global using TextBlock = System.Windows.Controls.TextBlock;
 global using HorizontalAlignment = System.Windows.HorizontalAlignment;
 global using VerticalAlignment = System.Windows.VerticalAlignment;

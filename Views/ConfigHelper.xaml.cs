@@ -5,7 +5,7 @@ using CapsLockPro.Features;
 
 namespace CapsLockPro.Views;
 
-/// <summary>配置助手 GUI（对应 AHK ConfigHelper.ahk）。
+/// <summary>设置 GUI（对应 AHK ConfigHelper.ahk）。
 /// 菜单组/菜单项双列表 + 增删改 + 上下移动 + 搜索 + 保存/重载；逻辑委托 <see cref="MenuSystem"/>。</summary>
 public partial class ConfigHelperWindow : Window
 {
@@ -13,6 +13,7 @@ public partial class ConfigHelperWindow : Window
     private int _selectedGroupDisplay = -1;   // ListBox 0-indexed 显示位置
     private int _selectedItemDisplay = -1;    // ListBox 0-indexed 显示位置
     private List<int> _itemDisplayToIndex = new(); // 显示位置 → 组内真实索引
+    private bool _initializing = true;   // 初始化设 IsChecked 会触发 Checked/Unchecked，用此标志跳过
 
     public ConfigHelperWindow(string iniPath)
     {
@@ -20,6 +21,13 @@ public partial class ConfigHelperWindow : Window
         _iniPath = iniPath;
         try { MenuSystem.Load(_iniPath); } catch { /* 加载失败留空 */ }
         PopulateGroupList();
+        // 初始化开机自启勾选状态（按任务计划实际存在与否，不依赖配置文件）
+        Loaded += (_, _) =>
+        {
+            _initializing = true;
+            AutoStartBox.IsChecked = AutoStartService.IsEnabled();
+            _initializing = false;
+        };
     }
 
     /// <summary>显示槽位 → 组槽位（1..10）。</summary>
@@ -81,7 +89,7 @@ public partial class ConfigHelperWindow : Window
         var (ok, name) = InputDialog.Show(this, "添加菜单组", "请输入菜单组名称:", "");
         if (!ok || string.IsNullOrWhiteSpace(name)) return;
         int slot = MenuSystem.AddGroup(name.Trim());
-        if (slot < 0) { ConfirmDialog.Info(this, "配置助手", "菜单组已满 (最多10组)"); return; }
+        if (slot < 0) { ConfirmDialog.Info(this, "设置", "菜单组已满 (最多10组)"); return; }
         _selectedGroupDisplay = slot - 1;
         PopulateGroupList();
     }
@@ -161,6 +169,21 @@ public partial class ConfigHelperWindow : Window
         _selectedItemDisplay = d;
     }
 
+    private void AutoStartBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_initializing) return;
+        bool want = AutoStartBox.IsChecked == true;
+        bool ok = want ? AutoStartService.Enable() : AutoStartService.Disable();
+        if (!ok)
+        {
+            // 操作失败：回滚勾选并提示
+            _initializing = true;
+            AutoStartBox.IsChecked = !want;
+            _initializing = false;
+            ConfirmDialog.Info(this, "开机自启", want ? "启用失败，请检查权限或任务计划服务。" : "禁用失败。");
+        }
+    }
+
     private void TerminalPaths_Click(object sender, RoutedEventArgs e)
     {
         TerminalPathsDialog.ShowDialog(this);
@@ -187,7 +210,7 @@ public partial class ConfigHelperWindow : Window
         }
         catch (Exception ex)
         {
-            ConfirmDialog.Info(this, "配置助手", "保存失败: " + ex.Message);
+            ConfirmDialog.Info(this, "设置", "保存失败: " + ex.Message);
         }
     }
 }

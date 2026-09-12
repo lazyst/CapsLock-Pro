@@ -112,7 +112,7 @@ internal static class KeyboardHook
                     return (IntPtr)1;
                 }
 
-                // 阶段5：杂项热键（放大镜/空置键/双引号花括号/快速搜索/速记/配置助手）
+                // 阶段5：杂项热键（放大镜/空置键/双引号花括号/快速搜索/速记/设置）
                 if (MiscKeys.TryHandle(vk))
                 {
                     MarkSwallowed(vk);

@@ -7,7 +7,7 @@ namespace CapsLockPro.Features;
 /// <summary>
 /// 杂项热键（对应原版 lib/QuickNote.ahk 前半的 #HotIf 块）。
 /// 在 CapsLock 按住 + 工具启用期间分发非编辑类键：放大镜 / 空置键 / 双引号花括号 / 快速搜索 /
-/// 速记窗口 / 配置助手。由 <see cref="Hooks.KeyboardHook"/> 在 vim 分发之后调用。
+/// 速记窗口 / 设置。由 <see cref="Hooks.KeyboardHook"/> 在 vim 分发之后调用。
 /// </summary>
 /// <remarks>
 /// 每个动作返回 true 即吞掉该键（keyup 由 <see cref="Core.AppState.SwallowedVks"/> 平衡）。
@@ -30,7 +30,7 @@ internal static class MiscKeys
             case Win32.VkOem6: InputHelper.SendText("}"); return true;    // ] → }
             case 'Q': QuickSearch.Start(); return true;
             case 'N': QuickNote.Toggle(); return true;
-            case Win32.VkOem5: ConfigHelper.Toggle(); return true;        // \ → 配置助手
+            case Win32.VkOem5: ConfigHelper.Toggle(); return true;        // \ → 设置
             default: return false;
         }
     }

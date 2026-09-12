@@ -219,7 +219,7 @@ dotnet publish -c Release -r win-x64 --self-contained false
 
 ### 8.3 菜单项命令
 
-菜单项命令使用**纯字符串格式**，配置助手中提供终端选择辅助拼接：
+菜单项命令使用**纯字符串格式**，设置中提供终端选择辅助拼接：
 
 - 终端选择：PowerShell 7/5、CMD、Git Bash、WSL Bash 或直接运行
 - 保持窗口：自动用 `wt` 包装并添加 `-NoExit`/`/k`
@@ -233,7 +233,7 @@ dotnet publish -c Release -r win-x64 --self-contained false
 
 ## 9. 自定义指南
 
-所有配置在程序目录下的 `CapsLock++.ini` 文件中。可用配置助手（**CapsLock+\**）图形化编辑，保存后自动生效。
+所有配置在程序目录下的 `CapsLock++.ini` 文件中。可用设置（**CapsLock+\**）图形化编辑，保存后自动生效。
 
 ### 9.1 速记功能配置
 
@@ -251,9 +251,9 @@ dotnet publish -c Release -r win-x64 --self-contained false
   - `nameY = "项目显示名称"`
   - `actionY = "执行命令"`（如 `notepad.exe`、`wt pwsh -NoExit -c ipconfig /all`）
 
-### 9.3 配置助手
+### 9.3 设置
 
-**CapsLock+\** 打开配置助手（内置 WPF 窗口）：
+**CapsLock+\** 打开设置（内置 WPF 窗口）：
 
 - **重新加载**：从 `CapsLock++.ini` 重新载入配置
 - **保存配置**：保存修改回 INI 并自动应用

@@ -3,7 +3,7 @@ using CapsLockPro.Views;
 namespace CapsLockPro.Features;
 
 /// <summary>
-/// 配置助手（对应原版 lib/ConfigHelper.ahk）。CapsLock+\ 切换配置窗口；
+/// 设置（对应原版 lib/ConfigHelper.ahk）。CapsLock+\ 切换配置窗口；
 /// UI 见 <see cref="Views.ConfigHelperWindow"/>，逻辑委托 <see cref="MenuSystem"/> 的 CRUD。
 /// </summary>
 internal static class ConfigHelper

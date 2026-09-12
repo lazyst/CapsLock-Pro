@@ -9,7 +9,7 @@ namespace CapsLockPro.Features;
 /// <summary>
 /// 速记协调器（对应原版 lib/QuickNote.ahk，重构后数据模型：每条速记=独立文件，分类=子目录）。
 /// 数据层见 <see cref="NoteRepository"/>；UI 见 <see cref="Views.QuickNoteWindow"/>。
-/// CapsLock+N 调 <see cref="Toggle"/>；配置助手保存后调 <see cref="Refresh"/>。
+/// CapsLock+N 调 <see cref="Toggle"/>；设置保存后调 <see cref="Refresh"/>。
 /// </summary>
 internal static class QuickNote
 {
@@ -29,7 +29,7 @@ internal static class QuickNote
         _repo.MigrateRootScatteredNotes();
     }
 
-    /// <summary>重新扫描分类（配置助手保存后调用；当前仓库即时扫描，此方法主要用于通知已打开窗口刷新）。</summary>
+    /// <summary>重新扫描分类（设置保存后调用；当前仓库即时扫描，此方法主要用于通知已打开窗口刷新）。</summary>
     public static void Refresh()
     {
         if (_form != null) _form.ReloadFromRepository();

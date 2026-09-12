@@ -57,7 +57,7 @@
          ├─ HelpPanel.Toggle()        ← 在 UI 线程 Show 窗体
          ├─ MenuSystem.Dispatch(vk)    ← 在 UI 线程 Show MenuPopup
          ├─ TextEditor.TryHandle(vk)  ← 注入/Sleep/剪贴板（按 handoff 走后台线程）
-         └─ MiscKeys.TryHandle(vk)    ← 速记/配置助手/快速搜索
+         └─ MiscKeys.TryHandle(vk)    ← 速记/设置/快速搜索
 ```
 
 **约束**（来自历史 handoff，迁移后必须保持）：

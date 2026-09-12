@@ -217,7 +217,7 @@ internal static class MenuSystem
         return true;
     }
 
-    // —— 配置助手 CRUD（由 Views.ConfigHelperWindow 调用）——
+    // —— 设置 CRUD（由 Views.ConfigHelperWindow 调用）——
 
     /// <summary>取得 1..N 的菜单组（可能为 null）。</summary>
     public static MenuGroup? GetGroup(int groupIndex) =>

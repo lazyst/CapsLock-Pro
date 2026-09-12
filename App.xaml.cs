@@ -13,7 +13,7 @@ namespace CapsLockPro;
 
 /// <summary>
 /// WPF 应用入口（替代旧 WinForms <c>TrayAppContext</c>）。
-/// OnStartup：单实例互斥体 → H.NotifyIcon 托盘 → 装/卸钩子 → 初始化菜单/速记/配置助手 → 看门狗。
+/// OnStartup：单实例互斥体 → H.NotifyIcon 托盘 → 装/卸钩子 → 初始化菜单/速记/设置 → 看门狗。
 /// 主 STA 线程由 WPF Dispatcher 泵送，低级键盘/鼠标钩子回调仍在本线程派发（模型不变）。
 /// </summary>
 public partial class App : Application
@@ -61,6 +61,9 @@ public partial class App : Application
         MenuSystem.Load(iniPath);
         QuickNote.Initialize(iniPath);
         ConfigHelper.Initialize(iniPath);
+
+        // —— 启动提示：鼠标旁显示“CapsLockPro 已启动”（复用 MouseTip，1.8s 后自动隐藏）——
+        MouseTip.Show("CapsLockPro 已启动");
     }
 
     private void BuildTray()
@@ -68,7 +71,7 @@ public partial class App : Application
         var menu = new ContextMenu();
         menu.Items.Add(NewItem("帮助面板 (CapsLock+`)", () => HelpPanel.Toggle()));
         menu.Items.Add(NewItem("速记 (CapsLock+N)", () => QuickNote.Toggle()));
-        menu.Items.Add(NewItem("配置助手 (CapsLock+\\)", () => ConfigHelper.Toggle()));
+        menu.Items.Add(NewItem("设置 (CapsLock+\\)", () => ConfigHelper.Toggle()));
         menu.Items.Add(new Separator());
         menu.Items.Add(NewItem("退出 CapsLock++", ExitApplication));
 

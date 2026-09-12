@@ -153,7 +153,7 @@ internal static class HelpPanel
             ("CapsLock + Tab", "放大镜 开/关"),
             ("CapsLock + N", "打开速记窗口"),
             ("CapsLock + P", "符号跳转 (配对括号等)"),
-            ("CapsLock + \\", "配置助手"),
+            ("CapsLock + \\", "设置"),
             ("CapsLock + `", "帮助面板 (本窗口)"),
         }),
     };
