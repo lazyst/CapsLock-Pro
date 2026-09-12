@@ -1,0 +1,68 @@
+{
+  "MenuGroups": [
+    {
+      "Enabled": true,
+      "Name": "命令",
+      "Items": [
+        {
+          "Name": "ipconfig",
+          "Cmd": "ipconfig /all",
+          "Terminal": "pwsh7",
+          "KeepWindow": true,
+          "Workdir": ""
+        },
+        {
+          "Name": "wsl",
+          "Cmd": "wsl",
+          "Terminal": "pwsh7",
+          "KeepWindow": true,
+          "Workdir": ""
+        },
+        {
+          "Name": "playwright-cli",
+          "Cmd": "playwright-cli show",
+          "Terminal": "pwsh7",
+          "KeepWindow": false,
+          "Workdir": ""
+        },
+        {
+          "Name": "edge启动远程调试",
+          "Cmd": "& 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' --remote-debugging-port=9222",
+          "Terminal": "pwsh7",
+          "KeepWindow": false,
+          "Workdir": ""
+        },
+        {
+          "Name": "关闭edge远程调试",
+          "Cmd": "taskkill /F /IM msedge.exe",
+          "Terminal": "pwsh7",
+          "KeepWindow": false,
+          "Workdir": ""
+        }
+      ]
+    },
+    {
+      "Enabled": true,
+      "Name": "程序",
+      "Items": [
+        {
+          "Name": "pwershell",
+          "Cmd": "",
+          "Terminal": "pwsh7",
+          "KeepWindow": true,
+          "Workdir": ""
+        }
+      ]
+    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "TerminalPaths": {},
+  "MouseModeSpeed": 7
+}

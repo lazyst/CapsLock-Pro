@@ -2,6 +2,18 @@
 
 所有项目的重要更改都将记录在此文件中。
 
+## \[v2.0.2\] - 2026-09-13
+
+### 🔧 重构
+
+- **配置文件从 INI 迁移到 JSON**（`CapsLock++.ini` → `CapsLock++.json`）：菜单组/终端路径/鼠标速度统一为单个 JSON 对象，由 `System.Text.Json` 读写。配置仅由应用自身修改（设置面板/快捷键），不面向手改
+- **统一配置路径定位**（`Core/ConfigLocator`）：消除原先 App 上溯 3 级 / MouseMode 上溯 5 级的路径规则不一致；首启自动把旧 `CapsLock++.ini` 迁移为 JSON（旧文件改名 `.migrated` 备份）
+- 保留 `Config/IniFile.cs` 仅供一次性迁移使用，运行时不再引用
+
+> 升级说明：已有 `CapsLock++.ini` 的用户，首次启动会自动迁移为 `CapsLock++.json`，原文件改名 `CapsLock++.ini.migrated` 保留备份，无需手动操作。
+
+---
+
 ## \[v2.0.1\] - 2026-09-13
 
 ### ✨ 新增

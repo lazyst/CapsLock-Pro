@@ -233,7 +233,7 @@ dotnet publish -c Release -r win-x64 --self-contained false
 
 ## 9. 自定义指南
 
-所有配置在程序目录下的 `CapsLock++.ini` 文件中。可用设置（**CapsLock+\**）图形化编辑，保存后自动生效。
+所有配置在程序目录下的 `CapsLock++.json` 文件中。可用设置（**CapsLock+\**）图形化编辑，保存后自动生效。
 
 ### 9.1 速记功能配置
 
@@ -255,7 +255,7 @@ dotnet publish -c Release -r win-x64 --self-contained false
 
 **CapsLock+\** 打开设置（内置 WPF 窗口）：
 
-- **重新加载**：从 `CapsLock++.ini` 重新载入配置
+- **重新加载**：从 `CapsLock++.json` 重新载入配置
 - **保存配置**：保存修改回 INI 并自动应用
 - 速记路径页：编辑速记关键词与保存路径
 - 菜单配置页：管理 10 个菜单组及菜单项（组名、启用/禁用、项增删、双击编辑名称与命令）
