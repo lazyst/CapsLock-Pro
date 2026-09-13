@@ -5,7 +5,6 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- 管理员清单（requireAdministrator），双击即提权 -->
     <ApplicationManifest>app.manifest</ApplicationManifest>

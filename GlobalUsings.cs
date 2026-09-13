@@ -1,8 +1,6 @@
 // WPF 项目全局 using。
-// <UseWPF>true</UseWPF> 开启后 SDK 隐式 using 集合不再包含 System.IO，故显式补回。
-// <UseWindowsForms>true</UseWindowsForms> 用于 FolderBrowserDialog（现代文件夹选择器，
-// 内部走 IFileOpenDialog broker，带快速访问导航栏）。WinForms 与 WPF 同名类型
-//（Button/KeyEventArgs/MessageBox/Application 等）在此以 WPF 命名为准消歧。
+// 消歧：WPF 与同名类型（Button/KeyEventArgs/MessageBox/Application 等）在此以 WPF 命名为准。
+// 文件夹选择改用 .NET 8 WPF 原生 Microsoft.Win32.OpenFolderDialog（不再引用 WinForms）。
 global using System.IO;
 
 global using Application = System.Windows.Application;
