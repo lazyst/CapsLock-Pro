@@ -107,24 +107,33 @@ public partial class MenuItemEditDialog : Window
 
     private void PickFile_Click(object sender, RoutedEventArgs e)
     {
-        // 弹出选择：文件 or 文件夹
-        var choice = System.Windows.MessageBox.Show(
-            "点击 是 选择文件，点击 否 选择文件夹", "选择类型",
-            MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-        if (choice == MessageBoxResult.Yes)
+        // 左键点击弹出下拉菜单
+        if (PickFileBtn.ContextMenu != null)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Title = "选择要执行的文件",
-                Filter = "所有文件 (*.*)|*.*",
-            };
-            if (dlg.ShowDialog() == true)
-                CmdBox.Text = dlg.FileName;
+            PickFileBtn.ContextMenu.PlacementTarget = PickFileBtn;
+            PickFileBtn.ContextMenu.IsOpen = true;
         }
-        else if (choice == MessageBoxResult.No)
+    }
+
+    private void PickFile_MenuClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && mi.Tag is string type)
         {
-            var picked = FolderPicker.PickFolder(new WindowInteropHelper(this).Handle, "选择文件夹");
-            if (picked != null) CmdBox.Text = picked;
+            if (type == "file")
+            {
+                var dlg = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "选择要执行的文件",
+                    Filter = "所有文件 (*.*)|*.*",
+                };
+                if (dlg.ShowDialog() == true)
+                    CmdBox.Text = dlg.FileName;
+            }
+            else if (type == "folder")
+            {
+                var picked = FolderPicker.PickFolder(new WindowInteropHelper(this).Handle, "选择文件夹");
+                if (picked != null) CmdBox.Text = picked;
+            }
         }
     }
 }
