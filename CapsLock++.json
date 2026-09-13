@@ -56,12 +56,7 @@
     },
     {
       "Enabled": true,
-      "Name": "新组",
-      "Items": []
-    },
-    {
-      "Enabled": true,
-      "Name": "13",
+      "Name": "123",
       "Items": [
         {
           "Name": "ls",
@@ -72,6 +67,7 @@
         }
       ]
     },
+    null,
     null,
     null,
     null,

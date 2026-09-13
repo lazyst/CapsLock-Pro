@@ -77,8 +77,10 @@ internal static class MenuSystem
         var g = _groups[groupIndex];
         if (g == null) return;
         _currentGroup = groupIndex;
-        _current = new MenuPopupWindow(g.Name, groupIndex, g.Items.Select(x => x.Name).ToList());
-        _current.Closed += (_, _) => _current = null;
+        var menu = new MenuPopupWindow(g.Name, groupIndex, g.Items.Select(x => x.Name).ToList());
+        // 仅当关闭的仍是当前活跃菜单时才清引用，避免旧窗口淡出动画完成时误清新窗口
+        menu.Closed += (_, _) => { if (_current == menu) _current = null; };
+        _current = menu;
         _current.Show();
     }
 
