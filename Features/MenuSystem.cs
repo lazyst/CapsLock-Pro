@@ -126,7 +126,7 @@ internal static class MenuSystem
     {
         if (item.Terminal == "direct" || item.Terminal.Length == 0)
         {
-            RunDirect(item.Cmd);
+            RunDirect(item.Cmd, item.Workdir);
             return;
         }
         var r = TerminalLauncher.TryBuildLaunch(item.Terminal, item.KeepWindow, item.Cmd, item.Workdir);
@@ -157,9 +157,13 @@ internal static class MenuSystem
         }
     }
 
-    /// <summary>direct 终端：拆 exe+args 启动，失败回退 ShellExecute（URL/文档/含空格非可执行首段）。</summary>
-    private static void RunDirect(string cmd)
+    /// <summary>direct 终端：拆 exe+args 启动，失败回退 ShellExecute（URL/文档/含空格非可执行首段）。
+    /// 使用 workdir（空则默认桌面）作为工作目录，保证用户设置的工作目录生效。</summary>
+    private static void RunDirect(string cmd, string workdir)
     {
+        string wd = string.IsNullOrWhiteSpace(workdir)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+            : workdir.Trim();
         try
         {
             TrySplitCommandLine(cmd, out string exe, out string args);
@@ -169,11 +173,12 @@ internal static class MenuSystem
                 CreateNoWindow = false,
             };
             if (!string.IsNullOrEmpty(args)) psi.Arguments = args;
+            if (Directory.Exists(wd)) psi.WorkingDirectory = wd;
             Process.Start(psi);
         }
         catch
         {
-            try { Process.Start(new ProcessStartInfo(cmd) { UseShellExecute = true }); }
+            try { Process.Start(new ProcessStartInfo(cmd) { UseShellExecute = true, WorkingDirectory = wd }); }
             catch (Exception ex) { CrashLog.Write("MenuRunDirect", ex); }
         }
     }

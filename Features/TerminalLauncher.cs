@@ -91,7 +91,7 @@ internal static class TerminalLauncher
         {
             string? wt0 = ResolveWt();
             if (wt0 != null && File.Exists(wt0))
-                return new LaunchResult(true, wt0, shellToken, workdir2, null);
+                return new LaunchResult(true, wt0, $"--starting-directory \"{workdir2.Replace("\"", "")}\" {shellToken}", workdir2, null);
             return new LaunchResult(true, shell, "", workdir2, null);
         }
 
@@ -104,7 +104,7 @@ internal static class TerminalLauncher
             // wt 包装：exe=wt，args="<shell> <shellArgs>"。
             // wt 以 ';' 作为子命令分隔符（且不尊重引号），shellArgs 里的 ';'（含 keepWindow 的 "; exec bash"
             // 及用户命令里的 ';'）必须转义为 '\\;' 让 wt 传字面分号给 shell，否则会被拆成多个 tab。
-            return new LaunchResult(true, wt, $"{shellToken} {WtEscapeSemicolon(shellArgs)}", workdir2, null);
+            return new LaunchResult(true, wt, $"--starting-directory \"{workdir2.Replace("\"", "")}\" {shellToken} {WtEscapeSemicolon(shellArgs)}", workdir2, null);
         }
             return new LaunchResult(true, shell, shellArgs, workdir2, null);
     }
