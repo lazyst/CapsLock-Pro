@@ -25,6 +25,7 @@ internal static class MenuSystem
     private static readonly MenuGroup?[] _groups = new MenuGroup?[MaxGroups + 1]; // 1-indexed
     private static MenuPopupWindow? _current;
     private static int _currentGroup; // 当前弹出菜单的组索引（供钩子路由选择用）
+    private static string? _loadedConfigPath; // 缓存已加载的配置路径，避免重复 IO
 
     /// <summary>菜单组槽位总数（1..N）。</summary>
     public static int GroupCount => MaxGroups;
@@ -32,9 +33,11 @@ internal static class MenuSystem
     /// <summary>当前是否有菜单弹出。</summary>
     public static bool IsMenuOpen => _current != null;
 
-    /// <summary>从 JSON 加载全部 10 个菜单组（启动时调用一次）。</summary>
+    /// <summary>从 JSON 加载全部 10 个菜单组。启动时调用一次；相同路径重复调用直接跳过。</summary>
     public static void Load(string? configPath)
     {
+        if (configPath == _loadedConfigPath) return; // 已加载，跳过重复 IO
+        _loadedConfigPath = configPath;
         var cfg = AppConfig.Load(configPath ?? "");
         TerminalLauncher.LoadFromConfig(cfg);
         for (int i = 1; i <= MaxGroups; i++)
@@ -275,6 +278,7 @@ internal static class MenuSystem
     /// <summary>从 JSON 重新加载全部组（关闭已开菜单）。</summary>
     public static void ReloadFromConfig(string? configPath)
     {
+        _loadedConfigPath = null; // 清除缓存，强制重新加载
         CloseCurrent();
         Load(configPath);
     }

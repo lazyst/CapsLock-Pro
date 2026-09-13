@@ -21,11 +21,11 @@ public partial class ConfigHelperWindow : Window
         _configPath = configPath;
         try { MenuSystem.Load(_configPath); } catch { /* 加载失败留空 */ }
         PopulateGroupList();
-        // 初始化开机自启勾选状态（按任务计划实际存在与否，不依赖配置文件）
-        Loaded += (_, _) =>
+        // 异步查询开机自启状态（schtasks 是外部进程，同步调用会阻塞 UI 线程导致白屏）
+        Loaded += async (_, _) =>
         {
             _initializing = true;
-            AutoStartBox.IsChecked = AutoStartService.IsEnabled();
+            AutoStartBox.IsChecked = await System.Threading.Tasks.Task.Run(() => AutoStartService.IsEnabled());
             _initializing = false;
         };
     }
