@@ -115,6 +115,8 @@ public partial class MenuPopupWindow : Window
     private void Window_Deactivated(object sender, EventArgs e)
     {
         if (_isClosing) return;
+        // 旧窗口淡出动画期间，新窗口已接管 _current；忽略旧窗口的 Deactivated，避免误关新菜单
+        if (sender is System.Windows.Window w && !MenuSystem.IsCurrentWindow(w)) return;
         _isClosing = true;
         try { MenuSystem.CloseCurrent(); } catch { /* 静默 */ }
     }

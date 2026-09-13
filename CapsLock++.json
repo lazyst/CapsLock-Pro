@@ -54,8 +54,24 @@
         }
       ]
     },
-    null,
-    null,
+    {
+      "Enabled": true,
+      "Name": "新组",
+      "Items": []
+    },
+    {
+      "Enabled": true,
+      "Name": "13",
+      "Items": [
+        {
+          "Name": "ls",
+          "Cmd": "ls",
+          "Terminal": "pwsh7",
+          "KeepWindow": true,
+          "Workdir": ""
+        }
+      ]
+    },
     null,
     null,
     null,

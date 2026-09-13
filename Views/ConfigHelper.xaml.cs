@@ -14,6 +14,7 @@ public partial class ConfigHelperWindow : Window
     private int _selectedItemDisplay = -1;    // ListBox 0-indexed 显示位置
     private List<int> _itemDisplayToIndex = new(); // 显示位置 → 组内真实索引
     private bool _initializing = true;   // 初始化设 IsChecked 会触发 Checked/Unchecked，用此标志跳过
+    private bool _suppressGroupSelection; // PopulateGroupList 期间抑制 GroupList_SelectedIndexChanged 避免选中被重置
 
     public ConfigHelperWindow(string configPath)
     {
@@ -48,6 +49,7 @@ public partial class ConfigHelperWindow : Window
 
     private void GroupList_SelectedIndexChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
+        if (_suppressGroupSelection) return;
         _selectedGroupDisplay = GroupList.SelectedIndex;
         _selectedItemDisplay = -1;
         PopulateItemList(string.Empty);
@@ -103,7 +105,9 @@ public partial class ConfigHelperWindow : Window
             {
                 MenuSystem.EditGroup(SelectedSlot, name.Trim());
             }
+            _suppressGroupSelection = true;
             PopulateGroupList();
+            _suppressGroupSelection = false;
         }
     }
 
@@ -127,7 +131,9 @@ public partial class ConfigHelperWindow : Window
             int slot = MenuSystem.AddGroup("新组");
             if (slot < 0) { ConfirmDialog.Info(this, "设置", "菜单组已满（最多10组）"); return; }
             _selectedGroupDisplay = slot - 1;
+            _suppressGroupSelection = true;
             PopulateGroupList();
+            _suppressGroupSelection = false;
         }
         var dlg = MenuItemEditDialog.ShowDialog(this, "添加菜单项", "", "", "direct", false, "");
         if (dlg != null)

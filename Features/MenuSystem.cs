@@ -33,6 +33,9 @@ internal static class MenuSystem
     /// <summary>当前是否有菜单弹出。</summary>
     public static bool IsMenuOpen => _current != null;
 
+    /// <summary>指定窗口是否是当前活跃的菜单窗口（用于旧窗口淡出期间忽略其 Deactivated 事件）。</summary>
+    public static bool IsCurrentWindow(System.Windows.Window w) => _current == w;
+
     /// <summary>从 JSON 加载全部 10 个菜单组。启动时调用一次；相同路径重复调用直接跳过。</summary>
     public static void Load(string? configPath)
     {
