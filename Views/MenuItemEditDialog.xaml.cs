@@ -43,6 +43,8 @@ public partial class MenuItemEditDialog : Window
             // 初始显示终端说明
             var desc = _terminalDescs.FirstOrDefault(d => d.key == _terminalKey).desc;
             TerminalDesc.Text = desc;
+            // direct 模式显示"选择..."按钮
+            PickFileBtn.Visibility = _terminalKey == "direct" ? Visibility.Visible : Visibility.Collapsed;
         };
         UpdatePreview();
     }
@@ -73,6 +75,8 @@ public partial class MenuItemEditDialog : Window
             _terminalKey = CommandString.Terminals[TerminalCombo.SelectedIndex].key;
             var desc = _terminalDescs.FirstOrDefault(d => d.key == _terminalKey).desc;
             TerminalDesc.Text = desc;
+            // direct 模式显示"选择..."按钮，其他终端隐藏
+            PickFileBtn.Visibility = _terminalKey == "direct" ? Visibility.Visible : Visibility.Collapsed;
         }
         UpdatePreview();
     }
@@ -99,5 +103,28 @@ public partial class MenuItemEditDialog : Window
     {
         var picked = FolderPicker.PickFolder(new WindowInteropHelper(this).Handle, "选择工作目录");
         if (picked != null) WorkdirBox.Text = picked;
+    }
+
+    private void PickFile_Click(object sender, RoutedEventArgs e)
+    {
+        // 弹出选择：文件 or 文件夹
+        var choice = System.Windows.MessageBox.Show(
+            "点击 是 选择文件，点击 否 选择文件夹", "选择类型",
+            MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        if (choice == MessageBoxResult.Yes)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "选择要执行的文件",
+                Filter = "所有文件 (*.*)|*.*",
+            };
+            if (dlg.ShowDialog() == true)
+                CmdBox.Text = dlg.FileName;
+        }
+        else if (choice == MessageBoxResult.No)
+        {
+            var picked = FolderPicker.PickFolder(new WindowInteropHelper(this).Handle, "选择文件夹");
+            if (picked != null) CmdBox.Text = picked;
+        }
     }
 }

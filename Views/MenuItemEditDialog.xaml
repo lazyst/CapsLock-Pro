@@ -23,7 +23,10 @@
         <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" x:Name="NameBox" Margin="0,4" MinHeight="30" TextChanged="UpdatePreview"/>
 
         <TextBlock Grid.Row="1" Grid.Column="0" Text="命令:" VerticalAlignment="Center" Margin="0,6"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" x:Name="CmdBox" Margin="0,4" MinHeight="30" TextChanged="UpdatePreview"/>
+        <TextBox Grid.Row="1" Grid.Column="1" x:Name="CmdBox" Margin="0,4" MinHeight="30" TextChanged="UpdatePreview"/>
+        <Button Grid.Row="1" Grid.Column="2" x:Name="PickFileBtn" Style="{StaticResource Btn}" Content="选择..."
+                VerticalAlignment="Center" Margin="8,0,0,0" Click="PickFile_Click"
+                ToolTip="选择要执行的文件或文件夹" Visibility="Collapsed"/>
 
         <TextBlock Grid.Row="2" Grid.Column="0" Text="终端:" VerticalAlignment="Center" Margin="0,6"/>
         <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,4">
