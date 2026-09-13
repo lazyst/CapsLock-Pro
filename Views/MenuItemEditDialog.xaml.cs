@@ -36,7 +36,14 @@ public partial class MenuItemEditDialog : Window
             if (CommandString.Terminals[i].key == terminal) { sel = i; break; }
         TerminalCombo.SelectedIndex = sel;
 
-        Loaded += (_, _) => { NameBox.Focus(); NameBox.SelectAll(); };
+        Loaded += (_, _) =>
+        {
+            NameBox.Focus();
+            NameBox.SelectAll();
+            // 初始显示终端说明
+            var desc = _terminalDescs.FirstOrDefault(d => d.key == _terminalKey).desc;
+            TerminalDesc.Text = desc;
+        };
         UpdatePreview();
     }
 
@@ -49,10 +56,24 @@ public partial class MenuItemEditDialog : Window
         return dlg._ok ? dlg : null;
     }
 
+    private static readonly (string key, string desc)[] _terminalDescs =
+    {
+        ("direct",   "直接运行，不打开终端窗口。适用于 GUI 程序、打开 URL/文件、静默执行"),
+        ("pwsh7",    "PowerShell 7，需要已安装"),
+        ("pwsh5",    "Windows 自带 PowerShell 5.1"),
+        ("cmd",      "Windows 命令提示符"),
+        ("gitbash",  "Git Bash（需安装 Git for Windows）"),
+        ("wslbash",  "WSL Linux Bash（需安装 WSL）"),
+    };
+
     private void Terminal_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (TerminalCombo.SelectedIndex >= 0)
+        {
             _terminalKey = CommandString.Terminals[TerminalCombo.SelectedIndex].key;
+            var desc = _terminalDescs.FirstOrDefault(d => d.key == _terminalKey).desc;
+            TerminalDesc.Text = desc;
+        }
         UpdatePreview();
     }
 
