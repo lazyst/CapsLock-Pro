@@ -85,24 +85,24 @@ public partial class ConfigHelperWindow : Window
     }
 
     // —— 组操作 ——
-    private void AddGroup_Click(object sender, RoutedEventArgs e)
-    {
-        var (ok, name) = InputDialog.Show(this, "添加菜单组", "请输入菜单组名称:", "");
-        if (!ok || string.IsNullOrWhiteSpace(name)) return;
-        int slot = MenuSystem.AddGroup(name.Trim());
-        if (slot < 0) { ConfirmDialog.Info(this, "设置", "菜单组已满 (最多10组)"); return; }
-        _selectedGroupDisplay = slot - 1;
-        PopulateGroupList();
-    }
-
     private void EditGroup_Click(object sender, RoutedEventArgs e)
     {
         var g = MenuSystem.GetGroup(SelectedSlot);
-        if (g == null) return;
-        var (ok, name) = InputDialog.Show(this, "编辑菜单组", "请输入菜单组名称:", g.Name);
+        string currentName = g?.Name ?? "";
+        var (ok, name) = InputDialog.Show(this, "编辑菜单组", "请输入菜单组名称:", currentName);
         if (ok && !string.IsNullOrWhiteSpace(name))
         {
-            MenuSystem.EditGroup(SelectedSlot, name.Trim());
+            if (g == null)
+            {
+                // 空槽 → 创建组
+                int slot = MenuSystem.AddGroup(name.Trim());
+                if (slot < 0) { ConfirmDialog.Info(this, "设置", "菜单组已满（最多10组）"); return; }
+                _selectedGroupDisplay = slot - 1;
+            }
+            else
+            {
+                MenuSystem.EditGroup(SelectedSlot, name.Trim());
+            }
             PopulateGroupList();
         }
     }
@@ -120,7 +120,15 @@ public partial class ConfigHelperWindow : Window
     // —— 项操作 ——
     private void AddItem_Click(object sender, RoutedEventArgs e)
     {
-        if (MenuSystem.GetGroup(SelectedSlot) == null) return;
+        var g = MenuSystem.GetGroup(SelectedSlot);
+        if (g == null)
+        {
+            // 空槽 → 先自动创建组（用默认名），再添加项
+            int slot = MenuSystem.AddGroup("新组");
+            if (slot < 0) { ConfirmDialog.Info(this, "设置", "菜单组已满（最多10组）"); return; }
+            _selectedGroupDisplay = slot - 1;
+            PopulateGroupList();
+        }
         var dlg = MenuItemEditDialog.ShowDialog(this, "添加菜单项", "", "", "direct", false, "");
         if (dlg != null)
         {

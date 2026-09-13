@@ -70,11 +70,22 @@ internal static class KeyboardHook
             }
 
             // 菜单打开期间：数字键选项 / Esc 关菜单由钩子路由（不依赖窗口焦点，对齐 AHK #HotIf WinActive(menu)）
-            if (isDown && MenuSystem.IsMenuOpen && MenuSystem.HandleMenuKey(vk, isDown))
+            if (isDown && MenuSystem.IsMenuOpen)
             {
-                AppState.OtherKeyPressed = true; // 视为 CapsLock 组合键，避免 keyup 误触发单击→Esc
-                MarkSwallowed(vk);
-                return (IntPtr)1;
+                // CapsLock 按住 + 数字键 → 关闭当前菜单并切换到新组（而非在当前组内选项）
+                if (AppState.IsCapsLockDown && vk >= '0' && vk <= '9')
+                {
+                    MenuSystem.Dispatch(vk); // 内部先 CloseCurrent() 再 Show 新组
+                    AppState.OtherKeyPressed = true;
+                    MarkSwallowed(vk);
+                    return (IntPtr)1;
+                }
+                if (MenuSystem.HandleMenuKey(vk, isDown))
+                {
+                    AppState.OtherKeyPressed = true;
+                    MarkSwallowed(vk);
+                    return (IntPtr)1;
+                }
             }
 
             // 已吞键的 keyup：一并吞掉，保持事件平衡（防止被吞的 keydown 配对走漏）

@@ -32,7 +32,6 @@
                         <ListBox x:Name="GroupList" SelectionChanged="GroupList_SelectedIndexChanged"/>
                     </DockPanel>
                     <StackPanel Grid.Row="1" Orientation="Horizontal">
-                        <Button Style="{StaticResource Btn}" Content="添加" Click="AddGroup_Click" Margin="0,0,4,0"/>
                         <Button Style="{StaticResource Btn}" Content="编辑" Click="EditGroup_Click" Margin="0,0,4,0"/>
                         <Button Style="{StaticResource BtnDanger}" Content="删除" Click="DeleteGroup_Click"/>
                     </StackPanel>
