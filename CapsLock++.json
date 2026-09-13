@@ -9,7 +9,7 @@
           "Cmd": "ipconfig /all",
           "Terminal": "pwsh7",
           "KeepWindow": true,
-          "Workdir": ""
+          "Workdir": "C:\\main"
         },
         {
           "Name": "wsl",

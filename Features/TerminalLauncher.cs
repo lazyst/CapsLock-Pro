@@ -86,12 +86,17 @@ internal static class TerminalLauncher
         string shellToken = QuoteIfNeeded(shell);
         bool empty = string.IsNullOrWhiteSpace(cmd);
 
-        // 空命令 → 仅打开 shell 交互（wt 包装或 shell 直接启动）
+        // 空命令 → 仅打开 shell 交互（优先 wt 包装，wt 可用时始终走 wt）
         if (empty)
         {
             string? wt0 = ResolveWt();
             if (wt0 != null && File.Exists(wt0))
-                return new LaunchResult(true, wt0, $"--starting-directory \"{workdir2.Replace("\"", "")}\" {shellToken}", workdir2, null);
+            {
+                if (string.IsNullOrWhiteSpace(workdir))
+                    return new LaunchResult(true, wt0, shellToken, workdir2, null);
+                // wt 语法：new-tab 子命令 + --startingDirectory（驼峰，是 new-tab 的参数不是全局选项）
+                return new LaunchResult(true, wt0, $"new-tab --startingDirectory \"{workdir2.Replace("\"", "")}\" {shellToken}", workdir2, null);
+            }
             return new LaunchResult(true, shell, "", workdir2, null);
         }
 
@@ -104,7 +109,11 @@ internal static class TerminalLauncher
             // wt 包装：exe=wt，args="<shell> <shellArgs>"。
             // wt 以 ';' 作为子命令分隔符（且不尊重引号），shellArgs 里的 ';'（含 keepWindow 的 "; exec bash"
             // 及用户命令里的 ';'）必须转义为 '\\;' 让 wt 传字面分号给 shell，否则会被拆成多个 tab。
-            return new LaunchResult(true, wt, $"--starting-directory \"{workdir2.Replace("\"", "")}\" {shellToken} {WtEscapeSemicolon(shellArgs)}", workdir2, null);
+            if (string.IsNullOrWhiteSpace(workdir))
+                return new LaunchResult(true, wt, $"{shellToken} {WtEscapeSemicolon(shellArgs)}", workdir2, null);
+            // 设了工作目录：用 new-tab 子命令 + --startingDirectory（驼峰，是 new-tab 的参数而非全局选项）
+            // 让 wt 在指定目录启动。必须放在 new-tab 之后、命令之前。
+            return new LaunchResult(true, wt, $"new-tab --startingDirectory \"{workdir2.Replace("\"", "")}\" {shellToken} {WtEscapeSemicolon(shellArgs)}", workdir2, null);
         }
             return new LaunchResult(true, shell, shellArgs, workdir2, null);
     }
