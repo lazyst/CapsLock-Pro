@@ -1,0 +1,47 @@
+{
+  "MenuGroups": [
+    {
+      "Enabled": true,
+      "Name": "命令",
+      "Items": [
+        {
+          "Name": "ipconfig",
+          "Cmd": "ipconfig /all",
+          "Terminal": "pwsh7",
+          "KeepWindow": true,
+          "Workdir": ""
+        },
+        {
+          "Name": "ping",
+          "Cmd": "ping 8.8.8.8",
+          "Terminal": "pwsh7",
+          "KeepWindow": true,
+          "Workdir": ""
+        }
+      ]
+    },
+    {
+      "Enabled": true,
+      "Name": "程序",
+      "Items": [
+        {
+          "Name": "浏览器",
+          "Cmd": "https://example.com",
+          "Terminal": "direct",
+          "KeepWindow": false,
+          "Workdir": ""
+        }
+      ]
+    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "TerminalPaths": {},
+  "MouseModeSpeed": 7
+}
