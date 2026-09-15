@@ -33,7 +33,10 @@
       <Link>Icon\CapsLock++.ico</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="CapsLock++.json">
+    <!-- 用户私有配置 CapsLock++.json 已加入 .gitignore，仓库不携带；CI/发布一律用示例作为默认配置。
+         仅 Release（含 publish）把示例复制为输出目录的 CapsLock++.json；Debug 不复制，
+         以免覆盖本地开发用的真实配置（ConfigLocator 在 Debug 下回退读取仓库根）。 -->
+    <Content Include="CapsLock++.example.json" Condition="'$(Configuration)' == 'Release'">
       <Link>CapsLock++.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
