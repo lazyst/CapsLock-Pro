@@ -36,6 +36,17 @@ internal static class MenuSystem
     /// <summary>指定窗口是否是当前活跃的菜单窗口（用于旧窗口淡出期间忽略其 Deactivated 事件）。</summary>
     public static bool IsCurrentWindow(System.Windows.Window w) => _current == w;
 
+    /// <summary>判断屏幕坐标点是否落在当前菜单窗口矩形内（供鼠标钩子判定"点击外部"）。</summary>
+    public static bool PointInMenuRect(int x, int y)
+    {
+        var w = _current;
+        if (w == null) return false;
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+        if (hwnd == IntPtr.Zero) return false;
+        if (!Win32.GetWindowRect(hwnd, out var r)) return false;
+        return x >= r.Left && x <= r.Right && y >= r.Top && y <= r.Bottom;
+    }
+
     /// <summary>从 JSON 加载全部 10 个菜单组。启动时调用一次；相同路径重复调用直接跳过。</summary>
     public static void Load(string? configPath)
     {
@@ -77,11 +88,20 @@ internal static class MenuSystem
         var g = _groups[groupIndex];
         if (g == null) return;
         _currentGroup = groupIndex;
-        var menu = new MenuPopupWindow(g.Name, groupIndex, g.Items.Select(x => x.Name).ToList());
-        // 仅当关闭的仍是当前活跃菜单时才清引用，避免旧窗口淡出动画完成时误清新窗口
-        menu.Closed += (_, _) => { if (_current == menu) _current = null; };
-        _current = menu;
-        _current.Show();
+        // 延迟到下一 Dispatcher 周期再创建并显示窗口：
+        // 让上一组菜单的淡出/失焦先完成，并显式 Activate 使其成为前台窗口，
+        // 避免切换组后新菜单因前台权限/时序竞争未能激活，导致点击外部不触发
+        // Deactivated 而关不掉（与 HelpPanel 同一类激活竞态，见 Features/HelpPanel.cs）。
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_currentGroup != groupIndex) return; // 期间已切换到别的组，丢弃本次
+            var menu = new MenuPopupWindow(g.Name, groupIndex, g.Items.Select(x => x.Name).ToList());
+            // 仅当关闭的仍是当前活跃菜单时才清引用，避免旧窗口淡出动画完成时误清新窗口
+            menu.Closed += (_, _) => { if (_current == menu) _current = null; };
+            _current = menu;
+            _current.Show();
+            _current.Activate();
+        }));
     }
 
     /// <summary>菜单内按键路由（由全局钩子调用，不依赖窗口焦点）：

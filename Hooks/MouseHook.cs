@@ -76,6 +76,14 @@ internal static class MouseHook
                     break;
 
                 case Win32.WmLbuttondown:
+                    // 菜单打开时：点击面板外部 → 关闭菜单并放行点击（与 HelpPanel 同思路，
+                    // 用坐标判定确定性关闭，不依赖 Deactivated/前台状态，避免切换组后与
+                    // 旧窗口淡出动画的激活竞态导致点击外部不触发关闭）。点击放行给下层窗口。
+                    if (MenuSystem.IsMenuOpen && !MenuSystem.PointInMenuRect(ms.Pt.X, ms.Pt.Y))
+                    {
+                        MenuSystem.CloseCurrent();
+                        break; // 不吞点击：放行给光标下窗口
+                    }
                     // 帮助面板打开时：点击面板外部 → 关闭面板并放行点击。
                     // 不依赖 Deactivated/前台状态——Activate() 因前台权限/时序竞争会间歇性失败，
                     // 导致面板非活动窗口时点击外部不触发 Deactivated。改用坐标判定确定性关闭，

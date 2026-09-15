@@ -201,6 +201,9 @@ internal static class InputHelper
         0x5B => true,  // VK_LWIN
         0x5C => true,  // VK_RWIN
         0x6F => true,  // VK_DIVIDE (numpad /)
+        0xAD => true,  // VK_VOLUME_MUTE
+        0xAE => true,  // VK_VOLUME_DOWN
+        0xAF => true,  // VK_VOLUME_UP
         _ => false,
     };
 }
