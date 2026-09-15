@@ -2,6 +2,16 @@
 
 所有项目的重要更改都将记录在此文件中。
 
+## \[v2.0.5\] - 2026-09-15
+
+### 🐛 修复
+
+- **切换菜单组后点击外部无法关闭**：`MenuPopupWindow` 依赖 `Deactivated` 事件关闭，但切换组时因旧窗口淡出与前台权限竞争，新菜单间歇性未能激活，导致点击外部不触发关闭。
+  - `MenuSystem.Show` 改为 `Dispatcher.BeginInvoke` 延迟创建窗口并显式 `Activate`（与 HelpPanel 同一竞态修复思路）；
+  - `MouseHook` 左键按下加入坐标判定：菜单打开时点击窗口矩形外确定性调用 `CloseCurrent()`，彻底规避激活竞态。
+- **底部滚轮调音量触发抖音网页快捷键**：`InputHelper.Tap` 发送 `VK_VOLUME_UP/DOWN` 时未带 `KEYEVENTF_EXTENDEDKEY`，扫描码 0x30/0x2E/0x20 被浏览器误判为字符键 `KeyB/KeyC/KeyD`，触发抖音收藏/评论等网页快捷键。
+  - 将 0xAD/0xAE/0xAF 加入 `IsExtendedKey`，确保 SendInput 发送 E0 扩展前缀，浏览器正确识别为 `VolumeUp/VolumeDown` 媒体键，网页快捷键不再匹配。
+
 ## \[v2.0.2\] - 2026-09-13
 
 ### 🔧 重构
